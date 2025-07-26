@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ATS Home</title>
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>QuantumNxt ATS</h2>
+        </div>
+        <ul class="menu">
+            <li>
+                <a href="#"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <ul class="submenu">
+                    <li><a href="#">My Tasks Overview</a></li>
+                    <li><a href="#">Team Performance</a></li>
+                    <li><a href="#">Recruitment Pipeline</a></li>
+                    <li><a href="#">Infographics & Reports</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-users"></i> Teams</a>
+                <ul class="submenu">
+                    <li><a href="#">Create Team</a></li>
+                    <li><a href="#">Manage Teams</a></li>
+                    <li><a href="#">Assign Team Members</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-tasks"></i> Recruitment Tasks</a>
+                <ul class="submenu">
+                    <li><a href="#">Create New Recruitment Task</a></li>
+                    <li><a href="#">View/Edit Recruitment Tasks</a></li>
+                    <li><a href="#">Assign Tasks to Team Members</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-file-alt"></i> Resume Management</a>
+                <ul class="submenu">
+                    <li><a href="#">Upload Resume</a></li>
+                    <li><a href="#">View/Parse Resumes</a></li>
+                    <li><a href="#">Screen Resumes</a></li>
+                    <li><a href="#">Export Screened Resumes</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-calendar-check"></i> Interview Workflow</a>
+                <ul class="submenu">
+                    <li><a href="#">Schedule Interviews</a></li>
+                    <li><a href="#">Record Interview Results</a></li>
+                    <li><a href="#">Track Candidate Status</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-user-tie"></i> Candidates</a>
+                <ul class="submenu">
+                    <li><a href="#">View Finalized Candidates</a></li>
+                    <li><a href="#">Candidate Profiles</a></li>
+                    <li><a href="#">Offer Letter Management</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-chart-bar"></i> Reports & Analytics</a>
+                <ul class="submenu">
+                    <li><a href="#">Team-wise Reports</a></li>
+                    <li><a href="#">Task Progress Reports</a></li>
+                    <li><a href="#">Candidate Conversion Rates</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#"><i class="fas fa-cog"></i> Settings</a>
+                <ul class="submenu">
+                    <li><a href="#">User Profile</a></li>
+                    <li><a href="#">Notification Preferences</a></li>
+                    <li><a href="#">Access Control & Permissions</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h1>Welcome to QuantumNxt ATS</h1>
+        <p>Select a menu item to get started.</p>
+    </div>
+    <script src="{% static 'js/home.js' %}"></script>
+</body>
+</html>
