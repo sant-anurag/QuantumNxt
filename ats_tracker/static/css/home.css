@@ -1,8 +1,42 @@
 body {
     margin: 0;
     font-family: 'Segoe UI', Arial, sans-serif;
-    background: linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%);
     min-height: 100vh;
+    position: relative;
+    background: linear-gradient(120deg, #4e54c8 0%, #8f94fb 100%);
+    overflow-x: hidden;
+    /* Animated glowing spheres in the background */
+}
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.34;
+    pointer-events: none;
+    animation: moveOrb 13s linear infinite;
+}
+body::before {
+    width: 680px;
+    height: 680px;
+    background: radial-gradient(circle at 60% 40%, #fff 0%, #27c6be 80%);
+    left: -180px;
+    top: -180px;
+    animation-delay: 0s;
+}
+body::after {
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle at 40% 70%, #00fff7 30%, #4e54c8 100%);
+    right: -120px;
+    bottom: -120px;
+    animation-delay: 6.5s;
+}
+@keyframes moveOrb {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%      { transform: translateY(40px) scale(1.13); }
 }
 
 .sidebar {
@@ -11,26 +45,31 @@ body {
     top: 0;
     width: 270px;
     height: 100%;
-    background: rgba(34, 40, 49, 0.92);
     color: #fff;
-    box-shadow: 2px 0 12px rgba(0,0,0,0.1);
-    transition: width 0.3s;
-    z-index: 100;
+    z-index: 10;
+    background: rgba(255,255,255,0.13)
+    border-right: 1.5px solid rgba(255,255,255,0.16);
+    box-shadow: 2px 0 30px rgba(33, 36, 61, 0.14), 0 4px 32px 0 rgba(34, 140, 249, 0.13);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: width 0.4s cubic-bezier(.68,-0.55,.27,1.55);
     overflow-y: auto;
 }
 
 .sidebar-header {
-    padding: 32px 24px 16px 24px;
-    background: rgba(34, 40, 49, 0.98);
-    border-bottom: 1px solid #393e46;
+    padding: 34px 24px 20px 24px;
+    background: rgba(24, 28, 48, 0.82);
+    border-bottom: 1.3px solid rgba(140, 140, 255, 0.15);
     text-align: center;
+    backdrop-filter: blur(9px);
 }
 
 .sidebar-header h2 {
     margin: 0;
-    font-size: 1.6em;
-    letter-spacing: 1px;
-    color: #00adb5;
+    font-size: 1.65em;
+    letter-spacing: 1.2px;
+    color: #3af2f7;
+    text-shadow: 0 0 18px rgba(70,245,245,0.20);
 }
 
 .menu {
@@ -38,88 +77,128 @@ body {
     padding: 0;
     margin: 0;
 }
-
 .menu > li {
     position: relative;
 }
-
 .menu > li > a {
     display: flex;
     align-items: center;
-    padding: 18px 24px;
-    color: #fff;
+    padding: 18px 28px;
+    color: #eaf7ff;
     text-decoration: none;
     font-size: 1.08em;
-    transition: background 0.2s, color 0.2s;
-    border-left: 4px solid transparent;
+    border-left: 3.4px solid transparent;
+    transition: background 0.25s, color 0.22s, border 0.22s, transform 0.19s;
+    position: relative;
+    z-index: 2;
+    /* Glassy hover/active animation */
 }
-
 .menu > li > a:hover, .menu > li.active > a {
-    background: rgba(0, 173, 181, 0.18);
-    color: #00adb5;
-    border-left: 4px solid #00adb5;
+    background: rgba(63,255,250,0.07);
+    color: #71ffe7;
+    border-left: 3.4px solid #33efd2;
+    font-weight: 500;
+    box-shadow: 0 4px 20px 2px rgba(52, 245, 255, 0.07);
+    transform: scale(1.03) translateX(4px);
 }
 
 .menu i {
-    margin-right: 16px;
-    font-size: 1.2em;
-    min-width: 24px;
+    margin-right: 18px;
+    font-size: 1.21em;
+    min-width: 26px;
     text-align: center;
 }
-
 .submenu {
     display: none;
-    background: rgba(57, 62, 70, 0.92);
+    background: rgba(70, 210, 210, 0.05);
     padding-left: 0;
-    animation: fadeIn 0.3s;
+    animation: fadeIn 0.22s;
+    border-radius: 0 0 12px 12px;
 }
-
 .menu > li.active .submenu {
     display: block;
 }
-
 .submenu li a {
     display: block;
-    padding: 12px 48px;
-    color: #bfc9d1;
+    padding: 12px 52px;
+    color: #bbf7ff;
     text-decoration: none;
     font-size: 0.98em;
-    transition: background 0.2s, color 0.2s;
+    border-left: 2.3px solid transparent;
+    transition: background 0.19s, color 0.19s, border 0.19s;
+}
+.submenu li a:hover {
+    background: rgba(50,255,255,0.11);
+    color: #3af2f7;
+    border-left: 2.3px solid #33efd2;
 }
 
-.submenu li a:hover {
-    background: rgba(0, 173, 181, 0.12);
-    color: #00adb5;
+/* Glass Card Animation */
+.glass-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.23) 0%, rgba(70,255,255,0.11) 100%);
+    border-radius: 22px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.19);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.7px solid rgba(255,255,255,0.32);
+    animation: glassy-fadeup 1.1s cubic-bezier(.45,.45,.30,1.34);
+    transition: box-shadow 0.24s, transform 0.19s;
+}
+.glass-card:hover {
+    box-shadow: 0 12px 44px rgba(52, 245, 255, 0.17), 0 4px 30px rgba(31, 38, 135, 0.19);
+    transform: translateY(-6px) scale(1.021);
+}
+@keyframes glassy-fadeup {
+    0% {transform: translateY(25px) scale(0.98); opacity:0;}
+    100% {transform: translateY(0) scale(1); opacity:1;}
 }
 
 .main-content {
     margin-left: 270px;
     padding: 48px 40px;
     min-height: 100vh;
-    background: rgba(255,255,255,0.85);
+    background: #fff;
     transition: margin-left 0.3s;
 }
 
+/* Fade in effect for subtle UI entrance */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px);}
+    from { opacity: 0; transform: translateY(-14px);}
     to { opacity: 1; transform: translateY(0);}
 }
 
-/* Responsive */
+/* Responsive Animations */
 @media (max-width: 900px) {
     .sidebar {
-        width: 70px;
+        width: 66px;
     }
     .sidebar-header h2 {
         display: none;
     }
     .main-content {
-        margin-left: 70px;
+        margin-left: 66px;
+        padding: 20px 4px;
     }
     .menu > li > a span {
         display: none;
     }
     .submenu li a {
-        padding-left: 24px;
+        padding-left: 16px;
     }
+}
+
+/* Accessibility focus styling */
+.menu > li > a:focus, .submenu li a:focus {
+    outline: 2px solid #33efd2;
+    background: rgba(50,255,255,0.10);
+    outline-offset: 0;
+}
+
+/* Optional: Glassy scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 7px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(60,220,220,0.21);
+    border-radius: 8px;
 }
