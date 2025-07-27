@@ -4,6 +4,9 @@ from django.db import connection
 from django.utils.html import escape
 from .db_initializer import ATSDatabaseInitializer
 import mysql.connector
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.http import JsonResponse
 
 def home(request):
     initializer = ATSDatabaseInitializer()
@@ -71,5 +74,81 @@ def add_member(request):
         'error': error
     })
 
+# python
 
+from django.http import JsonResponse
+
+def create_team(request):
+    message = error = None
+    members = []
+    teams = []
+    if request.method == "POST":
+        team_name = request.POST.get("team_name", "").strip()
+        selected_members = request.POST.getlist("members")
+        if not team_name or not selected_members:
+            error = "Team name and at least one member are required."
+        else:
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO teams (team_name) VALUES (%s)", [team_name])
+                team_id = cursor.lastrowid
+                for emp_id in selected_members:
+                    cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
+                conn.commit()
+                message = f"Team '{team_name}' created successfully."
+            except Exception as e:
+                if "Duplicate entry" in str(e):
+                    error = "A team with this name already exists."
+                else:
+                    error = f"Failed to create team: {str(e)}"
+            finally:
+                if 'cursor' in locals():
+                    cursor.close()
+                if 'conn' in locals():
+                    conn.close()
+    # Fetch available members
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT emp_id, first_name, last_name, email, phone FROM hr_team_members WHERE status='active'")
+        members = cursor.fetchall()
+        # Fetch teams and their strength
+        cursor.execute("""
+            SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
+            FROM teams t
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            GROUP BY t.team_id, t.team_name, t.created_at
+            ORDER BY t.created_at DESC
+        """)
+        teams = cursor.fetchall()
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return render(request, "create_team.html", {
+        "members": members,
+        "teams": teams,
+        "message": message,
+        "error": error
+    })
+
+def team_members(request, team_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT m.emp_id, m.first_name, m.last_name, m.email, m.phone
+            FROM team_members tm
+            JOIN hr_team_members m ON tm.emp_id = m.emp_id
+            WHERE tm.team_id = %s
+        """, [team_id])
+        members = cursor.fetchall()
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return JsonResponse({"members": members})
 # Create your views here.

@@ -1,0 +1,128 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link href="https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+<div class="ct-main">
+    <!-- Section 1: Create Team -->
+    <section class="ct-section">
+        <div class="ct-card">
+            <header class="ct-card-header">
+                <h2><i class="fas fa-layer-group"></i> Create Team</h2>
+            </header>
+            <div class="ct-card-body">
+                {% if message %}
+                    <div class="ct-alert ct-alert-success">{{ message }}</div>
+                {% endif %}
+                {% if error %}
+                    <div class="ct-alert ct-alert-error">{{ error }}</div>
+                {% endif %}
+                <form method="post" id="create-team-form" autocomplete="off">
+                    {% csrf_token %}
+                    <div class="ct-form-group">
+                        <label for="team_name">Team Name</label>
+                        <input type="text" id="team_name" name="team_name" maxlength="100" required placeholder="Enter team name" />
+                    </div>
+                    <button type="submit" class="ct-btn-primary"><i class="fas fa-plus-circle"></i> Create Team</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2 and 3 side-by-side on desktop, stacked on mobile -->
+
+        <!-- Section 2: Select Members -->
+        <section class="ct-section ct-table-section">
+            <div class="ct-card">
+                <header class="ct-card-header">
+                    <h2><i class="fas fa-user-friends"></i> Select Members</h2>
+                </header>
+                <div class="ct-card-body">
+                    <div class="ct-table-container">
+                        <table class="ct-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Name</th>
+                                    <th>Emp ID</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in members %}
+                                <tr>
+                                    <td>
+                                        <label class="ct-checkbox">
+                                            <input type="checkbox" form="create-team-form" name="members" value="{{ member.emp_id }}">
+                                            <span class="ct-checkmark"></span>
+                                        </label>
+                                    </td>
+                                    <td>{{ member.first_name }} {{ member.last_name }}</td>
+                                    <td>{{ member.emp_id }}</td>
+                                    <td>{{ member.email }}</td>
+                                    <td>{{ member.phone|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="ct-no-data">No available members.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Existing Teams -->
+        <section class="ct-section ct-table-section">
+            <div class="ct-card">
+                <header class="ct-card-header">
+                    <h2><i class="fas fa-list-ul"></i> Existing Teams</h2>
+                </header>
+                <div class="ct-card-body">
+                    <div class="ct-table-container">
+                        <table class="ct-table">
+                            <thead>
+                                <tr>
+                                    <th>Team Name</th>
+                                    <th>Strength</th>
+                                    <th>Created On</th>
+                                    <th>Members</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team in teams %}
+                                <tr>
+                                    <td>{{ team.team_name }}</td>
+                                    <td>{{ team.strength }}</td>
+                                    <td>{{ team.created_at|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <a href="#" class="ct-link" data-team-id="{{ team.team_id }}">View</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="ct-no-data">No teams created yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+</div>
+
+<!-- Modal for team members -->
+<div id="team-members-modal" class="ct-modal-overlay" style="display: none;">
+    <div class="ct-modal-content">
+        <span class="ct-modal-close" id="close-modal" title="Close">&times;</span>
+        <h3><i class="fas fa-users"></i> Team Members</h3>
+        <div id="modal-members-list"></div>
+    </div>
+</div>
+<link rel="stylesheet" href="{% static 'css/create_team.css' %}">
+<script src="{% static 'js/create_team.js' %}"></script>
+{% endblock %}

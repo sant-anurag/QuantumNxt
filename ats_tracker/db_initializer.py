@@ -9,6 +9,7 @@ class ATSDatabaseInitializer:
         )
         self.cursor = self.conn.cursor()
 
+    # python
     def initialize(self):
         self.cursor.execute("CREATE DATABASE IF NOT EXISTS ats")
         self.cursor.execute("USE ats")
@@ -26,8 +27,25 @@ class ATSDatabaseInitializer:
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             );
         """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS teams (
+                team_id INT AUTO_INCREMENT PRIMARY KEY,
+                team_name VARCHAR(100) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS team_members (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                team_id INT NOT NULL,
+                emp_id INT NOT NULL,
+                FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
+                FOREIGN KEY (emp_id) REFERENCES hr_team_members(emp_id) ON DELETE CASCADE,
+                UNIQUE(team_id, emp_id)
+            );
+        """)
         self.conn.commit()
-        print("Database and HR team members table created.")
+        print("Database, HR team members, and teams tables created.")
 
     def close(self):
         self.cursor.close()
