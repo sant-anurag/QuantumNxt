@@ -139,9 +139,9 @@ def team_members(request, team_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT m.emp_id, m.first_name, m.last_name, m.email, m.phone
-            FROM team_members tm
-            JOIN hr_team_members m ON tm.emp_id = m.emp_id
+            SELECT m.emp_id, m.first_name, m.last_name, m.email, m.phone, m.role, m.date_joined, m.status
+            FROM hr_team_members m
+            JOIN team_members tm ON m.emp_id = tm.emp_id
             WHERE tm.team_id = %s
         """, [team_id])
         members = cursor.fetchall()

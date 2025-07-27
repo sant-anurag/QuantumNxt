@@ -2,31 +2,38 @@ document.addEventListener("DOMContentLoaded", function() {
         // --- Modal logic for team members ---
         const modal = document.getElementById("team-members-modal");
         const closeModalBtn = document.getElementById("close-modal");
-        document.querySelectorAll(".ct-link[data-team-id]").forEach(link => {
-            link.addEventListener("click", function(e) {
+        document.addEventListener("click", function(e) {
+            // Delegate for dynamic table pagination and modal links
+            if (e.target.classList.contains("ct-link") && e.target.hasAttribute("data-team-id")) {
                 e.preventDefault();
-                const teamId = this.getAttribute("data-team-id");
+                const teamId = e.target.getAttribute("data-team-id");
                 fetch(`/team-members/${teamId}/`)
                     .then(resp => resp.json())
                     .then(data => {
                         const container = document.getElementById("modal-members-list");
                         if (data.members && data.members.length > 0) {
-                            let html = `<table>
+                            let html = `<table class="ct-table">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
                                         <th>Emp ID</th>
                                         <th>Email</th>
                                         <th>Phone</th>
+                                        <th>Role</th>
+                                        <th>Date Joined</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
                             data.members.forEach(m => {
                                 html += `<tr>
-                                    <td>${m.first_name} ${m.last_name}</td>
-                                    <td>${m.emp_id}</td>
-                                    <td>${m.email}</td>
+                                    <td>${m.first_name || ""} ${m.last_name || ""}</td>
+                                    <td>${m.emp_id || "-"}</td>
+                                    <td>${m.email || "-"}</td>
                                     <td>${m.phone || "-"}</td>
+                                    <td>${m.role || "-"}</td>
+                                    <td>${m.date_joined || "-"}</td>
+                                    <td>${m.status || "-"}</td>
                                 </tr>`;
                             });
                             html += "</tbody></table>";
@@ -36,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                         modal.style.display = "flex";
                     });
-            });
+            }
         });
         if (closeModalBtn) {
             closeModalBtn.onclick = function() {
@@ -53,7 +60,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const membersTableBody = document.getElementById("members-table-body");
         const searchInput = document.getElementById("member-search");
         const paginationDiv = document.getElementById("members-pagination");
-        // Collect all members from the DOM at load
         let allMembers = [];
         membersTableBody.querySelectorAll("tr").forEach(row => {
             if (!row.classList.contains("ct-no-data")) {
@@ -117,7 +123,6 @@ document.addEventListener("DOMContentLoaded", function() {
         membersTableBody.addEventListener("change", function(e) {
             if (e.target.type === "checkbox") {
                 const value = e.target.value;
-                // Find all checkboxes with this value and sync checked state
                 document.querySelectorAll(`input[name="members"][value="${value}"]`).forEach(cb => {
                     cb.checked = e.target.checked;
                 });
@@ -135,4 +140,63 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             });
         }
+
+        // --- Search and Pagination for Teams Table ---
+        const teamsTableBody = document.getElementById("teams-table-body");
+        const teamSearchInput = document.getElementById("team-search");
+        const teamsPaginationDiv = document.getElementById("teams-pagination");
+        let allTeams = [];
+        teamsTableBody.querySelectorAll("tr").forEach(row => {
+            if (!row.classList.contains("ct-no-data")) {
+                const name = row.children[0].textContent.trim().toLowerCase();
+                allTeams.push({
+                    row: row.cloneNode(true),
+                    name: name
+                });
+            }
+        });
+
+        function renderTeams(filteredTeams, page = 1, perPage = 5) {
+            teamsTableBody.innerHTML = "";
+            if (filteredTeams.length === 0) {
+                teamsTableBody.innerHTML = `<tr><td colspan="4" class="ct-no-data">No teams found.</td></tr>`;
+                teamsPaginationDiv.innerHTML = "";
+                return;
+            }
+            const totalPages = Math.ceil(filteredTeams.length / perPage);
+            const start = (page - 1) * perPage;
+            const end = start + perPage;
+            filteredTeams.slice(start, end).forEach(t => {
+                teamsTableBody.appendChild(t.row.cloneNode(true));
+            });
+            // Pagination controls
+            let pagHtml = "";
+            if (totalPages > 1) {
+                for (let i = 1; i <= totalPages; i++) {
+                    pagHtml += `<button type="button" class="${i === page ? "active" : ""}" data-page="${i}">${i}</button>`;
+                }
+            }
+            teamsPaginationDiv.innerHTML = pagHtml;
+            // Add event listeners
+            teamsPaginationDiv.querySelectorAll("button").forEach(btn => {
+                btn.onclick = function() {
+                    renderTeams(filteredTeams, parseInt(this.getAttribute("data-page")), perPage);
+                };
+            });
+        }
+
+        function filterTeams() {
+            const term = teamSearchInput.value.trim().toLowerCase();
+            let filtered = allTeams;
+            if (term) {
+                filtered = allTeams.filter(t => t.name.includes(term));
+            }
+            renderTeams(filtered, 1, 5);
+        }
+
+        // Initial render
+        renderTeams(allTeams, 1, 5);
+
+        // Search event
+        teamSearchInput.addEventListener("input", filterTeams);
     });

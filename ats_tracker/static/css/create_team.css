@@ -306,7 +306,78 @@ body {
 /* ------ Modal Styles ------ */
 .ct-modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom
+    top: 0;
+    left: 270px; /* leave space for sidebar */
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: 100vh;
+    background: rgba(34, 44, 64, 0.38);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.18s;
+    animation: ct-modal-fadein 0.22s;
+}
+@keyframes ct-modal-fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.ct-modal-content {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 44px 0 rgba(30, 60, 120, 0.19), 0 2px 8px 0 rgba(68,110,172,0.08);
+    padding: 36px 32px 28px 32px;
+    min-width: 340px;
+    max-width: 98vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: ct-modal-pop 0.22s cubic-bezier(.45,.45,.30,1.34);
+}
+@keyframes ct-modal-pop {
+    from { transform: scale(0.97) translateY(30px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.ct-close-modal {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-size: 1.7em;
+    color: #b2b8d6;
+    cursor: pointer;
+    font-weight: 700;
+    z-index: 2;
+    transition: color 0.15s;
+}
+.ct-close-modal:hover {
+    color: #e74c3c;
+}
+#modal-members-list {
+    margin-top: 18px;
+}
+.ct-modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--ct-primary-light);
+    font-size: 1.18em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ct-modal-content .ct-table {
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-size: 0.98em;
+}
+@media (max-width: 600px) {
+    .ct-modal-content {
+        padding: 16px 4px 12px 4px;
+        min-width: 0;
+        width: 98vw;
+    }
+}
 
 .ct-flex-header {
     display: flex;
@@ -364,4 +435,18 @@ body {
     background: linear-gradient(90deg, var(--ct-primary-light) 0%, var(--ct-accent) 100%);
     color: #fff;
     border-color: var(--ct-accent);
+}
+
+/* Responsive stacking for both search headers */
+@media (max-width: 600px) {
+    .ct-flex-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .ct-search-box {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+    }
 }

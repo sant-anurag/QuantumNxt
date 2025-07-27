@@ -78,43 +78,49 @@
     </section>
 
     <!-- Section 3: Existing Teams -->
+
     <section class="ct-section ct-table-section">
-        <div class="ct-card">
-            <header class="ct-card-header">
-                <h2><i class="fas fa-list-ul"></i> Existing Teams</h2>
-            </header>
-            <div class="ct-card-body">
-                <div class="ct-table-container">
-                    <table class="ct-table">
-                        <thead>
-                            <tr>
-                                <th>Team Name</th>
-                                <th>Strength</th>
-                                <th>Created On</th>
-                                <th>Members</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for team in teams %}
-                            <tr>
-                                <td>{{ team.team_name }}</td>
-                                <td>{{ team.strength }}</td>
-                                <td>{{ team.created_at|date:"Y-m-d" }}</td>
-                                <td>
-                                    <a href="#" class="ct-link" data-team-id="{{ team.team_id }}">View</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="ct-no-data">No teams found.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </section>
+      <div class="ct-card">
+          <header class="ct-card-header ct-flex-header">
+              <h2><i class="fas fa-list-ul"></i> Existing Teams</h2>
+              <div class="ct-search-box">
+                  <input type="text" id="team-search" name="team_search" placeholder="Search team..." autocomplete="off">
+                  <i class="fas fa-search"></i>
+              </div>
+          </header>
+          <div class="ct-card-body">
+              <div class="ct-table-container">
+                  <table class="ct-table" id="teams-table">
+                      <thead>
+                          <tr>
+                              <th>Team Name</th>
+                              <th>Strength</th>
+                              <th>Created On</th>
+                              <th>Members</th>
+                          </tr>
+                      </thead>
+                      <tbody id="teams-table-body">
+                          {% for team in teams %}
+                          <tr>
+                              <td>{{ team.team_name }}</td>
+                              <td>{{ team.strength }}</td>
+                              <td>{{ team.created_at|date:"Y-m-d" }}</td>
+                              <td>
+                                  <a href="#" class="ct-link" data-team-id="{{ team.team_id }}">View</a>
+                              </td>
+                          </tr>
+                          {% empty %}
+                          <tr>
+                              <td colspan="4" class="ct-no-data">No teams found.</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+              <div class="ct-pagination" id="teams-pagination"></div>
+          </div>
+      </div>
+  </section>
 </div>
 
 <!-- Modal for team members -->
