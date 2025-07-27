@@ -307,3 +307,61 @@ body {
 .ct-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom
+
+.ct-flex-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: nowrap;
+}
+.ct-search-box {
+    display: flex;
+    align-items: center;
+    background: #f7fbfe;
+    border: 1.3px solid var(--ct-border);
+    border-radius: var(--ct-radius-pill);
+    padding: 4px 14px 4px 10px;
+    box-shadow: 0 1px 6px 0 rgba(50,90,245,0.04);
+    min-width: 210px;
+    max-width: 260px;
+    margin-left: auto;
+}
+.ct-search-box input[type="text"] {
+    border: none;
+    background: transparent;
+    font-size: 1em;
+    color: var(--ct-text);
+    outline: none;
+    width: 100%;
+    padding: 7px 0 7px 0;
+}
+.ct-search-box i {
+    color: var(--ct-primary-light);
+    margin-left: 7px;
+    font-size: 1.1em;
+}
+.ct-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 7px;
+    margin-top: 18px;
+    font-size: 1.04em;
+}
+.ct-pagination button {
+    background: #f7fbfe;
+    border: 1.2px solid var(--ct-border);
+    color: var(--ct-primary-light);
+    border-radius: 7px;
+    padding: 5px 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .13s, color .13s, border .13s;
+}
+.ct-pagination button.active,
+.ct-pagination button:hover {
+    background: linear-gradient(90deg, var(--ct-primary-light) 0%, var(--ct-accent) 100%);
+    color: #fff;
+    border-color: var(--ct-accent);
+}
