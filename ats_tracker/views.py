@@ -375,6 +375,7 @@ def jd_list(request):
 
 @csrf_exempt
 def create_jd(request):
+    message = error = None
     if request.method == "POST":
         jd_id = generate_jd_id()
         company_id = request.POST.get("company_id")
@@ -383,19 +384,45 @@ def create_jd(request):
         must_have_skills = request.POST["must_have_skills"]
         good_to_have_skills = request.POST["good_to_have_skills"]
         no_of_positions = int(request.POST.get("no_of_positions", 1))
-        total_profiles = int(request.POST.get("total_profiles", 0))
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO recruitment_jds
-            (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, created_by)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, created_by))
-        conn.commit()
-        conn.close()
-        return redirect("jd_create")
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO recruitment_jds
+                (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by))
+            conn.commit()
+            message = f"Task {escape(jd_id)} created successfully!"
+        except Exception as e:
+            if "Duplicate entry" in str(e):
+                error = "A JD with this ID already exists."
+            else:
+                error = f"Failed to create JD: {escape(str(e))}"
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+        # Fetch companies for dropdown
+        companies = []
+        try:
+            conn = get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
+            companies = cursor.fetchall()
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+        return render(request, "jd_create.html", {
+            "companies": companies,
+            "message": message,
+            "error": error
+        })
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 @csrf_exempt

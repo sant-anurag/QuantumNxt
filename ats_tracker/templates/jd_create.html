@@ -2,11 +2,35 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/jd.css' %}">
+<style>
+    .alert {
+        padding: 12px 18px;
+        border-radius: 7px;
+        margin-bottom: 18px;
+        font-size: 1.08em;
+        font-weight: 500;
+    }
+    .alert.success {
+        background: #e6f9f0;
+        color: #1a7f4c;
+        border: 1.2px solid #b2e5d0;
+    }
+    .alert.error {
+        background: #fff0f0;
+        color: #c0392b;
+        border: 1.2px solid #f5b7b1;
+    }
+</style>
 <div class="jd-form-outer">
     <h2>Create Job Description</h2>
+    {% if message %}
+        <div class="alert success">{{ message }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="alert error">{{ error }}</div>
+    {% endif %}
     <form id="jdForm" method="post" action="{% url 'create_jd' %}" class="jd-grid-form">
         {% csrf_token %}
-
         <div class="form-group">
             <label>JD Summary</label>
             <input type="text" name="jd_summary" required maxlength="100" placeholder="Brief summary of the job description (max 100 characters)">
@@ -24,7 +48,6 @@
             <label>JD Description</label>
             <textarea name="jd_description" required rows="4"></textarea>
         </div>
-
         <div class="form-group">
             <label>Must Have Skills</label>
             <input type="text" name="must_have_skills" required>
@@ -45,7 +68,6 @@
                 <option value="on hold">On Hold</option>
             </select>
         </div>
-
         <div class="form-group form-actions form-group-full">
             <button type="submit" class="btn-primary">Create JD</button>
         </div>
