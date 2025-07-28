@@ -124,6 +124,7 @@ body, html {
     border-radius: 7px;
     padding: 8px 0 8px 10px;
     font-size: 1em;
+    text-align: center;
     font-weight: 500;
     margin-bottom: 6px;
     min-height: 24px;
@@ -132,6 +133,35 @@ body, html {
     display: block;
 }
 
+.login-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 18px;
+    gap: 7px;
+    font-size: 0.98em;
+}
+
+.login-link {
+    color: #174ea6;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.18s;
+    padding: 2px 6px;
+    border-radius: 5px;
+}
+
+.login-link:hover, .login-link:focus {
+    color: #11b7ee;
+    background: #f3f6fa;
+    text-decoration: underline;
+}
+
+.login-link-sep {
+    color: #b0b8c9;
+    font-weight: 400;
+    font-size: 1.1em;
+}
 @media (max-width: 500px) {
     .login-container { min-width: 0; width: 98vw; padding: 18px 6px 12px 6px; }
 }
