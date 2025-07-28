@@ -15,41 +15,61 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password
 from django.utils.html import escape
+from django.contrib.auth.hashers import make_password
 
 def login_view(request):
+    initializer = ATSDatabaseInitializer()
+    initializer.initialize()
+    initializer.close()
+
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '').strip()
         if not username or not password:
             return render(request, 'login.html', {'error': 'Please enter both username/email and password.'})
 
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT user_id, username, email, password_hash, role, is_active
-                FROM users
-                WHERE username=%s OR email=%s
-                LIMIT 1
-            """, [username, username])
-            row = cursor.fetchone()
-
-        if row and row[4] and row[5]:  # role and is_active
-            user_id, db_username, db_email, db_hash, role, is_active = row
-            if check_password(password, db_hash):
-                request.session['user_id'] = user_id
-                request.session['username'] = db_username
-                request.session['role'] = role
-                return redirect('home')
-            else:
-                return render(request, 'login.html', {'error': 'Invalid credentials.'})
+        valid_user = validate_user(username, password)
+        print("login_view -> Valid user:", valid_user)
+        # If valid_user is not None, it means the user was found and password matched
+        # valid_user will be a tuple (user_id, db_username, role, status)
+        if valid_user:
+            user_id, db_username, role,status = valid_user
+            request.session['user_id'] = user_id
+            request.session['username'] = db_username
+            request.session['role'] = role
+            request.session['authenticated'] = True
+            return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
 
     return render(request, 'login.html',{ 'error': 'Click Submit to Proceed'})
 
+# function to validate username and password with users table
+def validate_user(username, password):
+    print("validate_user -> Username:", username)
+    print("validate_user -> Password:", password)
+    conn = get_db_connection_ats()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id, username, email, password_hash, role, is_active
+        FROM users
+        WHERE username=%s OR email=%s
+        LIMIT 1
+    """, [username, username])
+    row = cursor.fetchone()
+    print("validate_user -> Database row:", row)
+    #compare the hashed password with the stored hash
+    if row:
+        print("validate_user -> User found in database")
+        user_id, db_username, db_email, db_hash, role, is_active = row
+        if check_password(password, db_hash) and is_active:
+            status = True
+            return user_id, db_username, role,status
+    cursor.close()
+    conn.close()
+    return None, None, None
+
 def home(request):
-    initializer = ATSDatabaseInitializer()
-    initializer.initialize()
-    initializer.close()
     return render(request, 'home.html')
 
 
