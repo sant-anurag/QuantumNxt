@@ -12,6 +12,39 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connection
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password
+from django.utils.html import escape
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        if not username or not password:
+            return render(request, 'login.html', {'error': 'Please enter both username/email and password.'})
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT user_id, username, email, password_hash, role, is_active
+                FROM users
+                WHERE username=%s OR email=%s
+                LIMIT 1
+            """, [username, username])
+            row = cursor.fetchone()
+
+        if row and row[4] and row[5]:  # role and is_active
+            user_id, db_username, db_email, db_hash, role, is_active = row
+            if check_password(password, db_hash):
+                request.session['user_id'] = user_id
+                request.session['username'] = db_username
+                request.session['role'] = role
+                return redirect('home')
+            else:
+                return render(request, 'login.html', {'error': 'Invalid credentials.'})
+        else:
+            return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
+
+    return render(request, 'login.html',{ 'error': 'Click Submit to Proceed'})
 
 def home(request):
     initializer = ATSDatabaseInitializer()

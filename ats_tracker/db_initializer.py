@@ -14,6 +14,17 @@ class ATSDatabaseInitializer:
         self.cursor.execute("CREATE DATABASE IF NOT EXISTS ats")
         self.cursor.execute("USE ats")
         self.cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        user_id INT AUTO_INCREMENT PRIMARY KEY,
+                        username VARCHAR(50) NOT NULL UNIQUE,
+                        email VARCHAR(100) NOT NULL UNIQUE,
+                        password_hash VARCHAR(255) NOT NULL,
+                        role ENUM('Admin', 'User') NOT NULL DEFAULT 'User',
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+        self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS hr_team_members (
                 emp_id INT AUTO_INCREMENT PRIMARY KEY,
                 first_name VARCHAR(50) NOT NULL,
