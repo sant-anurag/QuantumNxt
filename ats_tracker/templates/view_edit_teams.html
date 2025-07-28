@@ -1,0 +1,57 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/create_team.css' %}">
+<link rel="stylesheet" href="{% static 'css/view_edit_teams.css' %}">
+<div class="ct-main">
+    <div class="ct-section">
+        <div class="ct-flex-header">
+            <h2>View & Edit Teams</h2>
+            <div class="ct-search-box">
+                <input type="text" id="team-search" placeholder="Search teams...">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+        <div class="ct-table-container">
+            <table class="ct-table" id="teams-table">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Total Strength</th>
+                        <th>Created On</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="teams-table-body">
+                    {% for team in teams %}
+                    <tr data-team-id="{{ team.team_id }}">
+                        <td>{{ team.team_name }}</td>
+                        <td>{{ team.strength }}</td>
+                        <td>{{ team.created_at|date:"Y-m-d" }}</td>
+                        <td>
+                            <a href="#" class="ct-link view-edit-team" data-team-id="{{ team.team_id }}">View/Edit Members</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="ct-pagination" id="teams-pagination"></div>
+    </div>
+</div>
+
+<!-- Modal for editing team members -->
+<div class="ct-modal-overlay" id="edit-team-modal" style="display:none;">
+    <div class="ct-modal-content" style="max-width:600px;">
+        <span class="ct-close-modal" id="close-edit-modal">&times;</span>
+        <h3>Edit Team Members</h3>
+        <div id="edit-team-members-list"></div>
+        <div class="ct-form-group" style="margin-top:18px;">
+            <label for="add-member-select">Add Member to Team:</label>
+            <select id="add-member-select" style="width:100%;padding:8px;border-radius:8px;"></select>
+            <button class="ct-btn-primary" id="add-member-btn" style="margin-top:10px;">Add Member</button>
+        </div>
+    </div>
+</div>
+<script src="{% static 'js/view_edit_teams.js' %}"></script>
+{% endblock %}

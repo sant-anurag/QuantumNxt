@@ -7,6 +7,11 @@ import mysql.connector
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse
+import json
+from django.shortcuts import render
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.db import connection
+from django.views.decorators.csrf import csrf_exempt
 
 def home(request):
     initializer = ATSDatabaseInitializer()
@@ -151,4 +156,107 @@ def team_members(request, team_id):
         if 'conn' in locals():
             conn.close()
     return JsonResponse({"members": members})
-# Create your views here.
+
+def get_db_connection_ats():
+    return mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password='root',
+        database='ats',
+        charset='utf8mb4'
+    )
+
+def view_edit_teams(request):
+    teams = []
+    try:
+        conn = get_db_connection_ats()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
+            FROM teams t
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            GROUP BY t.team_id, t.team_name, t.created_at
+            ORDER BY t.created_at DESC
+        """)
+        teams = cursor.fetchall()
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return render(request, 'view_edit_teams.html', {'teams': teams})
+
+def team_members_api(request, team_id):
+    members = []
+    available_members = []
+    try:
+        conn = get_db_connection_ats()
+        cursor = conn.cursor(dictionary=True)
+        # Get team members
+        cursor.execute("""
+            SELECT m.emp_id, m.first_name, m.last_name, m.email, m.role
+            FROM hr_team_members m
+            INNER JOIN team_members tm ON m.emp_id = tm.emp_id
+            WHERE tm.team_id = %s
+        """, [team_id])
+        members = cursor.fetchall()
+        # Get available members not in this team
+        cursor.execute("""
+            SELECT m.emp_id, m.first_name, m.last_name, m.email
+            FROM hr_team_members m
+            WHERE m.emp_id NOT IN (
+                SELECT emp_id FROM team_members WHERE team_id = %s
+            )
+        """, [team_id])
+        available_members = cursor.fetchall()
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return JsonResponse({'members': members, 'available_members': available_members})
+
+@csrf_exempt
+def add_member_api(request, team_id):
+    try:
+        data = json.loads(request.body)
+        emp_id = data.get('emp_id')
+        if not emp_id:
+            return HttpResponseBadRequest("emp_id required")
+        conn = get_db_connection_ats()
+        cursor = conn.cursor()
+        # Insert into team_members, ignore if already exists
+        cursor.execute("""
+            INSERT IGNORE INTO team_members (team_id, emp_id) VALUES (%s, %s)
+        """, [team_id, emp_id])
+        conn.commit()
+    except Exception as e:
+        return HttpResponseBadRequest(str(e))
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return team_members_api(request, team_id)
+
+@csrf_exempt
+def remove_member_api(request, team_id):
+    try:
+        data = json.loads(request.body)
+        emp_id = data.get('emp_id')
+        if not emp_id:
+            return HttpResponseBadRequest("emp_id required")
+        conn = get_db_connection_ats()
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM team_members WHERE team_id = %s AND emp_id = %s
+        """, [team_id, emp_id])
+        conn.commit()
+    except Exception as e:
+        return HttpResponseBadRequest(str(e))
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+    return team_members_api(request, team_id)

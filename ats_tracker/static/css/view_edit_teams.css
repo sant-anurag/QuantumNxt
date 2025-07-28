@@ -1,0 +1,59 @@
+.ct-table-container { overflow-x: auto; }
+.ct-table th, .ct-table td { text-align: left; }
+.ct-table th { background: #f3f6fa; color: #174ea6; }
+.ct-table td { background: #fff; }
+.ct-link { color: #666de7; text-decoration: underline; cursor: pointer; }
+.ct-link:hover { color: #11b7ee; }
+.ct-modal-overlay {
+    position: fixed;
+    top: 0; left: 270px; right: 0; bottom: 0;
+    background: rgba(34, 44, 64, 0.38);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ct-modal-content {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 44px 0 rgba(30, 60, 120, 0.19), 0 2px 8px 0 rgba(68,110,172,0.08);
+    padding: 36px 32px 28px 32px;
+    min-width: 340px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+.ct-close-modal {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-size: 1.7em;
+    color: #b2b8d6;
+    cursor: pointer;
+    font-weight: 700;
+    z-index: 2;
+    transition: color 0.15s;
+}
+.ct-close-modal:hover { color: #e74c3c; }
+.ct-form-group label { font-weight: 600; color: #174ea6; }
+.ct-btn-primary { margin-top: 6px; }
+.ct-pagination { display: flex; gap: 7px; margin-top: 18px; }
+.ct-pagination button {
+    background: #f7fbfe;
+    border: 1.2px solid #dde6ee;
+    color: #666de7;
+    border-radius: 7px;
+    padding: 5px 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ct-pagination button.active,
+.ct-pagination button:hover {
+    background: linear-gradient(90deg, #666de7 0%, #11b7ee 100%);
+    color: #fff;
+    border-color: #11b7ee;
+}
+.ct-no-data { color: #da3c45; text-align: center; font-weight: 500; }
