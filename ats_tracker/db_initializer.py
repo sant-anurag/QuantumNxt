@@ -55,6 +55,27 @@ class ATSDatabaseInitializer:
                 UNIQUE(team_id, emp_id)
             );
         """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recruitment_jds (
+                jd_id VARCHAR(8) PRIMARY KEY,
+                jd_summary VARCHAR(255) NOT NULL,
+                jd_description TEXT NOT NULL,
+                must_have_skills TEXT,
+                good_to_have_skills TEXT,
+                total_profiles INT DEFAULT 0,
+                profiles_in_progress INT DEFAULT 0,
+                profiles_completed INT DEFAULT 0,
+                profiles_selected INT DEFAULT 0,
+                profiles_rejected INT DEFAULT 0,
+                profiles_on_hold INT DEFAULT 0,
+                jd_status ENUM('active', 'closed', 'on hold') DEFAULT 'active',
+                created_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(user_id)
+            );
+        """)
         self.conn.commit()
         print("Database, HR team members, and teams tables created.")
 

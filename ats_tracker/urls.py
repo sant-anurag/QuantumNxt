@@ -12,4 +12,7 @@ urlpatterns = [
     path('teams/<int:team_id>/members/', views.team_members_api, name='team_members_api'),
     path('teams/<int:team_id>/add_member/', views.add_member_api, name='add_member_api'),
     path('teams/<int:team_id>/remove_member/', views.remove_member_api, name='remove_member_api'),
+    path('jds/', views.jd_list, name='jd_create'),
+    path('jds/create/', views.create_jd, name='create_jd'),
+    path('jds/<str:jd_id>/', views.jd_detail, name='jd_detail'),
 ]

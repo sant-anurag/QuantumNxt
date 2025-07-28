@@ -313,3 +313,103 @@ def remove_member_api(request, team_id):
         if 'conn' in locals():
             conn.close()
     return team_members_api(request, team_id)
+
+# python
+
+
+def get_db():
+    return mysql.connector.connect(
+        host="localhost", user="root", password="root", database="ats"
+    )
+
+def generate_jd_id():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT jd_id FROM recruitment_jds ORDER BY created_at DESC LIMIT 1")
+    last = cursor.fetchone()
+    if last:
+        num = int(last[0][2:]) + 1
+    else:
+        num = 1
+    return f"JD{num:02d}"
+
+# python
+def jd_list(request):
+    search = request.GET.get("search", "")
+    page = int(request.GET.get("page", 1))
+    limit = 10
+    offset = (page - 1) * limit
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    query = "SELECT * FROM recruitment_jds"
+    params = []
+    if search:
+        query += " WHERE jd_id LIKE %s OR jd_summary LIKE %s"
+        params = [f"%{search}%", f"%{search}%"]
+    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    params += [limit, offset]
+    cursor.execute(query, params)
+    jds = cursor.fetchall()
+    cursor.execute("SELECT COUNT(*) FROM recruitment_jds" + (" WHERE jd_id LIKE %s OR jd_summary LIKE %s" if search else ""), params[:2] if search else [])
+    count_row = cursor.fetchone()
+    total = count_row['COUNT(*)'] if count_row else 0
+    num_pages = (total // limit) + (1 if total % limit else 0)
+    page_range = range(1, num_pages + 1)
+    conn.close()
+    return render(request, "jd_create.html", {
+        "jds": jds,
+        "total": total,
+        "page": page,
+        "search": search,
+        "page_range": page_range
+    })
+
+@csrf_exempt
+def create_jd(request):
+    if request.method == "POST":
+        jd_id = generate_jd_id()
+        jd_summary = request.POST["jd_summary"]
+        jd_description = request.POST["jd_description"]
+        must_have_skills = request.POST["must_have_skills"]
+        good_to_have_skills = request.POST["good_to_have_skills"]
+        total_profiles = int(request.POST.get("total_profiles", 0))
+        jd_status = request.POST.get("jd_status", "active")
+        created_by = request.session.get("user_id", None)
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO recruitment_jds
+            (jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, created_by))
+        conn.commit()
+        conn.close()
+        return redirect("jd_create")
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+@csrf_exempt
+def jd_detail(request, jd_id):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    if request.method == "GET":
+        cursor.execute("SELECT * FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+        jd = cursor.fetchone()
+        conn.close()
+        return JsonResponse(jd)
+    elif request.method == "POST":
+        # Update JD
+        jd_summary = request.POST["jd_summary"]
+        jd_description = request.POST["jd_description"]
+        must_have_skills = request.POST["must_have_skills"]
+        good_to_have_skills = request.POST["good_to_have_skills"]
+        total_profiles = int(request.POST.get("total_profiles", 0))
+        jd_status = request.POST.get("jd_status", "active")
+        cursor.execute("""
+            UPDATE recruitment_jds SET
+            jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
+            total_profiles=%s, jd_status=%s, updated_at=NOW()
+            WHERE jd_id=%s
+        """, (jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, jd_id))
+        conn.commit()
+        conn.close()
+        return JsonResponse({"success": True})
