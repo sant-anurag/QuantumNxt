@@ -16,6 +16,7 @@ from django.contrib import messages
 from django.contrib.auth.hashers import check_password
 from django.utils.html import escape
 from django.contrib.auth.hashers import make_password
+from django.utils.html import escape
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -333,7 +334,6 @@ def generate_jd_id():
         num = 1
     return f"JD{num:02d}"
 
-# python
 def jd_list(request):
     search = request.GET.get("search", "")
     page = int(request.GET.get("page", 1))
@@ -341,12 +341,17 @@ def jd_list(request):
     offset = (page - 1) * limit
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    query = "SELECT * FROM recruitment_jds"
+    # Join with customers to get company name
+    query = """
+        SELECT j.*, c.company_name
+        FROM recruitment_jds j
+        LEFT JOIN customers c ON j.company_id = c.company_id
+    """
     params = []
     if search:
-        query += " WHERE jd_id LIKE %s OR jd_summary LIKE %s"
+        query += " WHERE j.jd_id LIKE %s OR j.jd_summary LIKE %s"
         params = [f"%{search}%", f"%{search}%"]
-    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    query += " ORDER BY j.created_at DESC LIMIT %s OFFSET %s"
     params += [limit, offset]
     cursor.execute(query, params)
     jds = cursor.fetchall()
@@ -355,23 +360,29 @@ def jd_list(request):
     total = count_row['COUNT(*)'] if count_row else 0
     num_pages = (total // limit) + (1 if total % limit else 0)
     page_range = range(1, num_pages + 1)
+    # Fetch companies for dropdown
+    cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
+    companies = cursor.fetchall()
     conn.close()
     return render(request, "jd_create.html", {
         "jds": jds,
         "total": total,
         "page": page,
         "search": search,
-        "page_range": page_range
+        "page_range": page_range,
+        "companies": companies
     })
 
 @csrf_exempt
 def create_jd(request):
     if request.method == "POST":
         jd_id = generate_jd_id()
+        company_id = request.POST.get("company_id")
         jd_summary = request.POST["jd_summary"]
         jd_description = request.POST["jd_description"]
         must_have_skills = request.POST["must_have_skills"]
         good_to_have_skills = request.POST["good_to_have_skills"]
+        no_of_positions = int(request.POST.get("no_of_positions", 1))
         total_profiles = int(request.POST.get("total_profiles", 0))
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
@@ -379,9 +390,9 @@ def create_jd(request):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO recruitment_jds
-            (jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, created_by)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, created_by))
+            (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, created_by))
         conn.commit()
         conn.close()
         return redirect("jd_create")
@@ -392,24 +403,75 @@ def jd_detail(request, jd_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     if request.method == "GET":
-        cursor.execute("SELECT * FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+        cursor.execute("""
+            SELECT j.*, c.company_name
+            FROM recruitment_jds j
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            WHERE j.jd_id=%s
+        """, (jd_id,))
         jd = cursor.fetchone()
+        # Also fetch companies for modal dropdown
+        cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
+        companies = cursor.fetchall()
+        jd['companies'] = companies
         conn.close()
         return JsonResponse(jd)
     elif request.method == "POST":
-        # Update JD
+        company_id = request.POST.get("company_id")
         jd_summary = request.POST["jd_summary"]
         jd_description = request.POST["jd_description"]
         must_have_skills = request.POST["must_have_skills"]
         good_to_have_skills = request.POST["good_to_have_skills"]
-        total_profiles = int(request.POST.get("total_profiles", 0))
+        no_of_positions = int(request.POST.get("no_of_positions", 1))
         jd_status = request.POST.get("jd_status", "active")
         cursor.execute("""
             UPDATE recruitment_jds SET
-            jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
-            total_profiles=%s, jd_status=%s, updated_at=NOW()
+            company_id=%s, jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
+            no_of_positions=%s, jd_status=%s, updated_at=NOW()
             WHERE jd_id=%s
-        """, (jd_summary, jd_description, must_have_skills, good_to_have_skills, total_profiles, jd_status, jd_id))
+        """, (company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, jd_id))
         conn.commit()
         conn.close()
         return JsonResponse({"success": True})
+
+
+def create_customer(request):
+    message = error = None
+    if request.method == "POST":
+        company_name = request.POST.get("company_name", "").strip()
+        contact_person_name = request.POST.get("contact_person_name", "").strip()
+        contact_email = request.POST.get("contact_email", "").strip()
+        contact_phone = request.POST.get("contact_phone", "").strip()
+        # Basic validation
+        if not company_name or not contact_person_name or not contact_email or not contact_phone:
+            error = "All fields are required."
+        elif '@' not in contact_email or len(contact_email) > 100:
+            error = "Invalid email address."
+        elif len(company_name) > 255 or len(contact_person_name) > 100:
+            error = "Company or contact name too long."
+        elif len(contact_phone) > 20:
+            error = "Phone number too long."
+        else:
+            try:
+                conn = get_db_connection_ats()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO customers (company_name, contact_person_name, contact_email, contact_phone)
+                    VALUES (%s, %s, %s, %s)
+                """, [company_name, contact_person_name, contact_email, contact_phone])
+                conn.commit()
+                message = f"Customer '{escape(company_name)}' created successfully!"
+            except Exception as e:
+                if 'Duplicate entry' in str(e):
+                    error = "A customer with this company name or email/phone already exists."
+                else:
+                    error = f"Failed to create customer: {str(e)}"
+            finally:
+                if 'cursor' in locals():
+                    cursor.close()
+                if 'conn' in locals():
+                    conn.close()
+    return render(request, "create_customer.html", {
+        "message": message,
+        "error": error
+    })

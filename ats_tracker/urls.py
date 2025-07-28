@@ -15,4 +15,5 @@ urlpatterns = [
     path('jds/', views.jd_list, name='jd_create'),
     path('jds/create/', views.create_jd, name='create_jd'),
     path('jds/<str:jd_id>/', views.jd_detail, name='jd_detail'),
+    path('create_customer/', views.create_customer, name='create_customer'),
 ]

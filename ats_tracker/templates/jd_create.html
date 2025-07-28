@@ -2,135 +2,54 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/jd.css' %}">
-<div class="jd-container">
-    <div class="jd-form-section">
-        <h2>Create Job Description</h2>
-        <form id="jdForm" method="post" action="{% url 'create_jd' %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label>JD Summary</label>
-                <input type="text" name="jd_summary" required maxlength="255">
-            </div>
-            <div class="form-group">
-                <label>JD Description</label>
-                <textarea name="jd_description" required></textarea>
-            </div>
-            <div class="form-group">
-                <label>Must Have Skills</label>
-                <input type="text" name="must_have_skills" required>
-            </div>
-            <div class="form-group">
-                <label>Good to Have Skills</label>
-                <input type="text" name="good_to_have_skills">
-            </div>
-            <div class="form-group">
-                <label>Total Profiles</label>
-                <input type="number" name="total_profiles" min="0" value="0">
-            </div>
-            <div class="form-group">
-                <label>Status</label>
-                <select name="jd_status">
-                    <option value="active">Active</option>
-                    <option value="closed">Closed</option>
-                    <option value="on hold">On Hold</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-primary">Create JD</button>
-        </form>
-    </div>
-    <div class="jd-list-section">
-        <div class="jd-list-header">
-            <h2>JD List</h2>
-            <input type="text" id="jdSearch" placeholder="Search JD ID or Summary..." value="{{ search }}">
-        </div>
-        <table class="jd-table">
-            <thead>
-                <tr>
-                    <th>JD ID</th>
-                    <th>Summary</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th>In Progress</th>
-                    <th>Completed</th>
-                    <th>Selected</th>
-                    <th>Rejected</th>
-                    <th>On Hold</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for jd in jds %}
-                <tr>
-                    <td>{{ jd.jd_id }}</td>
-                    <td>{{ jd.jd_summary }}</td>
-                    <td>{{ jd.jd_status }}</td>
-                    <td>{{ jd.total_profiles }}</td>
-                    <td>{{ jd.profiles_in_progress }}</td>
-                    <td>{{ jd.profiles_completed }}</td>
-                    <td>{{ jd.profiles_selected }}</td>
-                    <td>{{ jd.profiles_rejected }}</td>
-                    <td>{{ jd.profiles_on_hold }}</td>
-                    <td>
-                        <button class="btn-action" onclick="openJDModal('{{ jd.jd_id }}')">View/Edit</button>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr><td colspan="10">No JDs found.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <div class="pagination">
-            {% for p in page_range %}
-                <a href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
-            {% endfor %}
-        </div>
-    </div>
-</div>
+<div class="jd-form-outer">
+    <h2>Create Job Description</h2>
+    <form id="jdForm" method="post" action="{% url 'create_jd' %}" class="jd-grid-form">
+        {% csrf_token %}
 
-<!-- JD Modal -->
-<div id="jdModal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <form id="jdEditForm">
-            <h3>JD Details</h3>
-            <div class="form-group">
-                <label>JD ID</label>
-                <input type="text" name="jd_id" readonly>
-            </div>
-            <div class="form-group">
-                <label>JD Summary</label>
-                <input type="text" name="jd_summary" required>
-            </div>
-            <div class="form-group">
-                <label>JD Description</label>
-                <textarea name="jd_description" required></textarea>
-            </div>
-            <div class="form-group">
-                <label>Must Have Skills</label>
-                <input type="text" name="must_have_skills" required>
-            </div>
-            <div class="form-group">
-                <label>Good to Have Skills</label>
-                <input type="text" name="good_to_have_skills">
-            </div>
-            <div class="form-group">
-                <label>Total Profiles</label>
-                <input type="number" name="total_profiles" min="0">
-            </div>
-            <div class="form-group">
-                <label>Status</label>
-                <select name="jd_status">
-                    <option value="active">Active</option>
-                    <option value="closed">Closed</option>
-                    <option value="on hold">On Hold</option>
-                </select>
-            </div>
-            <div class="modal-actions">
-                <button type="button" onclick="enableEditJD()">Edit</button>
-                <button type="submit" style="display:none;">Save</button>
-                <button type="button" onclick="closeJDModal()">Close</button>
-            </div>
-        </form>
-    </div>
+        <div class="form-group">
+            <label>JD Summary</label>
+            <input type="text" name="jd_summary" required maxlength="100" placeholder="Brief summary of the job description (max 100 characters)">
+        </div>
+        <div class="form-group">
+            <label>Company</label>
+            <select name="company_id" required>
+                <option value="">Select Company</option>
+                {% for company in companies %}
+                    <option value="{{ company.company_id }}">{{ company.company_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group form-group-full">
+            <label>JD Description</label>
+            <textarea name="jd_description" required rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Must Have Skills</label>
+            <input type="text" name="must_have_skills" required>
+        </div>
+        <div class="form-group">
+            <label>Good to Have Skills</label>
+            <input type="text" name="good_to_have_skills">
+        </div>
+        <div class="form-group">
+            <label>No. of Positions</label>
+            <input type="number" name="no_of_positions" min="1" value="1" required>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select name="jd_status">
+                <option value="active">Active</option>
+                <option value="closed">Closed</option>
+                <option value="on hold">On Hold</option>
+            </select>
+        </div>
+
+        <div class="form-group form-actions form-group-full">
+            <button type="submit" class="btn-primary">Create JD</button>
+        </div>
+    </form>
 </div>
 <script src="{% static 'js/jd.js' %}"></script>
 {% endblock %}

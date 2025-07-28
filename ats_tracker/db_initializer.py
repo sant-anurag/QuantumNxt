@@ -56,6 +56,18 @@ class ATSDatabaseInitializer:
             );
         """)
 
+       # Add this before recruitment_jds table creation
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS customers (
+                company_id INT AUTO_INCREMENT PRIMARY KEY,
+                company_name VARCHAR(255) NOT NULL UNIQUE,
+                contact_person_name VARCHAR(100) NOT NULL,
+                contact_email VARCHAR(100) NOT NULL,
+                contact_phone VARCHAR(20) NOT NULL
+            );
+        """)
+
+        # Update recruitment_jds table creation
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS recruitment_jds (
                 jd_id VARCHAR(8) PRIMARY KEY,
@@ -63,6 +75,7 @@ class ATSDatabaseInitializer:
                 jd_description TEXT NOT NULL,
                 must_have_skills TEXT,
                 good_to_have_skills TEXT,
+                no_of_positions INT DEFAULT 0,
                 total_profiles INT DEFAULT 0,
                 profiles_in_progress INT DEFAULT 0,
                 profiles_completed INT DEFAULT 0,
@@ -70,9 +83,11 @@ class ATSDatabaseInitializer:
                 profiles_rejected INT DEFAULT 0,
                 profiles_on_hold INT DEFAULT 0,
                 jd_status ENUM('active', 'closed', 'on hold') DEFAULT 'active',
+                company_id INT,
                 created_by INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES customers(company_id),
                 FOREIGN KEY (created_by) REFERENCES users(user_id)
             );
         """)

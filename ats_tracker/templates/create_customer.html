@@ -1,0 +1,39 @@
+{% extends "home.html" %}
+    {% load static %}
+    {% block content %}
+    <link rel="stylesheet" href="{% static 'css/customer.css' %}">
+    <!-- Add in <head> of home.html if not already present -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <div class="customer-form-outer">
+        <h2><i class="fas fa-building" style="margin-right:10px;"></i>Create Customer</h2>
+        {% if message %}
+            <div class="alert success">{{ message }}</div>
+        {% endif %}
+        {% if error %}
+            <div class="alert error">{{ error }}</div>
+        {% endif %}
+        <form id="customerForm" method="post" action="{% url 'create_customer' %}" class="customer-grid-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" name="company_name" required maxlength="255" placeholder="Enter company name">
+            </div>
+            <div class="form-group">
+                <label>Contact Person Name</label>
+                <input type="text" name="contact_person_name" required maxlength="100" placeholder="Contact person">
+            </div>
+            <div class="form-group">
+                <label>Contact Email</label>
+                <input type="email" name="contact_email" required maxlength="100" placeholder="Contact email">
+            </div>
+            <div class="form-group">
+                <label>Contact Phone</label>
+                <input type="text" name="contact_phone" required maxlength="20" placeholder="Contact phone">
+            </div>
+            <div class="form-group form-actions form-group-full">
+                <button type="submit" class="btn-primary">Create Customer</button>
+            </div>
+        </form>
+    </div>
+    <script src="{% static 'js/customer.js' %}"></script>
+    {% endblock %}
