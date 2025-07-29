@@ -1,0 +1,32 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/assign_jd.css' %}">
+<div class="assign-jd-main">
+    <header class="assign-jd-header">
+        <h2><i class="fas fa-link"></i> Assign JD to Team</h2>
+    </header>
+    <div class="assign-jd-form">
+        <div class="assign-jd-group">
+            <label for="assign-jd-select">Select JD</label>
+            <div class="assign-jd-dropdown">
+                <input type="text" id="jd-search-box" class="assign-jd-search" placeholder="Search JD ID or Summary...">
+                <select id="assign-jd-select" size="6"></select>
+            </div>
+        </div>
+        <div class="assign-jd-group">
+            <label for="assign-team-select">Select Team</label>
+            <div class="assign-jd-dropdown">
+                <input type="text" id="team-search-box" class="assign-jd-search" placeholder="Search Team Name...">
+                <select id="assign-team-select" size="6"></select>
+            </div>
+        </div>
+        <div class="assign-jd-actions">
+            <button id="assign-btn" class="assign-jd-btn-primary"><i class="fas fa-check"></i> Assign</button>
+            <button id="reset-btn" class="assign-jd-btn-secondary"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+    </div>
+    <div id="assign-jd-result" class="assign-jd-result" style="display:none;"></div>
+</div>
+<script src="{% static 'js/assign_jd.js' %}"></script>
+{% endblock %}

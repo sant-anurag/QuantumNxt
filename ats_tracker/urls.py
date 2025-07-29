@@ -19,4 +19,7 @@ urlpatterns = [
     path('view_edit_jds/', views.view_edit_jds, name='view_edit_jds'),
     path('get_jd/<str:jd_id>/', views.get_jd, name='get_jd'),
     path('update_jd/<str:jd_id>/', views.update_jd, name='update_jd'),
+    path('assign_jd/', views.assign_jd, name='assign_jd'),
+    path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
+    path('assign_jd_page/', views.assign_jd_page, name='assign_jd_page'),
 ]

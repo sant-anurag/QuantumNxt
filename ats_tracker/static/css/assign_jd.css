@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap');
+
+.assign-jd-main {
+    max-width: 700px;
+    margin: 40px auto 32px auto;
+    background: #f5f8fc;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px 0 rgba(0,32,56,0.07);
+    padding: 0 18px 32px 18px;
+    font-family: 'Inter', sans-serif;
+}
+.assign-jd-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 0 12px 0;
+    border-bottom: 1.5px solid #dde6ee;
+    background: #f8fbff;
+    border-radius: 18px 18px 0 0;
+    gap: 18px;
+}
+.assign-jd-header h2 {
+    font-size: 1.3em;
+    color: #666de7;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.assign-jd-form {
+    display: flex;
+    gap: 32px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+.assign-jd-group {
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.assign-jd-group label {
+    font-size: 1em;
+    font-weight: 600;
+    color: #174ea6;
+    margin-bottom: 0;
+}
+.assign-jd-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.assign-jd-search {
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #dde6ee;
+    font-size: 1em;
+    background: #f7fbfe;
+    color: #233243;
+    font-weight: 500;
+    outline: none;
+    transition: border .2s;
+}
+.assign-jd-search:focus {
+    border-color: #666de7;
+    background: #fff;
+}
+#assign-jd-select, #assign-team-select {
+    width: 100%;
+    border-radius: 10px;
+    border: 1.5px solid #dde6ee;
+    font-size: 1em;
+    background: #fff;
+    color: #233243;
+    font-weight: 500;
+    min-height: 120px;
+    max-height: 180px;
+    outline: none;
+    transition: border .2s;
+}
+.assign-jd-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 18px;
+    justify-content: flex-end;
+    width: 100%;
+}
+.assign-jd-btn-primary, .assign-jd-btn-secondary {
+    border: none;
+    border-radius: 12px;
+    padding: 9px 22px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 2px 18px rgba(80,170,255,0.12);
+    transition: background .13s, box-shadow .14s, transform .1s;
+}
+.assign-jd-btn-primary {
+    background: linear-gradient(96deg, #666de7 0%, #11b7ee 100%);
+    color: #fff;
+}
+.assign-jd-btn-primary:hover {
+    background: linear-gradient(97deg, #11b7ee 0%, #666de7 100%);
+    box-shadow: 0 6px 32px rgba(20,66,201,0.10);
+    transform: scale(1.03);
+}
+.assign-jd-btn-secondary {
+    background: #f3f6fa;
+    color: #174ea6;
+}
+.assign-jd-btn-secondary:hover {
+    background: #e5e8ff;
+}
+.assign-jd-result {
+    margin-top: 32px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(80,170,255,0.09);
+    padding: 22px 18px;
+    font-size: 1.05em;
+    color: #233243;
+}
+.assign-jd-result h3 {
+    color: #666de7;
+    font-size: 1.15em;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+.assign-jd-result .jd-details, .assign-jd-result .team-details {
+    margin-bottom: 12px;
+}
+.assign-jd-result .team-members-list {
+    margin-top: 6px;
+    padding-left: 12px;
+}
+.assign-jd-result .team-members-list li {
+    margin-bottom: 2px;
+    color: #174ea6;
+    font-weight: 500;
+}
+@media (max-width: 900px) {
+    .assign-jd-main { margin: 12px auto 12px auto; }
+    .assign-jd-form { flex-direction: column; gap: 18px; }
+}

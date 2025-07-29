@@ -612,3 +612,56 @@ def update_jd(request, jd_id):
         conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid method'}, status=405)
+
+def assign_jd_data(request):
+    conn = get_db_connection_ats()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
+        FROM recruitment_jds
+        ORDER BY created_at DESC
+    """)
+    jds = cursor.fetchall()
+    cursor.execute("SELECT team_id, team_name FROM teams ORDER BY team_name")
+    teams = cursor.fetchall()
+    conn.close()
+    return JsonResponse({"jds": jds, "teams": teams})
+
+@csrf_exempt
+def assign_jd(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+    data = json.loads(request.body)
+    jd_id = data.get("jd_id")
+    team_id = data.get("team_id")
+    if not jd_id or not team_id:
+        return JsonResponse({"error": "JD and Team required"}, status=400)
+    conn = get_db_connection_ats()
+    cursor = conn.cursor()
+    # Update JD with team_id
+    cursor.execute("UPDATE recruitment_jds SET team_id=%s WHERE jd_id=%s", [team_id, jd_id])
+    conn.commit()
+    # Fetch JD details
+    cursor.execute("""
+        SELECT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, c.company_name
+        FROM recruitment_jds j
+        LEFT JOIN customers c ON j.company_id = c.company_id
+        WHERE j.jd_id=%s
+    """, [jd_id])
+    jd = cursor.fetchone()
+    # Fetch team details
+    cursor.execute("SELECT team_id, team_name FROM teams WHERE team_id=%s", [team_id])
+    team = cursor.fetchone()
+    # Fetch team members
+    cursor.execute("""
+        SELECT m.first_name, m.last_name, m.email
+        FROM hr_team_members m
+        INNER JOIN team_members tm ON m.emp_id = tm.emp_id
+        WHERE tm.team_id=%s
+    """, [team_id])
+    members = cursor.fetchall()
+    conn.close()
+    return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
+
+def assign_jd_page(request):
+    return render(request, "assign_jd.html")
