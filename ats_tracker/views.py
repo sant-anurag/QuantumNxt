@@ -340,6 +340,7 @@ def generate_jd_id():
     return f"JD{num:02d}"
 
 def jd_list(request):
+    print("jd_list -> Request method:", request.method)
     search = request.GET.get("search", "")
     page = int(request.GET.get("page", 1))
     limit = 10
@@ -380,6 +381,7 @@ def jd_list(request):
 
 @csrf_exempt
 def create_jd(request):
+    print("create_jd -> Request method:", request.method)
     message = error = None
     if request.method == "POST":
         jd_id = generate_jd_id()
@@ -432,6 +434,7 @@ def create_jd(request):
 
 @csrf_exempt
 def jd_detail(request, jd_id):
+    print("jd_detail -> Request method:", request.method)
     conn = get_db_connection_ats()
     cursor = conn.cursor(dictionary=True)
     if request.method == "GET":
@@ -511,6 +514,7 @@ def create_customer(request):
 
 
 def view_edit_jds(request):
+    print("view_edit_jds -> Request method:", request.method)
     conn = get_db_connection_ats()
     cursor = conn.cursor()
     cursor.execute("""
@@ -542,6 +546,7 @@ def view_edit_jds(request):
     })
 
 def get_jd(request, jd_id):
+    print("get_jd details-> Request method:", request.method)
     conn = get_db_connection_ats()
     cursor = conn.cursor()
     cursor.execute("""
