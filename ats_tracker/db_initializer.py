@@ -84,10 +84,13 @@ class ATSDatabaseInitializer:
                 profiles_on_hold INT DEFAULT 0,
                 jd_status ENUM('active', 'closed', 'on hold') DEFAULT 'active',
                 company_id INT,
+                team_id INT,
                 created_by INT,
+                closure_date DATE NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (company_id) REFERENCES customers(company_id),
+                FOREIGN KEY (team_id) REFERENCES teams(team_id),
                 FOREIGN KEY (created_by) REFERENCES users(user_id)
             );
         """)
