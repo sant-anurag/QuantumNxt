@@ -90,58 +90,84 @@
     <div class="jd-modal-content">
         <span class="jd-close-modal" id="jd-close-modal">&times;</span>
         <form id="jd-edit-form">
-            <h3><i class="fas fa-file-alt"></i> JD Details</h3>
-            <div class="jd-form-group">
-                <label>JD ID</label>
-                <input type="text" name="jd_id" id="jd_id" readonly>
+            <h3 style="color: #666de7;"><i class="fas fa-file-alt"></i> JD Details</h3>
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>JD ID</label>
+                    <input type="text" name="jd_id" id="jd_id" readonly>
+                </div>
+                <div class="jd-form-group">
+                    <label>Summary</label>
+                    <input type="text" name="jd_summary" id="jd_summary" required>
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Summary</label>
-                <input type="text" name="jd_summary" id="jd_summary" required>
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Description</label>
+                    <textarea name="jd_description" id="jd_description" rows="3" required></textarea>
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Description</label>
-                <textarea name="jd_description" id="jd_description" rows="3" required></textarea>
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Must Have Skills</label>
+                    <input type="text" name="must_have_skills" id="must_have_skills">
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Must Have Skills</label>
-                <input type="text" name="must_have_skills" id="must_have_skills">
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Good to Have Skills</label>
+                    <input type="text" name="good_to_have_skills" id="good_to_have_skills">
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Good to Have Skills</label>
-                <input type="text" name="good_to_have_skills" id="good_to_have_skills">
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Experience Range</label>
+                    <input type="text" name="experience_range" id="experience_range" placeholder="e.g. 2-5 years">
+                </div>
+
+                <div class="jd-form-group">
+                    <label>Education</label>
+                    <input type="text" name="education" id="education" placeholder="e.g. B.Tech, MBA">
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>No. of Positions</label>
-                <input type="number" name="no_of_positions" id="no_of_positions" min="1">
+            <div class="jd-form-row">
+
+                <div class="jd-form-group">
+                    <label>No. of Positions</label>
+                    <input type="number" name="no_of_positions" id="no_of_positions" min="1">
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Status</label>
-                <select name="jd_status" id="jd_status">
-                    <option value="active">Active</option>
-                    <option value="closed">Closed</option>
-                    <option value="on hold">On Hold</option>
-                </select>
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Status</label>
+                    <select name="jd_status" id="jd_status">
+                        <option value="active">Active</option>
+                        <option value="closed">Closed</option>
+                        <option value="on hold">On Hold</option>
+                    </select>
+                </div>
+                <div class="jd-form-group">
+                    <label>Company</label>
+                    <select name="company_id" id="company_id">
+                        {% for c in companies %}
+                            <option value="{{ c.0 }}">{{ c.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-            <div class="jd-form-group">
-                <label>Company</label>
-                <select name="company_id" id="company_id">
-                    {% for c in companies %}
-                        <option value="{{ c.0 }}">{{ c.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="jd-form-group">
-                <label>Team</label>
-                <select name="team_id" id="team_id">
-                    {% for t in teams %}
-                        <option value="{{ t.0 }}">{{ t.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="jd-form-group">
-                <label>Closure Date</label>
-                <input type="date" name="closure_date" id="closure_date">
+            <div class="jd-form-row">
+                <div class="jd-form-group">
+                    <label>Team</label>
+                    <select name="team_id" id="team_id">
+                        {% for t in teams %}
+                            <option value="{{ t.0 }}">{{ t.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="jd-form-group">
+                    <label>Closure Date</label>
+                    <input type="date" name="closure_date" id="closure_date">
+                </div>
             </div>
             <div class="jd-modal-actions">
                 <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>

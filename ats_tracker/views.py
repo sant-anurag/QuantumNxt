@@ -568,32 +568,42 @@ def get_jd(request, jd_id):
 
 @csrf_exempt
 def update_jd(request, jd_id):
+    print("update_jd -> Request method:", request.method)
     if request.method == 'POST':
         data = json.loads(request.body)
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                UPDATE recruitment_jds SET
-                    jd_summary=%s,
-                    jd_description=%s,
-                    must_have_skills=%s,
-                    good_to_have_skills=%s,
-                    no_of_positions=%s,
-                    jd_status=%s,
-                    company_id=%s,
-                    team_id=%s,
-                    closure_date=%s
-                WHERE jd_id=%s
-            """, [
-                data['jd_summary'],
-                data['jd_description'],
-                data['must_have_skills'],
-                data['good_to_have_skills'],
-                data['no_of_positions'],
-                data['jd_status'],
-                data['company_id'],
-                data['team_id'],
-                data['closure_date'] if data['closure_date'] else None,
-                jd_id
-            ])
+        conn = get_db_connection_ats()
+        cursor = conn.cursor()
+        print("update_jd -> Data received:", data)
+
+        team_id = data['team_id'] if data['team_id'] not in ('', None) else None
+        company_id = data['company_id'] if data['company_id'] not in ('', None) else None
+
+        cursor.execute("""
+            UPDATE recruitment_jds SET
+                jd_summary=%s,
+                jd_description=%s,
+                must_have_skills=%s,
+                good_to_have_skills=%s,
+                no_of_positions=%s,
+                jd_status=%s,
+                company_id=%s,
+                team_id=%s,
+                closure_date=%s
+            WHERE jd_id=%s
+        """, [
+            data['jd_summary'],
+            data['jd_description'],
+            data['must_have_skills'],
+            data['good_to_have_skills'],
+            data['no_of_positions'],
+            data['jd_status'],
+            company_id,
+            team_id,
+            data['closure_date'] if data['closure_date'] else None,
+            jd_id
+        ])
+        conn.commit()
+        cursor.close()
+        conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid method'}, status=405)
