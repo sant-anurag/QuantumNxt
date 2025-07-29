@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+    body {
+        margin: 0;
+        font-family: 'Inter', Arial, sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #e3eafc 0%, #c1d3fe 100%);
+        color: #222;
+        overflow-x: hidden;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 260px;
+        height: 100%;
+        background: linear-gradient(120deg, rgba(255,255,255,0.85) 0%, rgba(210,220,255,0.65) 100%);
+        box-shadow: 2px 0 24px rgba(60, 80, 180, 0.09);
+        border-right: 1px solid #e0e7ff;
+        backdrop-filter: blur(12px);
+        transition: width 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+        overflow-y: auto;
+    }
+
+    .sidebar-header {
+        padding: 32px 20px 18px 20px;
+        background: rgba(230, 240, 255, 0.92);
+        border-bottom: 1px solid #dbeafe;
+        text-align: center;
+    }
+
+    .sidebar-header h2 {
+        margin: 0;
+        font-size: 1.5em;
+        font-weight: 700;
+        color: #3b82f6;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 12px rgba(59,130,246,0.08);
+    }
+
+    .menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .menu > li > a {
+        display: flex;
+        align-items: center;
+        padding: 16px 24px;
+        color: #374151;
+        text-decoration: none;
+        font-size: 1.05em;
+        border-left: 3px solid transparent;
+        transition: background 0.22s, color 0.18s, border 0.18s, transform 0.16s;
+    }
+    .menu > li > a:hover, .menu > li.active > a {
+        background: linear-gradient(90deg, #e0e7ff 0%, #f1f5f9 100%);
+        color: #2563eb;
+        border-left: 3px solid #3b82f6;
+        font-weight: 500;
+        box-shadow: 0 2px 12px 0 rgba(59,130,246,0.07);
+        transform: scale(1.02) translateX(2px);
+    }
+
+    .menu i {
+        margin-right: 14px;
+        font-size: 1.15em;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .submenu {
+        display: none;
+        background: rgba(59,130,246,0.04);
+        border-radius: 0 0 10px 10px;
+        animation: fadeIn 0.18s;
+    }
+    .menu > li.active .submenu {
+        display: block;
+    }
+    .submenu li a {
+        display: block;
+        padding: 10px 40px;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 0.97em;
+        border-left: 2px solid transparent;
+        transition: background 0.15s, color 0.15s, border 0.15s;
+    }
+    .submenu li a:hover {
+        background: #e0e7ff;
+        color: #2563eb;
+        border-left: 2px solid #3b82f6;
+    }
+
+    .glass-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(210,220,255,0.85) 100%);
+        border-radius: 18px;
+        box-shadow: 0 6px 24px 0 rgba(59,130,246,0.09);
+        border: 1px solid #e0e7ff;
+        animation: glassy-fadeup 0.8s cubic-bezier(.45,.45,.30,1.34);
+        transition: box-shadow 0.18s, transform 0.14s;
+    }
+    .glass-card:hover {
+        box-shadow: 0 10px 32px rgba(59,130,246,0.13), 0 2px 16px rgba(59,130,246,0.09);
+        transform: translateY(-4px) scale(1.015);
+    }
+
+    .main-content {
+        margin-left: 260px;
+        padding: 40px 32px;
+        min-height: 100vh;
+        background: #f8fafc;
+        transition: margin-left 0.3s;
+        font-size: 1.07em;
+    }
+
+    @keyframes glassy-fadeup {
+        0% {transform: translateY(18px) scale(0.98); opacity:0;}
+        100% {transform: translateY(0) scale(1); opacity:1;}
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px);}
+        to { opacity: 1; transform: translateY(0);}
+    }
+
+    @media (max-width: 900px) {
+        .sidebar {
+            width: 60px;
+        }
+        .sidebar-header h2 {
+            display: none;
+        }
+        .main-content {
+            margin-left: 60px;
+            padding: 16px 2px;
+        }
+        .menu > li > a span {
+            display: none;
+        }
+        .submenu li a {
+            padding-left: 12px;
+        }
+    }
+
+    .menu > li > a:focus, .submenu li a:focus {
+        outline: 2px solid #3b82f6;
+        background: #e0e7ff;
+        outline-offset: 0;
+    }
+
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: #c7d2fe;
+        border-radius: 7px;
+    }

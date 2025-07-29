@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ----- Base Styling ----- */
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, Arial, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(120deg, #eef2f7 0%, #f7fafd 100%);
+    color: #232946;
+    letter-spacing: 0.01em;
+    font-size: 1.05em;
+    overflow-x: hidden;
+}
+
+/* ----- Sidebar ----- */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 252px;
+    height: 100vh;
+    background: linear-gradient(135deg, #252a41 0%, #4f5d95 40%, #8ea2ff 100%);
+    box-shadow: 2px 0 24px rgba(75,91,211,0.09);
+    border-right: 1px solid rgba(208,218,255,0.25);
+    backdrop-filter: blur(16px) saturate(1.8);
+    transition: width 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 32px 24px 18px 24px;
+    background: rgba(37,42,65,0.92);
+    border-bottom: 1px solid rgba(146,158,203,0.17);
+    text-align: center;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 14px #31375b22;
+    user-select: none;
+}
+
+/* ----- Side Nav Menu ----- */
+.menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.menu > li > a {
+    display: flex;
+    align-items: center;
+    padding: 15px 26px;
+    color: #cbd5f7;
+    text-decoration: none;
+    font-size: 1.04em;
+    border-radius: 8px;
+    margin: 0 10px;
+    font-weight: 500;
+    position: relative;
+    transition:
+        background 0.16s cubic-bezier(.58,.04,.50,.91),
+        color 0.15s,
+        transform 0.15s;
+}
+.menu > li > a:hover,
+.menu > li.active > a {
+    background: linear-gradient(97deg, #25325e 0%, #434d81 100%);
+    color: #fafafc;
+    font-weight: 600;
+    box-shadow: 0 3px 18px 0 rgba(99,102,241,0.08);
+    transform: translateX(2px) scale(1.03);
+}
+.menu > li > a:before {
+    content: "";
+    position: absolute;
+    left: 12px; top: 50%; transform: translateY(-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4f5d95;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.menu > li.active > a:before,
+.menu > li > a:hover:before {
+    opacity: 1;
+    background: #a5b4fc;
+}
+
+/* Menu Icons */
+.menu i {
+    margin-right: 14px;
+    font-size: 1.15em;
+    min-width: 24px;
+    text-align: center;
+    color: #b0b7d1;
+    transition: color 0.15s;
+}
+.menu > li.active > a i,
+.menu > li > a:hover i {
+    color: #a5b4fc;
+}
+
+/* ----- Submenu ----- */
+.submenu {
+    display: none;
+    background: linear-gradient(90deg, #202845cc 80%, #46538d33 100%);
+    border-radius: 0 0 12px 12px;
+    margin: 0 10px 6px;
+    animation: fadeIn 0.18s cubic-bezier(.32,.72,.59,1.36);
+}
+.menu > li.active .submenu {
+    display: block;
+}
+.submenu li a {
+    display: block;
+    padding: 10px 46px;
+    color: #a5accf;
+    text-decoration: none;
+    font-size: 0.97em;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    transition: background 0.13s, color 0.13s;
+}
+.submenu li a:hover,
+.submenu li a:focus {
+    background: #282e4b;
+    color: #e0e7ff;
+}
+
+.glass-card {
+    background: linear-gradient(119deg, rgba(255,255,255,0.98) 30%, rgba(238,242,255,0.7) 100%);
+    border-radius: 18px;
+    box-shadow: 0 6px 32px 0 rgba(115,131,255,0.09);
+    border: 1px solid #e2e8f0;
+    animation: cardFadeUp 0.5s cubic-bezier(.11,.78,.25,1.1);
+    transition: box-shadow 0.13s, transform 0.13s;
+}
+.glass-card:hover {
+    box-shadow: 0 10px 36px rgba(83,98,241,0.18), 0 2px 14px rgba(99,102,241,0.08);
+    transform: translateY(-3px) scale(1.015);
+}
+
+.main-content {
+    margin-left: 252px;
+    padding: 44px 40px;
+    min-height: 100vh;
+    background: #f8fafc;
+    transition: margin-left 0.3s;
+    font-size: 1.1em;
+}
+
+.btn-primary {
+    background: linear-gradient(92deg, #6366f1 0%, #7d84f7 100%);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 26px;
+    font-size: 1em;
+    font-weight: 600;
+    box-shadow: 0 3px 12px rgba(65,75,211,0.07);
+    cursor: pointer;
+    transition:
+        background 0.18s cubic-bezier(.42,.49,.3,1.1),
+        box-shadow 0.15s,
+        transform 0.11s;
+}
+.btn-primary:hover {
+    background: linear-gradient(92deg, #7280f7 0%, #4f5d95 100%);
+    box-shadow: 0 8px 24px rgba(99,102,241,0.12);
+    transform: scale(1.04);
+}
+
+/* ---- Animations ---- */
+@keyframes cardFadeUp {
+    0% { transform: translateY(24px) scale(0.96); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+
+/* ------- Responsive Sidebar ------- */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 58px;
+    }
+    .sidebar-header h2 {
+        display: none;
+    }
+    .main-content {
+        margin-left: 58px;
+        padding: 16px 4px;
+    }
+    .menu > li > a span {
+        display: none;
+    }
+    .submenu li a {
+        padding-left: 14px;
+    }
+}
+
+.menu > li > a:focus, .submenu li a:focus {
+    outline: 2px solid #4f5d95;
+    background: #232846;
+    outline-offset: 0;
+}
+
+/* ---- Scrollbar for Sidebar ---- */
+.sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(146,158,203,0.29);
+    border-radius: 7px;
+}
+
+/* Optional: Nice Scrollbar for main-content */
+.main-content::-webkit-scrollbar {
+    width: 7px;
+}
+.main-content::-webkit-scrollbar-thumb {
+    background: #e6eaf8;
+    border-radius: 7px;
+}
