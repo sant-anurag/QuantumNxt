@@ -17,6 +17,11 @@ from django.contrib.auth.hashers import check_password
 from django.utils.html import escape
 from django.contrib.auth.hashers import make_password
 from django.utils.html import escape
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.db import connection
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -339,7 +344,7 @@ def jd_list(request):
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
-    conn = get_db()
+    conn = get_db_connection_ats()
     cursor = conn.cursor(dictionary=True)
     # Join with customers to get company name
     query = """
@@ -387,7 +392,7 @@ def create_jd(request):
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
         try:
-            conn = get_db()
+            conn = get_db_connection_ats()
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO recruitment_jds
@@ -409,7 +414,7 @@ def create_jd(request):
         # Fetch companies for dropdown
         companies = []
         try:
-            conn = get_db()
+            conn = get_db_connection_ats()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
             companies = cursor.fetchall()
@@ -427,7 +432,7 @@ def create_jd(request):
 
 @csrf_exempt
 def jd_detail(request, jd_id):
-    conn = get_db()
+    conn = get_db_connection_ats()
     cursor = conn.cursor(dictionary=True)
     if request.method == "GET":
         cursor.execute("""
@@ -502,3 +507,93 @@ def create_customer(request):
         "message": message,
         "error": error
     })
+
+
+
+def view_edit_jds(request):
+    conn = get_db_connection_ats()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
+        FROM recruitment_jds
+        ORDER BY created_at DESC
+    """)
+    jds = [
+        {
+            'jd_id': row[0],
+            'jd_summary': row[1],
+            'jd_status': row[2],
+            'no_of_positions': row[3],
+            'company_id': row[4],
+            'team_id': row[5],
+            'created_at': row[6]
+        }
+        for row in cursor.fetchall()
+    ]
+    # Fetch companies and teams for dropdowns
+    cursor.execute("SELECT company_id, company_name FROM customers")
+    companies = cursor.fetchall()
+    cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = cursor.fetchall()
+    return render(request, 'view_edit_jds.html', {
+        'jds': jds,
+        'companies': companies,
+        'teams': teams
+    })
+
+def get_jd(request, jd_id):
+    conn = get_db_connection_ats()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills,
+               no_of_positions, jd_status, company_id, team_id, closure_date
+        FROM recruitment_jds WHERE jd_id=%s
+    """, [jd_id])
+    row = cursor.fetchone()
+    if not row:
+        return JsonResponse({'error': 'JD not found'}, status=404)
+    jd = {
+        'jd_id': row[0],
+        'jd_summary': row[1],
+        'jd_description': row[2],
+        'must_have_skills': row[3],
+        'good_to_have_skills': row[4],
+        'no_of_positions': row[5],
+        'jd_status': row[6],
+        'company_id': row[7],
+        'team_id': row[8],
+        'closure_date': row[9].isoformat() if row[9] else ''
+    }
+    return JsonResponse({'jd': jd})
+
+@csrf_exempt
+def update_jd(request, jd_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE recruitment_jds SET
+                    jd_summary=%s,
+                    jd_description=%s,
+                    must_have_skills=%s,
+                    good_to_have_skills=%s,
+                    no_of_positions=%s,
+                    jd_status=%s,
+                    company_id=%s,
+                    team_id=%s,
+                    closure_date=%s
+                WHERE jd_id=%s
+            """, [
+                data['jd_summary'],
+                data['jd_description'],
+                data['must_have_skills'],
+                data['good_to_have_skills'],
+                data['no_of_positions'],
+                data['jd_status'],
+                data['company_id'],
+                data['team_id'],
+                data['closure_date'] if data['closure_date'] else None,
+                jd_id
+            ])
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid method'}, status=405)

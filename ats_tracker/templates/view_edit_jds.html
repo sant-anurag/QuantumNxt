@@ -1,0 +1,155 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/view_edit_jds.css' %}">
+<div class="jd-main">
+    <header class="jd-header">
+        <h2><i class="fas fa-file-alt"></i> View/Edit JDs</h2>
+        <div class="jd-toggle">
+            <button id="toggle-view" class="jd-btn-toggle" title="Switch View">
+                <i class="fas fa-table"></i> <span>Table</span>
+            </button>
+        </div>
+    </header>
+    <div id="jd-table-view" class="jd-table-container">
+        <table class="jd-table">
+            <thead>
+                <tr>
+                    <th>JD ID</th>
+                    <th>Summary</th>
+                    <th>Status</th>
+                    <th>Positions</th>
+                    <th>Company</th>
+                    <th>Team</th>
+                    <th>Created</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for jd in jds %}
+                <tr>
+                    <td>{{ jd.jd_id }}</td>
+                    <td>{{ jd.jd_summary }}</td>
+                    <td>{{ jd.jd_status }}</td>
+                    <td>{{ jd.no_of_positions }}</td>
+                    <td>
+                        {% for c in companies %}
+                            {% if c.0 == jd.company_id %}{{ c.1 }}{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for t in teams %}
+                            {% if t.0 == jd.team_id %}{{ t.1 }}{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>{{ jd.created_at|date:"Y-m-d" }}</td>
+                    <td>
+                        <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="jd-no-data">No JDs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="jd-card-view" class="jd-card-list" style="display:none;">
+        {% for jd in jds %}
+        <div class="jd-card">
+            <div class="jd-card-header">
+                <span class="jd-id">{{ jd.jd_id }}</span>
+                <span class="jd-status {{ jd.jd_status|lower }}">{{ jd.jd_status }}</span>
+            </div>
+            <div class="jd-card-body">
+                <h3>{{ jd.jd_summary }}</h3>
+                <p><b>Positions:</b> {{ jd.no_of_positions }}</p>
+                <p><b>Company:</b>
+                    {% for c in companies %}
+                        {% if c.0 == jd.company_id %}{{ c.1 }}{% endif %}
+                    {% endfor %}
+                </p>
+                <p><b>Team:</b>
+                    {% for t in teams %}
+                        {% if t.0 == jd.team_id %}{{ t.1 }}{% endif %}
+                    {% endfor %}
+                </p>
+                <p><b>Created:</b> {{ jd.created_at|date:"Y-m-d" }}</p>
+            </div>
+            <div class="jd-card-actions">
+                <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="jd-no-data">No JDs found.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Overlay -->
+<div id="jd-modal-overlay" class="jd-modal-overlay" style="display:none;">
+    <div class="jd-modal-content">
+        <span class="jd-close-modal" id="jd-close-modal">&times;</span>
+        <form id="jd-edit-form">
+            <h3><i class="fas fa-file-alt"></i> JD Details</h3>
+            <div class="jd-form-group">
+                <label>JD ID</label>
+                <input type="text" name="jd_id" id="jd_id" readonly>
+            </div>
+            <div class="jd-form-group">
+                <label>Summary</label>
+                <input type="text" name="jd_summary" id="jd_summary" required>
+            </div>
+            <div class="jd-form-group">
+                <label>Description</label>
+                <textarea name="jd_description" id="jd_description" rows="3" required></textarea>
+            </div>
+            <div class="jd-form-group">
+                <label>Must Have Skills</label>
+                <input type="text" name="must_have_skills" id="must_have_skills">
+            </div>
+            <div class="jd-form-group">
+                <label>Good to Have Skills</label>
+                <input type="text" name="good_to_have_skills" id="good_to_have_skills">
+            </div>
+            <div class="jd-form-group">
+                <label>No. of Positions</label>
+                <input type="number" name="no_of_positions" id="no_of_positions" min="1">
+            </div>
+            <div class="jd-form-group">
+                <label>Status</label>
+                <select name="jd_status" id="jd_status">
+                    <option value="active">Active</option>
+                    <option value="closed">Closed</option>
+                    <option value="on hold">On Hold</option>
+                </select>
+            </div>
+            <div class="jd-form-group">
+                <label>Company</label>
+                <select name="company_id" id="company_id">
+                    {% for c in companies %}
+                        <option value="{{ c.0 }}">{{ c.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="jd-form-group">
+                <label>Team</label>
+                <select name="team_id" id="team_id">
+                    {% for t in teams %}
+                        <option value="{{ t.0 }}">{{ t.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="jd-form-group">
+                <label>Closure Date</label>
+                <input type="date" name="closure_date" id="closure_date">
+            </div>
+            <div class="jd-modal-actions">
+                <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
+                <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
+                <button type="button" id="jd-close-btn" class="jd-btn-secondary"><i class="fas fa-times"></i> Close</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="{% static 'js/view_edit_jds.js' %}"></script>
+{% endblock %}
