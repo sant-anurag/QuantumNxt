@@ -28,4 +28,5 @@ urlpatterns = [
     path('upload_resume/', views.upload_resume_page, name='upload_resume_page'),
     path('api/upload_resume/', views.upload_resume, name='api_upload_resume'),
     path('api/recent_resumes/', views.recent_resumes, name='api_recent_resumes'),
+    path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
 ]

@@ -29,6 +29,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
+from django.http import FileResponse, Http404
+
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -852,3 +854,19 @@ def recent_resumes(request):
     cursor.close()
     conn.close()
     return JsonResponse({'resumes': resumes})
+
+def download_resume(request, resume_id):
+    # Connect to DB and fetch file path and name
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT file_path, file_name FROM resumes WHERE resume_id=%s", (resume_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row:
+        raise Http404("Resume not found")
+    file_path = row['file_path']
+    file_name = row['file_name']
+    if not os.path.exists(file_path):
+        raise Http404("File not found")
+    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)

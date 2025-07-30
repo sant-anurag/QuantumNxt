@@ -73,7 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${r.uploaded_on}</td>
                 <td>${r.customer}</td>
                 <td class="status-${r.status}">${r.status}</td>
-                <td><a href="${r.file_url}" target="_blank"><i class="fas fa-file-alt"></i> View</a></td>
+                <td>
+                    <a href="/download_resume/${r.resume_id}/" download="${r.file_name}">
+                        <i class="fas fa-file-alt"></i> Download/View
+                    </a>
+                </td>
             </tr>`;
         });
         html += `</tbody></table>`;
