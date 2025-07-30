@@ -1,37 +1,24 @@
 # ats_tracker/views.py
-from django.shortcuts import render
-from django.db import connection
-from django.utils.html import escape
-from .db_initializer import ATSDatabaseInitializer
-import mysql.connector
-from django.shortcuts import render, redirect
-from django.urls import reverse
-from django.http import JsonResponse
-import json
-from django.shortcuts import render
-from django.http import JsonResponse, HttpResponseBadRequest
-from django.db import connection
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib import messages
-from django.contrib.auth.hashers import check_password
-from django.utils.html import escape
-from django.contrib.auth.hashers import make_password
-from django.utils.html import escape
-from django.shortcuts import render, get_object_or_404
-from django.db import connection
-from django.views.decorators.csrf import csrf_exempt
-import json
 import os
-import mysql.connector
-from django.conf import settings
-
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
+import json
 from datetime import datetime
-from django.http import FileResponse, Http404
+
+import mysql.connector
+import textract
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
+from django.db import connection
+from django.http import (
+    JsonResponse, HttpResponseBadRequest, FileResponse, Http404
+)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse, Http404
-import textract  # For parsing resumes
+
+from .db_initializer import ATSDatabaseInitializer
 
 
 def login_view(request):
@@ -939,3 +926,4 @@ def update_resume_status(request):
         conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+

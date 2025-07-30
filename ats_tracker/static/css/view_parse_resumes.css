@@ -1,59 +1,192 @@
-.resume-table {
-    border-collapse: collapse;
-    width: 100%;
-    table-layout: fixed;
-    background: rgba(255,255,255,0.92);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 18px rgba(110,130,255,0.09);
-    margin-top: 18px;
-}
+/* Card container */
+    .glass-card {
+        background: linear-gradient(135deg, #f7fafd 80%, #e6ebff 100%);
+        border-radius: 18px;
+        box-shadow: 0 4px 32px rgba(110,130,255,0.13);
+        padding: 32px;
+        margin-top: 24px;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        border: 1px solid #e3e8f7;
+    }
 
-.resume-table th, .resume-table td {
-    border: 1px solid #dde6ee;
-    padding: 10px 12px;
-    text-align: left;
-    white-space: normal;
-    word-break: break-word;
-    font-size: 1em;
-    color: #2a2e4a;
-}
+    /* JD Select Dropdown */
+    #jd-select {
+        appearance: none;
+        background: #fff;
+        border: 1.5px solid #7280ff;
+        border-radius: 8px;
+        padding: 8px 36px 8px 14px;
+        font-size: 1.08em;
+        font-weight: 500;
+        color: #2a2e4a;
+        box-shadow: 0 2px 8px rgba(110,130,255,0.07);
+        outline: none;
+        transition: border 0.2s, box-shadow 0.2s;
+        margin-right: 12px;
+        min-width: 220px;
+        background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' fill='gray' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%237280ff' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+    }
+    #jd-select:focus {
+        border-color: #5661d2;
+        box-shadow: 0 0 0 2px #e6ebff;
+    }
 
-.resume-table th {
-    background: #e6ebff;
-    font-weight: 600;
-}
+    /* Table styling */
+    .resume-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        background: #fff;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 2px 18px rgba(110,130,255,0.09);
+        margin-top: 18px;
+        font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    }
 
-.resume-table td {
-    background: #f7fafd;
-}
+    .resume-table th, .resume-table td {
+        border-bottom: 1px solid #e3e8f7;
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 1.04em;
+        color: #2a2e4a;
+        background: none;
+    }
 
-.resume-table td a {
-    color: #5661d2;
-    text-decoration: underline;
-    font-weight: 500;
-}
+    .resume-table th {
+        background: linear-gradient(90deg, #e6ebff 80%, #f7fafd 100%);
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        border-top: 1px solid #e3e8f7;
+    }
 
-.resume-table td .selected {
-    color: #2e8b57;
-    font-weight: bold;
-}
-.resume-table td .rejected {
-    color: #c0392b;
-    font-weight: bold;
-}
+    .resume-table tr:last-child td {
+        border-bottom: none;
+    }
 
-.resume-table button {
-    margin: 0 4px;
-    padding: 6px 16px;
-    border-radius: 8px;
-    border: none;
-    background: #7280ff;
-    color: #fff;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.resume-table button:hover {
-    background: #5661d2;
-}
+    .resume-table td {
+        background: #f7fafd;
+        vertical-align: middle;
+        white-space: nowrap;
+        word-break: break-word;
+    }
+
+    .resume-table td a {
+        color: #5661d2;
+        text-decoration: underline;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .resume-table td a:hover {
+        color: #2e8b57;
+    }
+
+    /* Status styling */
+    .resume-table td .selected {
+        color: #2e8b57;
+        font-weight: bold;
+        background: #e6ffed;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 1em;
+    }
+    .resume-table td .rejected {
+        color: #c0392b;
+        font-weight: bold;
+        background: #ffe6e6;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 1em;
+    }
+
+    /* Icon buttons */
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 6px;
+        padding: 0;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: none;
+        background: #f7fafd;
+        color: #5661d2;
+        font-size: 1.5em;
+        font-weight: bold;
+        cursor: pointer;
+        vertical-align: middle;
+        box-shadow: 0 1px 4px rgba(110,130,255,0.07);
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        position: relative;
+    }
+    .icon-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #7280ff;
+    }
+    .icon-btn.select-btn:hover {
+        background: #e6ffed;
+        color: #2e8b57;
+        box-shadow: 0 2px 8px rgba(46,139,87,0.09);
+    }
+    .icon-btn.reject-btn:hover {
+        background: #ffe6e6;
+        color: #c0392b;
+        box-shadow: 0 2px 8px rgba(192,57,43,0.09);
+    }
+
+    /* Tooltip for icon buttons */
+    .icon-btn[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: -32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #5661d2;
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.6em;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(110,130,255,0.13);
+        opacity: 0.95;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+        .glass-card {
+            padding: 18px;
+        }
+        .resume-table th, .resume-table td {
+            padding: 10px 8px;
+            font-size: 0.98em;
+        }
+        #jd-select {
+            min-width: 140px;
+            font-size: 0.98em;
+        }
+    }
+    @media (max-width: 600px) {
+        .glass-card {
+            padding: 8px;
+        }
+        .resume-table th, .resume-table td {
+            padding: 6px 4px;
+            font-size: 0.92em;
+        }
+        #jd-select {
+            min-width: 100px;
+            font-size: 0.92em;
+        }
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            font-size: 1.1em;
+        }
+    }
