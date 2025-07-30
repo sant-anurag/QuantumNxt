@@ -58,35 +58,8 @@ function updateStatus(resumeId, status) {
     });
 }
 
-// Parsing button logic
-let parsing = false;
-document.getElementById('parse-btn').onclick = function() {
-    if (!parsing) {
-        parsing = true;
-        this.textContent = 'Stop Parsing';
-        this.title = 'Stop Parsing';
-        startParsing();
-    } else {
-        parsing = false;
-        this.textContent = 'Start Parsing';
-        this.title = 'Start Parsing';
-    }
-};
-
-function startParsing() {
+document.getElementById('export-btn').onclick = function() {
     const jdId = document.getElementById('jd-select').value;
     if (!jdId) return;
-    fetch(`/start_parse_resumes/?jd_id=${jdId}`, { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.success) {
-                alert(data.error || 'Parsing failed');
-                parsing = false;
-                document.getElementById('parse-btn').textContent = 'Start Parsing';
-                document.getElementById('parse-btn').title = 'Start Parsing';
-                return;
-            }
-            // Use parsed data to update table
-            renderTable(data.resumes || []);
-        });
-}
+    window.location.href = `/export_resumes_excel/?jd_id=${jdId}`;
+};

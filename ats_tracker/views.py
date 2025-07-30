@@ -927,3 +927,47 @@ def update_resume_status(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
+import openpyxl
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+
+def export_resumes_excel(request):
+    print("export_resumes_excel -> Request method:", request.method)
+    jd_id = request.GET.get('jd_id')
+    if not jd_id:
+        return HttpResponse("JD ID required", status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT r.file_name, r.status, r.uploaded_on, jd.jd_summary, c.company_name
+        FROM resumes r
+        LEFT JOIN recruitment_jds jd ON r.jd_id = jd.jd_id
+        LEFT JOIN customers c ON r.customer_id = c.company_id
+        WHERE r.jd_id = %s
+        ORDER BY r.uploaded_on DESC
+    """, (jd_id,))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Resumes"
+    headers = ["File Name", "Status", "Uploaded On", "JD Summary", "Company"]
+    ws.append(headers)
+    for row in rows:
+        ws.append([
+            row['file_name'],
+            row['status'],
+            row['uploaded_on'].strftime('%Y-%m-%d %H:%M') if row['uploaded_on'] else '',
+            row['jd_summary'],
+            row['company_name']
+        ])
+    for col in range(1, len(headers)+1):
+        ws.column_dimensions[get_column_letter(col)].width = 22
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="resumes_{jd_id}.xlsx"'
+    wb.save(response)
+    return response
+

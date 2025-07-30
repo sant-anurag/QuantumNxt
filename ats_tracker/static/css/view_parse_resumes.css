@@ -157,7 +157,31 @@
         pointer-events: none;
         z-index: 10;
     }
+/* Export button styling */
+.icon-btn.export-btn {
+    background: linear-gradient(90deg, #7280ff 60%, #5661d2 100%);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 2px 8px rgba(110,130,255,0.13);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    width: 120px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.08em;
+    letter-spacing: 0.02em;
+    margin-left: 18px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
+.icon-btn.export-btn:hover {
+    background: linear-gradient(90deg, #5661d2 60%, #7280ff 100%);
+    color: #e6ebff;
+    box-shadow: 0 4px 16px rgba(86,97,210,0.18);
+}
     /* Responsive adjustments */
     @media (max-width: 900px) {
         .glass-card {

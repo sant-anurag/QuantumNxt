@@ -34,5 +34,7 @@ urlpatterns = [
     path('update_resume_status/', views.update_resume_status, name='update_resume_status'),
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
     path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
+    # urls.py
+    path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
 
 ]
