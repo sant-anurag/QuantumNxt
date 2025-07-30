@@ -628,6 +628,7 @@ def assign_jd_data(request):
     return JsonResponse({"jds": jds, "teams": teams})
 
 @csrf_exempt
+@csrf_exempt
 def assign_jd(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -637,11 +638,9 @@ def assign_jd(request):
     if not jd_id or not team_id:
         return JsonResponse({"error": "JD and Team required"}, status=400)
     conn = get_db_connection_ats()
-    cursor = conn.cursor()
-    # Update JD with team_id
+    cursor = conn.cursor(dictionary=True)  # <-- Use dictionary=True
     cursor.execute("UPDATE recruitment_jds SET team_id=%s WHERE jd_id=%s", [team_id, jd_id])
     conn.commit()
-    # Fetch JD details
     cursor.execute("""
         SELECT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, c.company_name
         FROM recruitment_jds j
@@ -649,10 +648,8 @@ def assign_jd(request):
         WHERE j.jd_id=%s
     """, [jd_id])
     jd = cursor.fetchone()
-    # Fetch team details
     cursor.execute("SELECT team_id, team_name FROM teams WHERE team_id=%s", [team_id])
     team = cursor.fetchone()
-    # Fetch team members
     cursor.execute("""
         SELECT m.first_name, m.last_name, m.email
         FROM hr_team_members m
