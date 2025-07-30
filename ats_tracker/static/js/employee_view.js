@@ -1,163 +1,278 @@
 // ats_tracker/static/js/employee_view.js
-document.addEventListener("DOMContentLoaded", function() {
-    let allMembers = [];
-    let filteredMembers = [];
-    let selectedMember = null;
+        document.addEventListener("DOMContentLoaded", function() {
+            let allMembers = [];
+            let filteredMembers = [];
+            let selectedMember = null;
 
-    // Fetch all members for dropdown
-    fetch("/employee_view_data/")
-        .then(resp => resp.json())
-        .then(data => {
-            allMembers = data.members;
-            filteredMembers = [];
-            renderDropdown([]);
-        });
+            // Fetch all members for dropdown
+            fetch("/employee_view_data/")
+                .then(resp => resp.json())
+                .then(data => {
+                    allMembers = data.members;
+                    filteredMembers = [];
+                    renderDropdown([]);
+                });
 
-    function renderDropdown(members) {
-        const dropdown = document.getElementById("member-dropdown");
-        dropdown.innerHTML = "";
-        if (members.length === 0) {
-            dropdown.style.display = "none";
-            setButtonState(false);
-            return;
-        }
-        dropdown.style.display = "block";
-        members.forEach(m => {
-            const item = document.createElement("div");
-            item.className = "ev-autocomplete-item";
-            item.textContent = `${m.first_name} ${m.last_name} (${m.email})`;
-            item.dataset.empId = m.emp_id;
-            item.onclick = function() {
-                document.getElementById("member-search-box").value = item.textContent;
-                selectedMember = m;
+            function renderDropdown(members) {
+                const dropdown = document.getElementById("member-dropdown");
                 dropdown.innerHTML = "";
-                dropdown.style.display = "none";
-                setButtonState(true);
+                if (members.length === 0) {
+                    dropdown.style.display = "none";
+                    setButtonState(false);
+                    return;
+                }
+                dropdown.style.display = "block";
+                members.forEach(m => {
+                    const item = document.createElement("div");
+                    item.className = "ev-autocomplete-item";
+                    item.textContent = `${m.first_name} ${m.last_name} (${m.email})`;
+                    item.dataset.empId = m.emp_id;
+                    item.onclick = function() {
+                        selectedMember = m;
+                        document.getElementById("member-search-box").value = `${m.first_name} ${m.last_name}`;
+                        dropdown.style.display = "none";
+                        setButtonState(true);
+                    };
+                    dropdown.appendChild(item);
+                });
+                setButtonState(false);
+            }
+
+            function setButtonState(enabled) {
+                document.getElementById("search-btn").disabled = !enabled;
+                document.getElementById("reset-btn").disabled = false;
+            }
+
+            document.getElementById("member-search-box").addEventListener("input", function() {
+                const term = this.value.trim().toLowerCase();
+                selectedMember = null;
+                document.getElementById("employee-result").innerHTML = "";
+                if (term.length < 3) {
+                    renderDropdown([]);
+                    return;
+                }
+                filteredMembers = allMembers.filter(m =>
+                    m.first_name.toLowerCase().includes(term) ||
+                    m.last_name.toLowerCase().includes(term) ||
+                    m.email.toLowerCase().includes(term)
+                );
+                renderDropdown(filteredMembers);
+            });
+
+            document.getElementById("search-btn").onclick = function() {
+                if (!selectedMember) {
+                    alert("Please select a member from the dropdown.");
+                    return;
+                }
+                fetch("/employee_view_report/?emp_id=" + selectedMember.emp_id)
+                    .then(resp => resp.json())
+                    .then(data => {
+                        renderResult(data);
+                    });
             };
-            dropdown.appendChild(item);
-        });
-        setButtonState(false);
-    }
 
-    function setButtonState(enabled) {
-        document.getElementById("search-btn").disabled = !enabled;
-        document.getElementById("reset-btn").disabled = false;
-    }
+            document.getElementById("reset-btn").onclick = function() {
+                document.getElementById("member-search-box").value = "";
+                document.getElementById("member-dropdown").innerHTML = "";
+                document.getElementById("member-dropdown").style.display = "none";
+                document.getElementById("employee-result").innerHTML = "";
+                selectedMember = null;
+                setButtonState(false);
+            };
 
-    document.getElementById("member-search-box").addEventListener("input", function() {
-        const term = this.value.trim().toLowerCase();
-        selectedMember = null;
-        document.getElementById("employee-result").innerHTML = "";
-        if (term.length < 3) {
-            renderDropdown([]);
-            return;
-        }
-        filteredMembers = allMembers.filter(m =>
-            m.first_name.toLowerCase().includes(term) ||
-            m.last_name.toLowerCase().includes(term) ||
-            m.email.toLowerCase().includes(term)
-        );
-        renderDropdown(filteredMembers);
-    });
+            // --- Pagination helpers ---
+            function paginate(array, page, pageSize) {
+                const total = array.length;
+                const numPages = Math.ceil(total / pageSize);
+                const start = (page - 1) * pageSize;
+                return {
+                    rows: array.slice(start, start + pageSize),
+                    page,
+                    numPages,
+                    total
+                };
+            }
 
-    document.getElementById("search-btn").onclick = function() {
-        if (!selectedMember) {
-            alert("Please select a member from the dropdown.");
-            return;
-        }
-        fetch("/employee_view_report/?emp_id=" + selectedMember.emp_id)
-            .then(resp => resp.json())
-            .then(data => {
-                renderResult(data);
-            });
-    };
+            function renderPagination(container, page, numPages, onPageChange) {
+                container.innerHTML = "";
+                if (numPages <= 1) return;
+                const prev = document.createElement("button");
+                prev.textContent = "Prev";
+                prev.disabled = page === 1;
+                prev.onclick = () => onPageChange(page - 1);
+                container.appendChild(prev);
+                for (let i = 1; i <= numPages; i++) {
+                    const btn = document.createElement("button");
+                    btn.textContent = i;
+                    btn.className = i === page ? "active" : "";
+                    btn.onclick = () => onPageChange(i);
+                    container.appendChild(btn);
+                }
+                const next = document.createElement("button");
+                next.textContent = "Next";
+                next.disabled = page === numPages;
+                next.onclick = () => onPageChange(page + 1);
+                container.appendChild(next);
+            }
 
-    document.getElementById("reset-btn").onclick = function() {
-        document.getElementById("member-search-box").value = "";
-        document.getElementById("member-dropdown").innerHTML = "";
-        document.getElementById("member-dropdown").style.display = "none";
-        document.getElementById("employee-result").innerHTML = "";
-        selectedMember = null;
-        setButtonState(false);
-    };
+            // --- Main result rendering with pagination ---
+            function renderResult(data) {
+                const resultDiv = document.getElementById("employee-result");
+                resultDiv.innerHTML = "";
+                // Safely get JDs array
+                const jdscount = Array.isArray(data.jds) ? data.jds : [];
+                const activeCount = jdscount.filter(jd => jd.jd_status === "active").length;
+                const closedCount = jdscount.filter(jd => jd.jd_status === "closed").length;
+                const holdCount = jdscount.filter(jd => jd.jd_status === "on hold").length;
 
-    function renderResult(data) {
-        if (!data.member) {
-            document.getElementById("employee-result").innerHTML = `<div class="ev-no-data">No data found for this member.</div>`;
-            return;
-        }
-        let html = `<div class="ev-section">
-            <h3>Member Details</h3>
-            <div><b>Name:</b> ${data.member.first_name} ${data.member.last_name}</div>
-            <div><b>Email:</b> ${data.member.email}</div>
-            <div><b>Role:</b> ${data.member.role || "-"}</div>
-            <div><b>Status:</b> ${data.member.status}</div>
-        </div>`;
+                // Member Details (Professional Card Style)
+                const member = data.member || {};
+// Inside renderResult(data)
+let html = `
+<div class="ev-section" style="max-width:420px;margin-bottom:24px;">
+    <div style="font-size:1.15em;font-weight:700;color:#666de7;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-id-badge" style="color:#11b7ee;"></i> Member Details
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1.2px solid #dde6ee;">
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0 8px 0;width:38%;border:1.2px solid #dde6ee;">Name</td>
+            <td style="font-weight:600;padding:8px 0 8px 0;border:1.2px solid #dde6ee;">${member.first_name || ""} ${member.last_name || ""}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Email</td>
+            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.email || ""}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Employee ID</td>
+            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.emp_id || ""}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Role</td>
+            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.role || ""}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Status</td>
+            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.status || ""}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Active JDs</td>
+            <td style="font-weight:600;color:#1aa674;padding:8px 0;border:1.2px solid #dde6ee;">${activeCount}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Closed JDs</td>
+            <td style="font-weight:600;color:#da3c45;padding:8px 0;border:1.2px solid #dde6ee;">${closedCount}</td>
+        </tr>
+        <tr>
+            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">On Hold JDs</td>
+            <td style="font-weight:600;color:#666de7;padding:8px 0;border:1.2px solid #dde6ee;">${holdCount}</td>
+        </tr>
+    </table>
+</div>
+`;
+resultDiv.innerHTML = html;
 
-        // Assigned JDs as table
-        html += `<div class="ev-section">
-            <h3>Assigned JDs</h3>`;
-        if (data.jds.length === 0) {
-            html += `<div class="ev-no-data">No JD assignments found.</div>`;
-        } else {
-            html += `<table class="ev-table">
-                <thead>
-                    <tr>
-                        <th>JD ID</th>
-                        <th>Summary</th>
-                        <th>Status</th>
-                        <th>Team</th>
-                        <th>Company</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-            data.jds.forEach(jd => {
-                html += `<tr>
-                    <td>${jd.jd_id}</td>
-                    <td>${jd.jd_summary}</td>
-                    <td>${jd.jd_status}</td>
-                    <td>${jd.team_name || "-"}</td>
-                    <td>${jd.company_name || "-"}</td>
-                </tr>`;
-            });
-            html += `</tbody></table>`;
-        }
-        html += `</div>`;
-
-        // Teams & JDs as table
-        html += `<div class="ev-section">
-            <h3>Teams & JDs</h3>`;
-        if (data.teams.length === 0) {
-            html += `<div class="ev-no-data">Member is not part of any team.</div>`;
-        } else {
-            data.teams.forEach(team => {
-                html += `<div class="ev-team-header">${team.team_name}</div>`;
-                if (team.jds.length === 0) {
-                    html += `<div class="ev-no-data">No JDs assigned to this team.</div>`;
-                } else {
-                    html += `<table class="ev-table">
-                        <thead>
-                            <tr>
-                                <th>JD ID</th>
-                                <th>Summary</th>
-                                <th>Status</th>
-                                <th>Company</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                    team.jds.forEach(jd => {
-                        html += `<tr>
+                // Assigned JDs Table with Pagination and Count
+                const jdSection = document.createElement("div");
+                jdSection.className = "ev-section";
+                const jds = data.jds || [];
+                jdSection.innerHTML = `<h3>Assigned JDs <span style="color:#898fa4;font-weight:500;font-size:0.98em;">(${jds.length})</span></h3>`;
+                let jdPage = 1;
+                function renderJDs(page) {
+                    jdSection.querySelectorAll("table,.ev-no-data,.ev-pagination").forEach(e => e.remove());
+                    const jds = data.jds || [];
+                    if (jds.length === 0) {
+                        const noData = document.createElement("div");
+                        noData.className = "ev-no-data";
+                        noData.textContent = "No JDs assigned to this member.";
+                        jdSection.appendChild(noData);
+                        return;
+                    }
+                    const { rows, numPages } = paginate(jds, page, 5);
+                    let table = `<table class="ev-table"><thead>
+                        <tr>
+                            <th>JD ID</th>
+                            <th>Summary</th>
+                            <th>Status</th>
+                            <th>Team</th>
+                            <th>Company</th>
+                        </tr></thead><tbody>`;
+                    rows.forEach(jd => {
+                        table += `<tr>
                             <td>${jd.jd_id}</td>
                             <td>${jd.jd_summary}</td>
-                            <td>${jd.jd_status}</td>
+                            <td>
+                                <span class="ev-status-${jd.jd_status.replace(" ", "-")}">${jd.jd_status}</span>
+                            </td>
+                            <td>${jd.team_name || "-"}</td>
                             <td>${jd.company_name || "-"}</td>
                         </tr>`;
                     });
-                    html += `</tbody></table>`;
+                    table += `</tbody></table>`;
+                    jdSection.insertAdjacentHTML("beforeend", table);
+                    // Pagination controls
+                    if (numPages > 1) {
+                        const pagDiv = document.createElement("div");
+                        pagDiv.className = "ev-pagination";
+                        renderPagination(pagDiv, page, numPages, renderJDs);
+                        jdSection.appendChild(pagDiv);
+                    }
                 }
-            });
-        }
-        html += `</div>`;
-        document.getElementById("employee-result").innerHTML = html;
-    }
-});
+                renderJDs(jdPage);
+                resultDiv.appendChild(jdSection);
+
+                // Teams & JDs Table with Pagination per team
+                const teamsSection = document.createElement("div");
+                teamsSection.className = "ev-section";
+                teamsSection.innerHTML = `<h3>Teams & JDs</h3>`;
+                if (!data.teams || data.teams.length === 0) {
+                    teamsSection.insertAdjacentHTML("beforeend", `<div class="ev-no-data">Member is not part of any team.</div>`);
+                } else {
+                    data.teams.forEach((team, idx) => {
+                        const teamDiv = document.createElement("div");
+                        teamDiv.style.marginBottom = "18px";
+                        teamDiv.innerHTML = `<div class="ev-team-header">${team.team_name}</div>`;
+                        let teamJdPage = 1;
+                        function renderTeamJDs(page) {
+                            teamDiv.querySelectorAll("table,.ev-no-data,.ev-pagination").forEach(e => e.remove());
+                            const jds = team.jds || [];
+                            if (jds.length === 0) {
+                                const noData = document.createElement("div");
+                                noData.className = "ev-no-data";
+                                noData.textContent = "No JDs for this team.";
+                                teamDiv.appendChild(noData);
+                                return;
+                            }
+                            const { rows, numPages } = paginate(jds, page, 5);
+                            let table = `<table class="ev-table"><thead>
+                                <tr>
+                                    <th>JD ID</th>
+                                    <th>Summary</th>
+                                    <th>Status</th>
+                                    <th>Company</th>
+                                </tr></thead><tbody>`;
+                            rows.forEach(jd => {
+                                table += `<tr>
+                                    <td>${jd.jd_id}</td>
+                                    <td>${jd.jd_summary}</td>
+                                    <td>
+                                        <span class="ev-status-${jd.jd_status.replace(" ", "-")}">${jd.jd_status}</span>
+                                    </td>
+                                    <td>${jd.company_name || "-"}</td>
+                                </tr>`;
+                            });
+                            table += `</tbody></table>`;
+                            teamDiv.insertAdjacentHTML("beforeend", table);
+                            if (numPages > 1) {
+                                const pagDiv = document.createElement("div");
+                                pagDiv.className = "ev-pagination";
+                                renderPagination(pagDiv, page, numPages, renderTeamJDs);
+                                teamDiv.appendChild(pagDiv);
+                            }
+                        }
+                        renderTeamJDs(teamJdPage);
+                        teamsSection.appendChild(teamDiv);
+                    });
+                }
+                resultDiv.appendChild(teamsSection);
+            }
+        });
