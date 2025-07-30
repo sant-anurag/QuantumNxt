@@ -662,3 +662,66 @@ def assign_jd(request):
 
 def assign_jd_page(request):
     return render(request, "assign_jd.html")
+
+def employee_view_page(request):
+    return render(request, "employee_view.html")
+
+def employee_view_data(request):
+    print("employee_view_data -> Request method:", request.method)
+    conn = get_db_connection_ats()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT emp_id, first_name, last_name, email, role, status
+        FROM hr_team_members
+        WHERE status='active'
+        ORDER BY first_name, last_name
+    """)
+    members = cursor.fetchall()
+    conn.close()
+    return JsonResponse({"members": members})
+
+def employee_view_report(request):
+    print("employee_view_report -> Request method:", request.method)
+    emp_id = request.GET.get("emp_id")
+    if not emp_id:
+        return JsonResponse({"error": "emp_id required"}, status=400)
+    conn = get_db_connection_ats()
+    cursor = conn.cursor(dictionary=True)
+    # Member details
+    cursor.execute("""
+        SELECT emp_id, first_name, last_name, email, role, status
+        FROM hr_team_members WHERE emp_id=%s
+    """, [emp_id])
+    member = cursor.fetchone()
+    # JDs assigned to member (via team membership)
+    cursor.execute("""
+        SELECT j.jd_id, j.jd_summary, j.jd_status, t.team_name, c.company_name
+        FROM recruitment_jds j
+        LEFT JOIN teams t ON j.team_id = t.team_id
+        LEFT JOIN customers c ON j.company_id = c.company_id
+        WHERE j.team_id IN (
+            SELECT team_id FROM team_members WHERE emp_id=%s
+        )
+        ORDER BY j.jd_status, j.created_at DESC
+    """, [emp_id])
+    jds = cursor.fetchall()
+    # Teams member is part of, and JDs for each team
+    cursor.execute("""
+        SELECT t.team_id, t.team_name
+        FROM teams t
+        INNER JOIN team_members tm ON t.team_id = tm.team_id
+        WHERE tm.emp_id=%s
+        ORDER BY t.team_name
+    """, [emp_id])
+    teams = cursor.fetchall()
+    for team in teams:
+        cursor.execute("""
+            SELECT j.jd_id, j.jd_summary, j.jd_status, c.company_name
+            FROM recruitment_jds j
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            WHERE j.team_id=%s
+            ORDER BY j.jd_status, j.created_at DESC
+        """, [team['team_id']])
+        team['jds'] = cursor.fetchall()
+    conn.close()
+    return JsonResponse({"member": member, "jds": jds, "teams": teams})

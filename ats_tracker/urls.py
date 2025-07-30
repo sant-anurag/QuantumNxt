@@ -22,4 +22,8 @@ urlpatterns = [
     path('assign_jd/', views.assign_jd, name='assign_jd'),
     path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
     path('assign_jd_page/', views.assign_jd_page, name='assign_jd_page'),
+    path('employee_view/', views.employee_view_page, name='employee_view_page'),
+    path('employee_view_data/', views.employee_view_data, name='employee_view_data'),
+    path('employee_view_report/', views.employee_view_report, name='employee_view_report'),
+
 ]
