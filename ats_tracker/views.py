@@ -22,6 +22,13 @@ from django.http import JsonResponse
 from django.db import connection
 from django.views.decorators.csrf import csrf_exempt
 import json
+import os
+import mysql.connector
+from django.conf import settings
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -725,3 +732,97 @@ def employee_view_report(request):
         team['jds'] = cursor.fetchall()
     conn.close()
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
+
+
+
+def get_db_conn():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="ats"
+    )
+
+def upload_resume_page(request):
+    # Get all JDs for dropdown
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT jd.jd_id, jd.jd_summary, c.company_name
+        FROM recruitment_jds jd
+        LEFT JOIN customers c ON jd.company_id = c.company_id
+        ORDER BY jd.jd_id DESC
+    """)
+    jds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render(request, 'upload_resume.html', {'jds': jds})
+
+@csrf_exempt
+def upload_resume(request):
+    if request.method == 'POST':
+        jd_id = request.POST.get('jd_id')
+        resume_file = request.FILES.get('resume_file')
+        if not jd_id or not resume_file:
+            return JsonResponse({'success': False, 'error': 'Missing JD or file.'}, status=400)
+
+        # Get customer_id for JD
+        conn = get_db_conn()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+        jd_row = cursor.fetchone()
+        customer_id = jd_row['company_id'] if jd_row else None
+
+        import os
+
+        # Use STATICFILES_DIRS[0] or define a custom path
+        static_dir = settings.STATICFILES_DIRS[0] if hasattr(settings, 'STATICFILES_DIRS') else os.path.join(settings.BASE_DIR, 'static')
+        base_folder = os.path.join(static_dir, 'resumes', jd_id, 'to_be_screened')
+        os.makedirs(base_folder, exist_ok=True)
+        file_name = resume_file.name
+        file_path = os.path.join(base_folder, file_name)
+        with open(file_path, 'wb+') as destination:
+            for chunk in resume_file.chunks():
+                destination.write(chunk)
+
+        # Save metadata in DB
+        cursor.execute("""
+            INSERT INTO resumes (jd_id, file_name, file_path, status, customer_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
+        conn.commit()
+        resume_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        return JsonResponse({'success': True, 'resume_id': resume_id})
+    return JsonResponse({'success': False}, status=400)
+
+def recent_resumes(request):
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on,
+               c.company_name, r.status
+        FROM resumes r
+        LEFT JOIN recruitment_jds jd ON r.jd_id = jd.jd_id
+        LEFT JOIN customers c ON r.customer_id = c.company_id
+        ORDER BY r.uploaded_on DESC
+        LIMIT 20
+    """)
+    resumes = []
+    for row in cursor.fetchall():
+        # Build file URL for static serving
+        file_url = f"/static/resumes/{row['jd_id']}/{row['status']}/{row['file_name']}"
+        resumes.append({
+            'resume_id': row['resume_id'],
+            'file_name': row['file_name'],
+            'jd_id': row['jd_id'],
+            'jd_summary': row['jd_summary'],
+            'uploaded_on': row['uploaded_on'].strftime('%Y-%m-%d %H:%M'),
+            'customer': row['company_name'] or '',
+            'status': row['status'],
+            'file_url': file_url
+        })
+    cursor.close()
+    conn.close()
+    return JsonResponse({'resumes': resumes})

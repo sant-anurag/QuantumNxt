@@ -25,5 +25,7 @@ urlpatterns = [
     path('employee_view/', views.employee_view_page, name='employee_view_page'),
     path('employee_view_data/', views.employee_view_data, name='employee_view_data'),
     path('employee_view_report/', views.employee_view_report, name='employee_view_report'),
-
+    path('upload_resume/', views.upload_resume_page, name='upload_resume_page'),
+    path('api/upload_resume/', views.upload_resume, name='api_upload_resume'),
+    path('api/recent_resumes/', views.recent_resumes, name='api_recent_resumes'),
 ]

@@ -94,6 +94,20 @@ class ATSDatabaseInitializer:
                 FOREIGN KEY (created_by) REFERENCES users(user_id)
             );
         """)
+        # Add this to ATSDatabaseInitializer.initialize() after recruitment_jds table creation
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS resumes (
+                resume_id INT AUTO_INCREMENT PRIMARY KEY,
+                jd_id VARCHAR(8) NOT NULL,
+                file_name VARCHAR(255) NOT NULL,
+                file_path VARCHAR(255) NOT NULL,
+                status ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
+                uploaded_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                customer_id INT,
+                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id),
+                FOREIGN KEY (customer_id) REFERENCES customers(company_id)
+            );
+        """)
         self.conn.commit()
         print("Database, HR team members, and teams tables created.")
 

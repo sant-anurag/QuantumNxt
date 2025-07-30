@@ -1,0 +1,122 @@
+.upload-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(80,170,255,0.09);
+    border-radius: 8px;
+    padding: 32px 28px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+.upload-container h2 {
+    color: #666de7;
+    margin-bottom: 18px;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.form-row {
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.form-row label {
+    width: 120px;
+    color: #898fa4;
+    font-weight: 600;
+}
+.form-row select, .form-row input[type="file"] {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1.2px solid #dde6ee;
+    border-radius: 4px;
+    font-size: 1em;
+}
+.form-actions {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+.btn-upload, .btn-reset {
+    padding: 8px 22px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.2s;
+}
+.btn-upload {
+    background: #11b7ee;
+    color: #fff;
+}
+.btn-upload:hover {
+    background: #0e9cc7;
+}
+.btn-reset {
+    background: #dde6ee;
+    color: #666de7;
+}
+.btn-reset:hover {
+    background: #c2d3e6;
+}
+#upload-message {
+    margin: 10px 0;
+    color: #1aa674;
+    font-weight: 600;
+}
+hr {
+    margin: 28px 0 18px 0;
+    border: none;
+    border-top: 1.2px solid #dde6ee;
+}
+#resume-table-container {
+    margin-top: 10px;
+}
+.resume-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+.resume-table th, .resume-table td {
+    border: 1.2px solid #dde6ee;
+    padding: 8px 10px;
+    text-align: left;
+}
+.resume-table th {
+    background: #f5f8fa;
+    color: #666de7;
+    font-weight: 700;
+}
+.resume-table td.status-toBeScreened { color: #666de7; }
+.resume-table td.status-selected { color: #1aa674; }
+.resume-table td.status-rejected { color: #da3c45; }
+.resume-table td.status-onHold { color: #f7b731; }
+.resume-table a {
+    color: #11b7ee;
+    text-decoration: underline;
+}
+.pagination {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+.pagination button {
+    background: #dde6ee;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 12px;
+    color: #666de7;
+    font-weight: 600;
+    cursor: pointer;
+}
+.pagination button.active {
+    background: #11b7ee;
+    color: #fff;
+}
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
