@@ -1,0 +1,59 @@
+.resume-table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    background: rgba(255,255,255,0.92);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 18px rgba(110,130,255,0.09);
+    margin-top: 18px;
+}
+
+.resume-table th, .resume-table td {
+    border: 1px solid #dde6ee;
+    padding: 10px 12px;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+    font-size: 1em;
+    color: #2a2e4a;
+}
+
+.resume-table th {
+    background: #e6ebff;
+    font-weight: 600;
+}
+
+.resume-table td {
+    background: #f7fafd;
+}
+
+.resume-table td a {
+    color: #5661d2;
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.resume-table td .selected {
+    color: #2e8b57;
+    font-weight: bold;
+}
+.resume-table td .rejected {
+    color: #c0392b;
+    font-weight: bold;
+}
+
+.resume-table button {
+    margin: 0 4px;
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #7280ff;
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.resume-table button:hover {
+    background: #5661d2;
+}

@@ -18,18 +18,20 @@ from django.utils.html import escape
 from django.contrib.auth.hashers import make_password
 from django.utils.html import escape
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
 from django.db import connection
 from django.views.decorators.csrf import csrf_exempt
 import json
 import os
 import mysql.connector
 from django.conf import settings
-from django.http import JsonResponse
+
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from django.http import FileResponse, Http404
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, Http404
+import textract  # For parsing resumes
 
 
 def login_view(request):
@@ -870,3 +872,70 @@ def download_resume(request, resume_id):
     if not os.path.exists(file_path):
         raise Http404("File not found")
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
+
+
+
+def view_parse_resumes_page(request):
+    return render(request, 'view_parse_resumes.html')
+
+@csrf_exempt
+def view_parse_resumes(request):
+    jd_id = request.GET.get('jd_id')
+    if not jd_id:
+        return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
+    resumes = cursor.fetchall()
+    parsed_resumes = []
+    for r in resumes:
+        file_path = r['file_path']
+        if not os.path.exists(file_path):
+            continue
+        try:
+            text = textract.process(file_path).decode('utf-8')
+            # Simple parsing logic (use regex for better extraction)
+            import re
+            name = re.search(r'Name[:\- ]*(.*)', text)
+            email = re.search(r'[\w\.-]+@[\w\.-]+', text)
+            phone = re.search(r'(\+?\d{10,13})', text)
+            experience = re.search(r'Experience[:\- ]*(.*)', text)
+            summary = text[:300]  # First 300 chars as summary
+            parsed_resumes.append({
+                'resume_id': r['resume_id'],
+                'file_name': r['file_name'],
+                'name': name.group(1) if name else '',
+                'email': email.group(0) if email else '',
+                'phone': phone.group(1) if phone else '',
+                'experience': experience.group(1) if experience else '',
+                'summary': summary,
+                'status': r['status'],
+                'file_url': f"/download_resume/{r['resume_id']}/"
+            })
+        except Exception as e:
+            parsed_resumes.append({
+                'resume_id': r['resume_id'],
+                'file_name': r['file_name'],
+                'error': str(e),
+                'status': r['status'],
+                'file_url': f"/download_resume/{r['resume_id']}/"
+            })
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'resumes': parsed_resumes})
+
+@csrf_exempt
+def update_resume_status(request):
+    if request.method == 'POST':
+        resume_id = request.POST.get('resume_id')
+        status = request.POST.get('status')
+        if not resume_id or status not in ['selected', 'rejected']:
+            return JsonResponse({'success': False, 'error': 'Invalid input'}, status=400)
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE resumes SET status=%s WHERE resume_id=%s", (status, resume_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)

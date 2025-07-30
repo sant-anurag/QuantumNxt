@@ -29,4 +29,9 @@ urlpatterns = [
     path('api/upload_resume/', views.upload_resume, name='api_upload_resume'),
     path('api/recent_resumes/', views.recent_resumes, name='api_recent_resumes'),
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
+    path('view_parse_resumes_page/', views.view_parse_resumes_page, name='view_parse_resumes_page'),
+    path('view_parse_resumes/', views.view_parse_resumes, name='view_parse_resumes'),
+    path('update_resume_status/', views.update_resume_status, name='update_resume_status'),
+    path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
+    path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
 ]
