@@ -1,5 +1,5 @@
 .upload-container {
-    max-width: 600px;
+    max-width: 900px;
     margin: 40px auto;
     background: #fff;
     box-shadow: 0 2px 12px rgba(80,170,255,0.09);
@@ -76,6 +76,7 @@ hr {
 }
 .resume-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     margin-bottom: 12px;
 }
@@ -83,6 +84,13 @@ hr {
     border: 1.2px solid #dde6ee;
     padding: 8px 10px;
     text-align: left;
+    white-space: normal; /* Allow wrapping */
+    word-break: break-word; /* Break long words */
+}
+.resume-table td.resume-name {
+    max-width: 220px; /* Set a reasonable max width */
+    white-space: normal;
+    word-break: break-word;
 }
 .resume-table th {
     background: #f5f8fa;

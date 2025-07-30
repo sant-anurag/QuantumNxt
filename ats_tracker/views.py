@@ -761,41 +761,67 @@ def upload_resume_page(request):
 @csrf_exempt
 def upload_resume(request):
     if request.method == 'POST':
-        jd_id = request.POST.get('jd_id')
-        resume_file = request.FILES.get('resume_file')
-        if not jd_id or not resume_file:
-            return JsonResponse({'success': False, 'error': 'Missing JD or file.'}, status=400)
+        try:
+            # Validate JD ID and file
+            jd_id = request.POST.get('jd_id')
+            resume_file = request.FILES.get('resume_file')
+            if not jd_id:
+                return JsonResponse({'success': False, 'error': 'JD ID is required.'}, status=400)
+            if not resume_file:
+                return JsonResponse({'success': False, 'error': 'Resume file is required.'}, status=400)
 
-        # Get customer_id for JD
-        conn = get_db_conn()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
-        jd_row = cursor.fetchone()
-        customer_id = jd_row['company_id'] if jd_row else None
+            # Check if JD exists
+            conn = get_db_conn()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+            jd_row = cursor.fetchone()
+            if not jd_row:
+                return JsonResponse({'success': False, 'error': 'Invalid JD ID.'}, status=404)
+            customer_id = jd_row['company_id']
 
-        import os
+            # Validate file type
+            allowed_extensions = ['pdf', 'doc', 'docx']
+            file_extension = resume_file.name.split('.')[-1].lower()
+            if file_extension not in allowed_extensions:
+                return JsonResponse({'success': False, 'error': 'Invalid file type. Only PDF, DOC, and DOCX are allowed.'}, status=400)
 
-        # Use STATICFILES_DIRS[0] or define a custom path
-        static_dir = settings.STATICFILES_DIRS[0] if hasattr(settings, 'STATICFILES_DIRS') else os.path.join(settings.BASE_DIR, 'static')
-        base_folder = os.path.join(static_dir, 'resumes', jd_id, 'to_be_screened')
-        os.makedirs(base_folder, exist_ok=True)
-        file_name = resume_file.name
-        file_path = os.path.join(base_folder, file_name)
-        with open(file_path, 'wb+') as destination:
-            for chunk in resume_file.chunks():
-                destination.write(chunk)
+            # Save file to the appropriate folder
+            static_dir = settings.STATICFILES_DIRS[0] if hasattr(settings, 'STATICFILES_DIRS') else os.path.join(settings.BASE_DIR, 'static')
+            base_folder = os.path.join(static_dir, 'resumes', jd_id, 'to_be_screened')
+            os.makedirs(base_folder, exist_ok=True)
+            file_name = resume_file.name
+            file_path = os.path.join(base_folder, file_name)
+            with open(file_path, 'wb+') as destination:
+                for chunk in resume_file.chunks():
+                    destination.write(chunk)
 
-        # Save metadata in DB
-        cursor.execute("""
-            INSERT INTO resumes (jd_id, file_name, file_path, status, customer_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
-        conn.commit()
-        resume_id = cursor.lastrowid
-        cursor.close()
-        conn.close()
-        return JsonResponse({'success': True, 'resume_id': resume_id})
-    return JsonResponse({'success': False}, status=400)
+            # Save metadata in the database
+            cursor.execute("""
+                INSERT INTO resumes (jd_id, file_name, file_path, status, customer_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
+            conn.commit()
+            resume_id = cursor.lastrowid
+            # inclease the total_profiles count for the JD
+            cursor.execute("""
+                UPDATE recruitment_jds
+                SET total_profiles = total_profiles + 1
+                WHERE jd_id = %s
+            """, (jd_id,))
+            conn.commit()
+            return JsonResponse({'success': True, 'resume_id': resume_id})
+
+        except mysql.connector.Error as db_error:
+            return JsonResponse({'success': False, 'error': f'Database error: {str(db_error)}'}, status=500)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Unexpected error: {str(e)}'}, status=500)
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 def recent_resumes(request):
     conn = get_db_conn()

@@ -61,9 +61,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
             </thead>
             <tbody>`;
+        // Inside renderTable()
         pageResumes.forEach(r => {
+            let displayName = r.file_name.length > 30
+                ? r.file_name.slice(0, 30) + '<br>' + r.file_name.slice(30)
+                : r.file_name;
             html += `<tr>
-                <td>${r.file_name}</td>
+                <td class="resume-name">${displayName}</td>
                 <td>${r.jd_id}</td>
                 <td>${r.jd_summary}</td>
                 <td>${r.uploaded_on}</td>
