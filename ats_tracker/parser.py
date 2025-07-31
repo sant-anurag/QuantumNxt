@@ -41,32 +41,72 @@ class ResumeParser:
         doc = Document(docx_path)
         return '\n'.join([para.text for para in doc.paragraphs])
 
+
     def extract_name(self, text):
-        lines = text.splitlines()
-        filtered_lines = [
-            line.strip() for line in lines
-            if not re.search(self.EMAIL_REGEX, line)
-            and not re.search(self.PHONE_REGEX, line)
-            and not re.search(r'address|email|phone|contact|mobile|linkedin|github', line, re.I)
-            and 2 < len(line.strip()) < 50
-        ]
+            # 1. Pre-filter lines
+            lines = text.splitlines()
+            filtered_lines = [
+                line.strip() for line in lines
+                if not re.search(self.EMAIL_REGEX, line)
+                and not re.search(self.PHONE_REGEX, line)
+                and not re.search(
+                    r'address|email|phone|contact|mobile|linkedin|github|profile|curriculum|vitae|resume|summary|skills|experience|technologies|solutions|engineer|developer',
+                    line, re.I
+                )
+                and 2 < len(line.strip()) < 50
+            ]
 
-        filtered_text = "\n".join(filtered_lines[:15])
-        doc = self.nlp(filtered_text)
+            candidate_name = None
 
-        names = [
-            ent.text.strip() for ent in doc.ents
-            if ent.label_ == "PERSON"
-            and 2 <= len(ent.text.split()) <= 4
-            and not any(word.lower() in ent.text.lower() for word in ['language', 'engineer', 'developer', 'technologies'])
-        ]
-
-        if not names:
+            # 2. Check for explicit "Name:" headers
             for line in filtered_lines[:10]:
-                if line.isupper() and 1 < len(line.split()) <= 3:
-                    names.append(line.title())
+                match = re.match(r'^(Name|Candidate Name|Full Name)[:\- ]+([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)$', line)
+                if match:
+                    candidate_name = match.group(2).strip()
+                    break
 
-        return max(names, key=len) if names else ""
+            # 3. Use SpaCy NER on first 15 lines
+            if not candidate_name:
+                filtered_text = "\n".join(filtered_lines[:15])
+                doc = self.nlp(filtered_text)
+                names = [
+                    ent.text.strip() for ent in doc.ents
+                    if ent.label_ == "PERSON"
+                    and 2 <= len(ent.text.split()) <= 4
+                    and not any(word.lower() in ent.text.lower() for word in [
+                        'language', 'engineer', 'developer', 'technologies', 'solutions', 'resume', 'curriculum', 'vitae'
+                    ])
+                ]
+                if names:
+                    candidate_name = max(names, key=len)
+
+            # 4. Fallback: Look for capitalized lines (likely names)
+            if not candidate_name:
+                for line in filtered_lines[:10]:
+                    if re.match(r'^[A-Z][a-z]+(?:\s[A-Z][a-z]+)+$', line):
+                        candidate_name = line.strip()
+                        break
+
+            # 5. Last fallback: First non-empty filtered line
+            if not candidate_name:
+                for line in filtered_lines:
+                    if line:
+                        candidate_name = line.strip()
+                        break
+
+            # Post-processing: Remove trailing expertise/skill keywords
+            if candidate_name:
+                expertise_keywords = [
+                    'expertise', 'skills', 'technologies', 'core competencies', 'highlights', 'abilities', 'capabilities'
+                ]
+                for keyword in expertise_keywords:
+                    idx = candidate_name.lower().find(keyword)
+                    if idx != -1:
+                        candidate_name = candidate_name[:idx].strip()
+                        break
+                candidate_name = candidate_name.split('\n')[0].strip()
+
+            return candidate_name if candidate_name else ""
 
     def extract_contact(self, text):
         matches = re.findall(self.PHONE_REGEX, text)
