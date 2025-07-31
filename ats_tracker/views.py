@@ -2,10 +2,9 @@
 import os
 import json
 from datetime import datetime
-
 import mysql.connector
 import textract
-
+from .parser import ResumeParser
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
@@ -970,4 +969,48 @@ def export_resumes_excel(request):
     response['Content-Disposition'] = f'attachment; filename="resumes_{jd_id}.xlsx"'
     wb.save(response)
     return response
+
+@csrf_exempt
+def parse_resumes(request):
+    jd_id = request.GET.get('jd_id')
+    if not jd_id:
+        return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
+    resumes = cursor.fetchall()
+    parser = ResumeParser()
+    parsed_resumes = []
+    for r in resumes:
+        file_path = r['file_path']
+        if not os.path.exists(file_path):
+            continue
+        try:
+            result = parser.parse_resume(file_path)
+            parsed_resumes.append({
+                'resume_id': r['resume_id'],
+                'file_name': r['file_name'],
+                'name': result.get('Name', ''),
+                'email': result.get('Email', ''),
+                'phone': result.get('Contact Number', ''),
+                'experience': result.get('Work Experience (Years)', ''),
+                'status': r['status'],
+                'file_url': f"/download_resume/{r['resume_id']}/"
+            })
+        except Exception as e:
+            parsed_resumes.append({
+                'resume_id': r['resume_id'],
+                'file_name': r['file_name'],
+                'error': str(e),
+                'status': r['status'],
+                'file_url': f"/download_resume/{r['resume_id']}/"
+            })
+    cursor.close()
+    conn.close()
+    print("parse_resumes -> Parsed resumes:", parsed_resumes)
+    if not parsed_resumes:
+        return JsonResponse({'success': False, 'error': 'No resumes found for this JD'}, status=404)
+    return JsonResponse({'success': True, 'resumes': parsed_resumes})
+
+
 

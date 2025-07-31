@@ -117,7 +117,7 @@ class ResumeParser:
         else:
             return None
         return {
-            'Name': self.extract_name(text),
+            'Name':self.extract_name(text),
             'Contact Number': self.extract_contact(text),
             'Email': self.extract_email(text),
             'Work Experience (Years)': self.extract_experience_years(text)

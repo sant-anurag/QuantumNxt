@@ -28,7 +28,11 @@ function renderTable(resumes) {
     resumes.forEach(r => {
         tbody.innerHTML += `
             <tr>
-                <td><a href="${r.file_url}" download="${r.file_name}">${r.file_name}</a></td>
+                <td class="file-name-col"><a href="${r.file_url}" download="${r.file_name}">${r.file_name}</a></td>
+                <td>${r.name || ''}</td>
+                <td>${r.phone || ''}</td>
+                <td>${r.email || ''}</td>
+                <td>${r.experience || ''}</td>
                 <td>
                     <span class="${r.status}">${r.status}</span>
                 </td>
@@ -62,4 +66,14 @@ document.getElementById('export-btn').onclick = function() {
     const jdId = document.getElementById('jd-select').value;
     if (!jdId) return;
     window.location.href = `/export_resumes_excel/?jd_id=${jdId}`;
+};
+
+document.getElementById('start-parse-btn').onclick = function() {
+    const jdId = document.getElementById('jd-select').value;
+    if (!jdId) return;
+    fetch(`/parse_resumes/?jd_id=${jdId}`)
+        .then(res => res.json())
+        .then(data => {
+            renderTable(data.resumes || []);
+        });
 };

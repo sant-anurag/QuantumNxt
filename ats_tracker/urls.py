@@ -36,5 +36,6 @@ urlpatterns = [
     path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
     # urls.py
     path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
+    path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
 
 ]
