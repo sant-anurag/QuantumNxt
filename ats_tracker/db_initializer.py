@@ -123,21 +123,28 @@ class ATSDatabaseInitializer:
                 screen_status ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 screened_remarks TEXT,
                 l1_date DATE,
-                l1_result VARCHAR(50),
+                l1_result ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 l1_comments TEXT,
+                l1_interviewer_name VARCHAR(100),
+                l1_interviewer_email VARCHAR(100),
                 l2_date DATE,
-                l2_result VARCHAR(50),
+                l2_result ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 l2_comments TEXT,
+                l2_interviewer_name VARCHAR(100),
+                l2_interviewer_email VARCHAR(100),
                 l3_date DATE,
-                l3_result VARCHAR(50),
+                l3_result ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 l3_comments TEXT,
-                screening_team VARCHAR(100),
+                l3_interviewer_name VARCHAR(100),
+                l3_interviewer_email VARCHAR(100),
+                team_id INT,
                 hr_member_id INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id),
                 FOREIGN KEY (resume_id) REFERENCES resumes(resume_id),
-                FOREIGN KEY (hr_member_id) REFERENCES hr_team_members(emp_id)
+                FOREIGN KEY (hr_member_id) REFERENCES hr_team_members(emp_id),
+                FOREIGN KEY (team_id) REFERENCES teams(team_id)
             );
         """)
         self.conn.commit()

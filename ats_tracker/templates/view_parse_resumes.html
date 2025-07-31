@@ -73,7 +73,7 @@
                 </div>
             </div>
 
-            <!-- Screen Status, L1 Interview Date, L1 Result -->
+            <!-- Screen Status, Screening Team, HR Member ID -->
             <div class="modal-row">
                 <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
                     <label for="modal-screen-status">Screen Status:</label>
@@ -84,71 +84,24 @@
                         <option value="onHold">On Hold</option>
                     </select>
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-l1-date">L1 Interview Date:</label>
-                    <input type="date" id="modal-l1-date">
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-l1-result">L1 Result:</label>
-                    <input type="text" id="modal-l1-result" maxlength="50">
-                </div>
-            </div>
-
-            <!-- L2 Interview Date, L2 Result, L3 Interview Date -->
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-l2-date">L2 Interview Date:</label>
-                    <input type="date" id="modal-l2-date">
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-l2-result">L2 Result:</label>
-                    <input type="text" id="modal-l2-result" maxlength="50">
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-l3-date">L3 Interview Date:</label>
-                    <input type="date" id="modal-l3-date">
-                </div>
-            </div>
-
-            <!-- L3 Result, Screening Team, HR Member ID -->
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-l3-result">L3 Result:</label>
-                    <input type="text" id="modal-l3-result" maxlength="50">
-                </div>
+                <!-- Screening Team (readonly, auto-filled) -->
                 <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
                     <label for="modal-screening-team">Screening Team:</label>
-                    <input type="text" id="modal-screening-team" maxlength="100">
+                    <input type="text" id="modal-screening-team" readonly>
                 </div>
+
+                <!-- Assigned To (HR Member dropdown) -->
                 <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-hr-member-id">HR Member ID:</label>
-                    <input type="text" id="modal-hr-member-id" maxlength="10">
+                    <label for="modal-hr-member-id">Assigned To:</label>
+                    <select id="modal-hr-member-id"></select>
                 </div>
             </div>
 
-            <!-- Remarks and Comments (single field per row for better UX) -->
+            <!-- Screened Remarks -->
             <div class="modal-row">
                 <div style="flex:1; display:flex; flex-direction:column;">
                     <label for="modal-screened-remarks">Screened Remarks:</label>
                     <textarea id="modal-screened-remarks" maxlength="500"></textarea>
-                </div>
-            </div>
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-l1-comments">L1 Comments:</label>
-                    <textarea id="modal-l1-comments" maxlength="500"></textarea>
-                </div>
-            </div>
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-l2-comments">L2 Comments:</label>
-                    <textarea id="modal-l2-comments" maxlength="500"></textarea>
-                </div>
-            </div>
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-l3-comments">L3 Comments:</label>
-                    <textarea id="modal-l3-comments" maxlength="500"></textarea>
                 </div>
             </div>
 

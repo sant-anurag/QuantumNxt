@@ -1063,3 +1063,20 @@ def update_candidate_screen_status(request):
         conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+@csrf_exempt
+def get_candidate_details(request):
+    print("get_candidate_details -> Request method:", request.method)
+    resume_id = request.GET.get('resume_id')
+    if not resume_id:
+        return JsonResponse({'success': False, 'error': 'resume_id required'}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM candidates WHERE resume_id=%s ORDER BY candidate_id DESC LIMIT 1", (resume_id,))
+    candidate = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'candidate': candidate})

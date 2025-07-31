@@ -39,4 +39,5 @@ urlpatterns = [
     path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
     path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
     path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
+    path('get_candidate_details/', views.get_candidate_details, name='get_candidate_details'),
 ]

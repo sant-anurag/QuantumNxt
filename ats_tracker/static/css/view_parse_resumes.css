@@ -353,16 +353,19 @@
       gap: 10px;
   }
 
-  .modal-content h3 {
-      font-size: 1.3em;
-      width:auto;
-      font-weight: 600;
-      color: #5661d2;
-      margin-bottom: 12px;
-      text-align: center;
-      letter-spacing: 0.02em;
-      max-width: 540px;
-  }
+.modal-content h3 {
+    font-size: 1.6em;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(90deg, #6a5af9 0%, #4f8cff 100%);
+    padding: 18px 0 14px 0;
+    margin: -28px -28px 18px -28px;
+    border-radius: 16px 16px 0 0;
+    text-align: center;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 8px rgba(76,90,255,0.08);
+    border-bottom: 2px solid #e3e8f7;
+}
 
   .modal-row {
         flex:1;
