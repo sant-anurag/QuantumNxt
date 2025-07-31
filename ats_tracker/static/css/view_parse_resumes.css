@@ -347,7 +347,7 @@
       padding: 32px 28px;
       min-width: 420px;
       max-width: 98vw;
-      width: 480px;
+      width: auto;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -355,19 +355,26 @@
 
   .modal-content h3 {
       font-size: 1.3em;
+      width:auto;
       font-weight: 600;
       color: #5661d2;
       margin-bottom: 12px;
       text-align: center;
       letter-spacing: 0.02em;
+      max-width: 540px;
   }
 
   .modal-row {
+        flex:1;
       display: flex;
       align-items: center;
       margin-bottom: 10px;
       gap: 12px;
   }
+
+  .modal-row > div:not(:last-child) {
+    margin-right: 12px;
+}
 
   .modal-row label {
       min-width: 140px;
@@ -381,6 +388,9 @@
   .modal-row textarea {
       flex: 1;
       padding: 7px 12px;
+          max-width: 100%;
+     width: auto;
+    box-sizing: border-box;
       border-radius: 7px;
       border: 1.5px solid #7280ff;
       font-size: 1em;

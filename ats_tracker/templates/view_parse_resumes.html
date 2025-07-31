@@ -40,87 +40,118 @@
         <form id="candidate-form">
             <input type="hidden" id="modal-resume-id">
             <input type="hidden" id="modal-jd-id">
+
+            <!-- Name, Phone, Email -->
             <div class="modal-row">
-                <label>Name:</label>
-                <input type="text" id="modal-name" maxlength="100">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-name">Name:</label>
+                    <input type="text" id="modal-name" maxlength="100">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-phone">Phone:</label>
+                    <input type="text" id="modal-phone" maxlength="20">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-email">Email:</label>
+                    <input type="email" id="modal-email" maxlength="100">
+                </div>
+            </div>
+
+            <!-- Skills, Experience, Screened On -->
+            <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-skills">Skills:</label>
+                    <input type="text" id="modal-skills" maxlength="255">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-experience">Experience (years):</label>
+                    <input type="text" id="modal-experience" maxlength="20">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-screened-on">Screened On:</label>
+                    <input type="date" id="modal-screened-on">
+                </div>
+            </div>
+
+            <!-- Screen Status, L1 Interview Date, L1 Result -->
+            <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-screen-status">Screen Status:</label>
+                    <select id="modal-screen-status">
+                        <option value="toBeScreened">To Be Screened</option>
+                        <option value="selected">Selected</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="onHold">On Hold</option>
+                    </select>
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-l1-date">L1 Interview Date:</label>
+                    <input type="date" id="modal-l1-date">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-l1-result">L1 Result:</label>
+                    <input type="text" id="modal-l1-result" maxlength="50">
+                </div>
+            </div>
+
+            <!-- L2 Interview Date, L2 Result, L3 Interview Date -->
+            <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-l2-date">L2 Interview Date:</label>
+                    <input type="date" id="modal-l2-date">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-l2-result">L2 Result:</label>
+                    <input type="text" id="modal-l2-result" maxlength="50">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-l3-date">L3 Interview Date:</label>
+                    <input type="date" id="modal-l3-date">
+                </div>
+            </div>
+
+            <!-- L3 Result, Screening Team, HR Member ID -->
+            <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-l3-result">L3 Result:</label>
+                    <input type="text" id="modal-l3-result" maxlength="50">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-screening-team">Screening Team:</label>
+                    <input type="text" id="modal-screening-team" maxlength="100">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-hr-member-id">HR Member ID:</label>
+                    <input type="text" id="modal-hr-member-id" maxlength="10">
+                </div>
+            </div>
+
+            <!-- Remarks and Comments (single field per row for better UX) -->
+            <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-screened-remarks">Screened Remarks:</label>
+                    <textarea id="modal-screened-remarks" maxlength="500"></textarea>
+                </div>
             </div>
             <div class="modal-row">
-                <label>Phone:</label>
-                <input type="text" id="modal-phone" maxlength="20">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-l1-comments">L1 Comments:</label>
+                    <textarea id="modal-l1-comments" maxlength="500"></textarea>
+                </div>
             </div>
             <div class="modal-row">
-                <label>Email:</label>
-                <input type="email" id="modal-email" maxlength="100">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-l2-comments">L2 Comments:</label>
+                    <textarea id="modal-l2-comments" maxlength="500"></textarea>
+                </div>
             </div>
             <div class="modal-row">
-                <label>Skills:</label>
-                <input type="text" id="modal-skills" maxlength="255">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-l3-comments">L3 Comments:</label>
+                    <textarea id="modal-l3-comments" maxlength="500"></textarea>
+                </div>
             </div>
-            <div class="modal-row">
-                <label>Experience (years):</label>
-                <input type="text" id="modal-experience" maxlength="20">
-            </div>
-            <div class="modal-row">
-                <label>Screened On:</label>
-                <input type="date" id="modal-screened-on">
-            </div>
-            <div class="modal-row">
-                <label>Screen Status:</label>
-                <select id="modal-screen-status">
-                    <option value="toBeScreened">To Be Screened</option>
-                    <option value="selected">Selected</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="onHold">On Hold</option>
-                </select>
-            </div>
-            <div class="modal-row">
-                <label>Screened Remarks:</label>
-                <textarea id="modal-screened-remarks" maxlength="500"></textarea>
-            </div>
-            <div class="modal-row">
-                <label>L1 Interview Date:</label>
-                <input type="date" id="modal-l1-date">
-            </div>
-            <div class="modal-row">
-                <label>L1 Result:</label>
-                <input type="text" id="modal-l1-result" maxlength="50">
-            </div>
-            <div class="modal-row">
-                <label>L1 Comments:</label>
-                <textarea id="modal-l1-comments" maxlength="500"></textarea>
-            </div>
-            <div class="modal-row">
-                <label>L2 Interview Date:</label>
-                <input type="date" id="modal-l2-date">
-            </div>
-            <div class="modal-row">
-                <label>L2 Result:</label>
-                <input type="text" id="modal-l2-result" maxlength="50">
-            </div>
-            <div class="modal-row">
-                <label>L2 Comments:</label>
-                <textarea id="modal-l2-comments" maxlength="500"></textarea>
-            </div>
-            <div class="modal-row">
-                <label>L3 Interview Date:</label>
-                <input type="date" id="modal-l3-date">
-            </div>
-            <div class="modal-row">
-                <label>L3 Result:</label>
-                <input type="text" id="modal-l3-result" maxlength="50">
-            </div>
-            <div class="modal-row">
-                <label>L3 Comments:</label>
-                <textarea id="modal-l3-comments" maxlength="500"></textarea>
-            </div>
-            <div class="modal-row">
-                <label>Screening Team:</label>
-                <input type="text" id="modal-screening-team" maxlength="100">
-            </div>
-            <div class="modal-row">
-                <label>HR Member ID:</label>
-                <input type="text" id="modal-hr-member-id" maxlength="10">
-            </div>
+
             <div class="modal-actions">
                 <button type="button" id="modal-save-btn" class="modal-btn save-btn">Save</button>
                 <button type="button" id="modal-close-btn" class="modal-btn close-btn">Close</button>
