@@ -176,28 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             actionsTd.appendChild(recordBtn);
 
-            // Select button
-            const selectBtn = document.createElement('button');
-            selectBtn.innerHTML = '&#10004;';
-            selectBtn.className = 'icon-btn select-btn';
-            selectBtn.title = 'Select';
-            selectBtn.dataset.resumeId = resume.resume_id;
-            selectBtn.addEventListener('click', function() {
-                updateResumeStatus(resume.resume_id, 'selected');
-            });
-            actionsTd.appendChild(selectBtn);
-
-            // Reject button
-            const rejectBtn = document.createElement('button');
-            rejectBtn.innerHTML = '&#10008;';
-            rejectBtn.className = 'icon-btn reject-btn';
-            rejectBtn.title = 'Reject';
-            rejectBtn.dataset.resumeId = resume.resume_id;
-            rejectBtn.addEventListener('click', function() {
-                updateResumeStatus(resume.resume_id, 'rejected');
-            });
-            actionsTd.appendChild(rejectBtn);
-
             tr.appendChild(actionsTd);
             resumeTable.appendChild(tr);
         });
