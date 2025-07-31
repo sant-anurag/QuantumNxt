@@ -68,12 +68,30 @@ document.getElementById('export-btn').onclick = function() {
     window.location.href = `/export_resumes_excel/?jd_id=${jdId}`;
 };
 
-document.getElementById('start-parse-btn').onclick = function() {
+
+const startBtn = document.getElementById('start-parse-btn');
+const exportBtn = document.getElementById('export-btn');
+let parsingInProgress = false;
+
+startBtn.onclick = function() {
+    if (parsingInProgress) return; // Prevent double click
+    parsingInProgress = true;
+    startBtn.innerHTML = `<span class="spinner"></span> Stop Parsing`;
+    startBtn.disabled = true;
+    exportBtn.disabled = true;
+
     const jdId = document.getElementById('jd-select').value;
     if (!jdId) return;
+
     fetch(`/parse_resumes/?jd_id=${jdId}`)
         .then(res => res.json())
         .then(data => {
             renderTable(data.resumes || []);
+        })
+        .finally(() => {
+            parsingInProgress = false;
+            startBtn.innerHTML = `&#128269; Start Parsing`;
+            startBtn.disabled = false;
+            exportBtn.disabled = false;
         });
 };
