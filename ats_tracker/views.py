@@ -1115,3 +1115,115 @@ def get_candidate_details(request):
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})
+
+# views.py
+
+def schedule_interviews_page(request):
+    return render(request, 'schedule_interviews.html')
+
+def get_candidates_for_jd(request):
+    jd_id = request.GET.get('jd_id')
+    if not jd_id:
+        return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
+
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT c.*, r.status as resume_status
+            FROM candidates c
+            JOIN resumes r ON c.resume_id = r.resume_id
+            WHERE c.jd_id = %s AND c.screen_status = 'selected'
+            ORDER BY c.name
+        """, (jd_id,))
+        candidates = cursor.fetchall()
+        return JsonResponse({'success': True, 'candidates': candidates})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    finally:
+        cursor.close()
+        conn.close()
+
+@csrf_exempt
+def schedule_interview(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        candidate_id = data.get('candidate_id')
+        level = data.get('level')
+        date = data.get('date')
+        time = data.get('time')
+        interviewer_name = data.get('interviewer_name')
+        interviewer_email = data.get('interviewer_email')
+
+        # Validate required fields
+        if not all([candidate_id, level, date, time, interviewer_name, interviewer_email]):
+            return JsonResponse({'success': False, 'error': 'All fields are required'}, status=400)
+
+        # Get candidate info for calendar invite
+        conn = get_db_conn()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT c.name, c.email, c.jd_id, r.jd_summary
+            FROM candidates c
+            JOIN recruitment_jds r ON c.jd_id = r.jd_id
+            WHERE c.candidate_id = %s
+        """, (candidate_id,))
+        candidate = cursor.fetchone()
+
+        if not candidate:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+
+        # Update candidate record with interview details
+        cursor.execute(f"""
+            UPDATE candidates 
+            SET 
+                {level}_date = %s,
+                {level}_result = 'toBeScreened',
+                {level}_interviewer_name = %s,
+                {level}_interviewer_email = %s,
+                updated_at = NOW()
+            WHERE candidate_id = %s
+        """, (date, interviewer_name, interviewer_email, candidate_id))
+
+        conn.commit()
+
+        # Here you would integrate with MS Teams API to send calendar invites
+        # This is a simplified implementation
+        try:
+            # Simulate MS Teams integration
+            meeting_details = {
+                'subject': f"{level.upper()} Interview - {candidate['name']} for {candidate['jd_id']}",
+                'start_time': f"{date}T{time}:00",
+                'participants': [candidate['email'], interviewer_email],
+                'jd_summary': candidate['jd_summary']
+            }
+
+            # Log the meeting details (for demonstration)
+            print(f"Creating Teams meeting: {meeting_details}")
+
+            # In a real implementation, you would call MS Graph API here
+            # teams_meeting_link = create_teams_meeting(meeting_details)
+            teams_meeting_link = "https://teams.microsoft.com/meeting/sample-link"
+
+
+            conn.commit()
+
+        except Exception as e:
+            # Log the error but don't fail the entire operation
+            print(f"Teams integration error: {str(e)}")
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Interview scheduled successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()

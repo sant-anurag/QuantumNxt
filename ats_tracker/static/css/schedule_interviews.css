@@ -1,0 +1,364 @@
+/* Schedule Interviews Page Styles */
+.schedule-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-title {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 24px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.filter-card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.filter-field {
+    flex: 1;
+    min-width: 250px;
+}
+
+.filter-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.candidates-section {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background-color: #3498db;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 500;
+}
+
+.data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
+}
+
+.data-table tr:hover {
+    background-color: #f5f7f9;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.schedule-btn {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.schedule-btn:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 700px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.close-modal {
+    font-size: 24px;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.2s;
+}
+
+.close-modal:hover {
+    color: #34495e;
+}
+
+#schedule-form {
+    padding: 20px;
+}
+
+.modal-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.primary-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: #2980b9;
+}
+
+.secondary-btn {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.secondary-btn:hover {
+    background-color: #7f8c8d;
+}
+
+.modal-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+}
+
+.modal-message.success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    display: block;
+}
+
+.modal-message.error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    display: block;
+}{% extends 'home.html' %}
+{% load static %}
+
+{% block title %}Schedule Interviews{% endblock %}
+
+{% block content %}
+<div class="schedule-container">
+    <h1 class="page-title">Schedule Interviews</h1>
+
+    <div class="filter-card">
+        <div class="filter-row">
+            <div class="filter-field">
+                <label for="jd-select">Select Job Description:</label>
+                <select id="jd-select" class="form-control">
+                    <option value="">Select JD</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="candidates-section">
+        <h2 class="section-title">Candidates</h2>
+        <div class="table-responsive">
+            <table id="candidates-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Experience</th>
+                        <th>Screen Status</th>
+                        <th>L1 Status</th>
+                        <th>L2 Status</th>
+                        <th>L3 Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="9" class="text-center">Select a JD to view candidates</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Interview Scheduling Modal -->
+<div id="schedule-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Schedule Interview</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <form id="schedule-form">
+            <input type="hidden" id="candidate-id">
+            <input type="hidden" id="resume-id">
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="candidate-name">Candidate Name:</label>
+                    <input type="text" id="candidate-name" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="candidate-email">Candidate Email:</label>
+                    <input type="text" id="candidate-email" readonly>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="interview-level">Interview Level:</label>
+                    <select id="interview-level" required>
+                        <option value="">Select Level</option>
+                        <option value="l1">L1 (Technical)</option>
+                        <option value="l2">L2 (Technical)</option>
+                        <option value="l3">L3 (Managerial)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="interview-date">Interview Date:</label>
+                    <input type="date" id="interview-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="interview-time">Interview Time:</label>
+                    <input type="time" id="interview-time" required>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="interviewer-name">Interviewer Name:</label>
+                    <input type="text" id="interviewer-name" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="interviewer-email">Interviewer Email:</label>
+                    <input type="email" id="interviewer-email" required maxlength="100">
+                </div>
+            </div>
+
+            <div id="modal-message" class="modal-message"></div>
+
+            <div class="modal-actions">
+                <button type="submit" id="schedule-btn" class="btn primary-btn">Schedule</button>
+                <button type="button" id="cancel-btn" class="btn secondary-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/schedule_interviews.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/schedule_interviews.css' %}">
+{% endblock %}

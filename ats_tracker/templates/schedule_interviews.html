@@ -1,0 +1,114 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block title %}Schedule Interviews{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/schedule_interviews.css' %}">
+<div class="schedule-container">
+    <h1 class="page-title">Schedule Interviews</h1>
+
+    <div class="filter-card">
+        <div class="filter-row">
+            <div class="filter-field">
+                <label for="jd-select">Select Job Description:</label>
+                <select id="jd-select" class="form-control">
+                    <option value="">Select JD</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="candidates-section">
+        <h2 class="section-title">Candidates</h2>
+        <div class="table-responsive">
+            <table id="candidates-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Experience</th>
+                        <th>Screen Status</th>
+                        <th>L1 Status</th>
+                        <th>L2 Status</th>
+                        <th>L3 Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="9" class="text-center">Select a JD to view candidates</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Interview Scheduling Modal -->
+<div id="schedule-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Schedule Interview</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <form id="schedule-form">
+            <input type="hidden" id="candidate-id">
+            <input type="hidden" id="resume-id">
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="candidate-name">Candidate Name:</label>
+                    <input type="text" id="candidate-name" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="candidate-email">Candidate Email:</label>
+                    <input type="text" id="candidate-email" readonly>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="interview-level">Interview Level:</label>
+                    <select id="interview-level" required>
+                        <option value="">Select Level</option>
+                        <option value="l1">L1 (Technical)</option>
+                        <option value="l2">L2 (Technical)</option>
+                        <option value="l3">L3 (Managerial)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="interview-date">Interview Date:</label>
+                    <input type="date" id="interview-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="interview-time">Interview Time:</label>
+                    <input type="time" id="interview-time" required>
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="form-group">
+                    <label for="interviewer-name">Interviewer Name:</label>
+                    <input type="text" id="interviewer-name" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="interviewer-email">Interviewer Email:</label>
+                    <input type="email" id="interviewer-email" required maxlength="100">
+                </div>
+            </div>
+
+            <div id="modal-message" class="modal-message"></div>
+
+            <div class="modal-actions">
+                <button type="submit" id="schedule-btn" class="btn primary-btn">Schedule</button>
+                <button type="button" id="cancel-btn" class="btn secondary-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/schedule_interviews.js' %}"></script>
+
+{% endblock %}

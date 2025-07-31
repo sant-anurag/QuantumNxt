@@ -41,4 +41,8 @@ urlpatterns = [
     path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
     path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
     path('get_jd_team_members/', views.get_jd_team_members, name='get_jd_team_members'),
+    # urls.py
+    path('schedule_interviews/', views.schedule_interviews_page, name='schedule_interviews_page'),
+    path('get_candidates_for_jd/', views.get_candidates_for_jd, name='get_candidates_for_jd'),
+    path('schedule_interview/', views.schedule_interview, name='schedule_interview'),
 ]
