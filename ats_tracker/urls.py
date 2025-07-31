@@ -35,9 +35,10 @@ urlpatterns = [
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
     path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
     # urls.py
+    path('get_candidate_details/', views.get_candidate_details, name='get_candidate_details'),
     path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
     path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
     path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
     path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
-    path('get_candidate_details/', views.get_candidate_details, name='get_candidate_details'),
+    path('get_jd_team_members/', views.get_jd_team_members, name='get_jd_team_members'),
 ]

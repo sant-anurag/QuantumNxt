@@ -1,210 +1,352 @@
-// Fetch JDs for dropdown and initialize page
-fetch('/assign_jd_data/')
-    .then(res => res.json())
-    .then(data => {
-        const select = document.getElementById('jd-select');
-        data.jds.forEach(jd => {
-            const option = document.createElement('option');
-            option.value = jd.jd_id;
-            option.textContent = `${jd.jd_id} - ${jd.jd_summary}`;
-            select.appendChild(option);
-        });
-        if (select.value) loadResumes(select.value);
-        select.onchange = () => loadResumes(select.value);
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const jdSelect = document.getElementById('jd-select');
+    const jdIdSpan = document.getElementById('jd-id');
+    const startParseBtn = document.getElementById('start-parse-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const resumeTable = document.getElementById('resume-table').querySelector('tbody');
+    const candidateModal = document.getElementById('candidate-modal');
+    const candidateForm = document.getElementById('candidate-form');
+    const modalSaveBtn = document.getElementById('modal-save-btn');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
 
-function loadResumes(jdId) {
-    document.getElementById('jd-id').textContent = jdId;
-    fetch(`/view_parse_resumes/?jd_id=${jdId}`)
-        .then(res => res.json())
-        .then(data => {
-            renderTable(data.resumes || [], jdId); // Pass jdId as argument
-        });
-}
+    // State variables
+    let currentJdId = null;
+    let resumeData = [];
+    let isParsing = false;
 
-function renderTable(resumes, jdId) {
-    console.log('Rendering table with resumes:', resumes);
-    const tbody = document.querySelector('#resume-table tbody');
-    tbody.innerHTML = '';
-    resumes.forEach(r => {
-        const resumeJdId = r.jd_id || jdId; // Use jdId if missing
-        tbody.innerHTML += `
-            <tr>
-                <td class="file-name-col"><a href="${r.file_url}" download="${r.file_name}">${r.file_name}</a></td>
-                <td>${r.name || ''}</td>
-                <td>${r.phone || ''}</td>
-                <td>${r.email || ''}</td>
-                <td>${r.experience || ''}</td>
-                <td>
-                    <span class="${r.status}">${r.status}</span>
-                </td>
-                <td>
+    // Initialize - Load JDs for dropdown
+    function loadJDs() {
+        fetch('/assign_jd_data/')
+            .then(response => response.json())
+            .then(data => {
+                jdSelect.innerHTML = '<option value="">Select JD</option>';
+                data.jds.forEach(jd => {
+                    const option = document.createElement('option');
+                    option.value = jd.jd_id;
+                    option.textContent = `${jd.jd_id} - ${jd.jd_summary}`;
+                    jdSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading JDs:', error));
+    }
 
-                   <button class="icon-btn record-btn"
-                        onclick="handleRecordBtnClick(
-                            ${r.resume_id},
-                            '${resumeJdId}',
-                            '${escapeHtml(r.name)}',
-                            '${escapeHtml(r.phone).replace(/\n/g, '')}',
-                            '${escapeHtml(r.email)}',
-                            '${escapeHtml(r.experience)}'
-                        )"
-                        title="Record Details">&#x1F4DD;
-                    </button>
-                    </button>
-                 </td>
-            </tr>
-        `;
-    });
-}
-
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    return String(text).replace(/["'<>]/g, function(c) {
-        return {'"':'&quot;', "'":'&#39;', '<':'&lt;', '>':'&gt;'}[c];
-    });
-}
-
-// Modal logic
-function openCandidateModal(resumeId, jdId, name, phone, email, experience) {
-    const modal = document.getElementById('candidate-modal');
-    modal.style.display = 'flex';
-    document.getElementById('modal-resume-id').value = resumeId || '';
-    document.getElementById('modal-jd-id').value = jdId || '';
-    document.getElementById('modal-name').value = name || '';
-    document.getElementById('modal-phone').value = phone || '';
-    document.getElementById('modal-email').value = email || '';
-    document.getElementById('modal-experience').value = experience || '';
-    // Clear other fields
-    document.getElementById('modal-skills').value = '';
-    document.getElementById('modal-screened-on').value = '';
-    document.getElementById('modal-screen-status').value = 'toBeScreened';
-    document.getElementById('modal-screened-remarks').value = '';
-    document.getElementById('modal-l1-date').value = '';
-    document.getElementById('modal-l1-result').value = '';
-    document.getElementById('modal-l1-comments').value = '';
-    document.getElementById('modal-l2-date').value = '';
-    document.getElementById('modal-l2-result').value = '';
-    document.getElementById('modal-l2-comments').value = '';
-    document.getElementById('modal-l3-date').value = '';
-    document.getElementById('modal-l3-result').value = '';
-    document.getElementById('modal-l3-comments').value = '';
-    document.getElementById('modal-screening-team').value = '';
-    document.getElementById('modal-hr-member-id').value = '';
-}
-
-document.getElementById('modal-close-btn').onclick = function() {
-    document.getElementById('candidate-modal').style.display = 'none';
-};
-
-document.getElementById('modal-save-btn').onclick = function() {
-    const payload = {
-        resume_id: document.getElementById('modal-resume-id').value,
-        jd_id: document.getElementById('modal-jd-id').value,
-        name: document.getElementById('modal-name').value,
-        phone: document.getElementById('modal-phone').value,
-        email: document.getElementById('modal-email').value,
-        skills: document.getElementById('modal-skills').value,
-        experience: document.getElementById('modal-experience').value,
-        screened_on: document.getElementById('modal-screened-on').value,
-        screen_status: document.getElementById('modal-screen-status').value,
-        screened_remarks: document.getElementById('modal-screened-remarks').value,
-        l1_date: document.getElementById('modal-l1-date').value,
-        l1_result: document.getElementById('modal-l1-result').value,
-        l1_comments: document.getElementById('modal-l1-comments').value,
-        l2_date: document.getElementById('modal-l2-date').value,
-        l2_result: document.getElementById('modal-l2-result').value,
-        l2_comments: document.getElementById('modal-l2-comments').value,
-        l3_date: document.getElementById('modal-l3-date').value,
-        l3_result: document.getElementById('modal-l3-result').value,
-        l3_comments: document.getElementById('modal-l3-comments').value,
-        screening_team: document.getElementById('modal-screening-team').value,
-        hr_member_id: document.getElementById('modal-hr-member-id').value
-    };
-    fetch('/save_candidate_details/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('candidate-modal').style.display = 'none';
-            const select = document.getElementById('jd-select');
-            loadResumes(select.value);
+    // Event Listeners
+    jdSelect.addEventListener('change', function() {
+        currentJdId = this.value;
+        jdIdSpan.textContent = currentJdId;
+        if (currentJdId) {
+            loadResumes(currentJdId);
         } else {
-            alert(data.error || 'Failed to save candidate details.');
+            resumeTable.innerHTML = '';
+            resumeData = [];
         }
     });
-};
 
-function updateStatus(resumeId, status) {
-    fetch('/update_resume_status/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `resume_id=${resumeId}&status=${status}`
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            // Update candidate screen status as well
-            fetch('/update_candidate_screen_status/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: `resume_id=${resumeId}&status=${status}`
-            }).then(() => {
-                const select = document.getElementById('jd-select');
-                loadResumes(select.value);
+    startParseBtn.addEventListener('click', function() {
+        if (!currentJdId) {
+            alert('Please select a JD first');
+            return;
+        }
+        if (isParsing) return;
+
+        isParsing = true;
+        startParseBtn.innerHTML = '<span class="spinner"></span> Parsing...';
+
+        fetch(`/parse_resumes/?jd_id=${currentJdId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resumeData = data.resumes;
+                    displayResumes(resumeData);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error parsing resumes:', error);
+                alert('Failed to parse resumes. See console for details.');
+            })
+            .finally(() => {
+                isParsing = false;
+                startParseBtn.innerHTML = '&#128269; Start Parsing';
             });
-        } else {
-            alert(data.error);
+    });
+
+    exportBtn.addEventListener('click', function() {
+        if (!currentJdId) {
+            alert('Please select a JD first');
+            return;
+        }
+        window.location.href = `/export_resumes_excel/?jd_id=${currentJdId}`;
+    });
+
+    modalCloseBtn.addEventListener('click', function() {
+        candidateModal.style.display = 'none';
+    });
+
+    modalSaveBtn.addEventListener('click', function() {
+        saveCandidateDetails();
+    });
+
+    // Load and display resumes for selected JD
+    function loadResumes(jdId) {
+        resumeTable.innerHTML = '<tr><td colspan="7">Loading resumes...</td></tr>';
+
+        fetch(`/view_parse_resumes/?jd_id=${jdId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resumeData = data.resumes;
+                    displayResumes(resumeData);
+                } else {
+                    resumeTable.innerHTML = `<tr><td colspan="7">Error: ${data.error}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading resumes:', error);
+                resumeTable.innerHTML = '<tr><td colspan="7">Failed to load resumes</td></tr>';
+            });
+    }
+
+    // Display resumes in table
+    function displayResumes(resumes) {
+        if (!resumes || resumes.length === 0) {
+            resumeTable.innerHTML = '<tr><td colspan="7">No resumes found for this JD</td></tr>';
+            return;
+        }
+
+        resumeTable.innerHTML = '';
+
+        resumes.forEach(resume => {
+            const tr = document.createElement('tr');
+
+            // File Name column
+            const fileNameTd = document.createElement('td');
+            fileNameTd.className = 'file-name-col';
+            const fileLink = document.createElement('a');
+            fileLink.href = resume.file_url;
+            fileLink.textContent = resume.file_name;
+            fileLink.target = '_blank';
+            fileNameTd.appendChild(fileLink);
+            tr.appendChild(fileNameTd);
+
+            // Name column
+            const nameTd = document.createElement('td');
+            nameTd.className = 'name-col';
+            nameTd.textContent = resume.name || '-';
+            tr.appendChild(nameTd);
+
+            // Contact column
+            const contactTd = document.createElement('td');
+            contactTd.textContent = resume.phone || '-';
+            tr.appendChild(contactTd);
+
+            // Email column
+            const emailTd = document.createElement('td');
+            emailTd.textContent = resume.email || '-';
+            tr.appendChild(emailTd);
+
+            // Experience column
+            const expTd = document.createElement('td');
+            expTd.textContent = resume.experience || '-';
+            tr.appendChild(expTd);
+
+            // Status column
+            const statusTd = document.createElement('td');
+            let statusText = resume.status;
+            if (statusText === 'toBeScreened') statusText = 'To Be Screened';
+            else if (statusText === 'selected') statusText = 'Selected';
+            else if (statusText === 'rejected') statusText = 'Rejected';
+            else if (statusText === 'onHold') statusText = 'On Hold';
+            statusTd.textContent = statusText;
+            tr.appendChild(statusTd);
+
+            // Actions column
+            const actionsTd = document.createElement('td');
+
+            // Record details button
+            const recordBtn = document.createElement('button');
+            recordBtn.innerHTML = '&#9998;';
+            recordBtn.className = 'icon-btn record-btn';
+            recordBtn.title = 'Record Details';
+            recordBtn.dataset.resumeId = resume.resume_id;
+            recordBtn.addEventListener('click', function() {
+                openCandidateModal(resume);
+            });
+            actionsTd.appendChild(recordBtn);
+
+            // Select button
+            const selectBtn = document.createElement('button');
+            selectBtn.innerHTML = '&#10004;';
+            selectBtn.className = 'icon-btn select-btn';
+            selectBtn.title = 'Select';
+            selectBtn.dataset.resumeId = resume.resume_id;
+            selectBtn.addEventListener('click', function() {
+                updateResumeStatus(resume.resume_id, 'selected');
+            });
+            actionsTd.appendChild(selectBtn);
+
+            // Reject button
+            const rejectBtn = document.createElement('button');
+            rejectBtn.innerHTML = '&#10008;';
+            rejectBtn.className = 'icon-btn reject-btn';
+            rejectBtn.title = 'Reject';
+            rejectBtn.dataset.resumeId = resume.resume_id;
+            rejectBtn.addEventListener('click', function() {
+                updateResumeStatus(resume.resume_id, 'rejected');
+            });
+            actionsTd.appendChild(rejectBtn);
+
+            tr.appendChild(actionsTd);
+            resumeTable.appendChild(tr);
+        });
+    }
+
+    // Update resume status (select/reject)
+    function updateResumeStatus(resumeId, status) {
+        const formData = new FormData();
+        formData.append('resume_id', resumeId);
+        formData.append('status', status);
+
+        fetch('/update_resume_status/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update local data and UI
+                const resume = resumeData.find(r => r.resume_id == resumeId);
+                if (resume) {
+                    resume.status = status;
+                    loadResumes(currentJdId); // Reload to reflect changes
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+        });
+    }
+
+    // Open candidate modal for recording details
+    function openCandidateModal(resume) {
+        // Fetch team members for the current JD
+        fetch(`/get_jd_team_members/?jd_id=${currentJdId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Populate HR member dropdown
+                    const hrMemberSelect = document.getElementById('modal-hr-member-id');
+                    hrMemberSelect.innerHTML = '<option value="">Select HR Member</option>';
+                    data.members.forEach(member => {
+                        const option = document.createElement('option');
+                        option.value = member.emp_id;
+                        option.textContent = `${member.first_name} ${member.last_name}`;
+                        hrMemberSelect.appendChild(option);
+                    });
+
+                    // Set team info
+                    document.getElementById('modal-screening-team').value = data.team_id || '';
+
+                    // Check if candidate details already exist
+                    fetch(`/get_candidate_details/?resume_id=${resume.resume_id}`)
+                        .then(response => response.json())
+                        .then(candidateData => {
+                            // Set form fields
+                            document.getElementById('modal-resume-id').value = resume.resume_id;
+                            document.getElementById('modal-jd-id').value = currentJdId;
+                            document.getElementById('modal-team-id').value = data.team_id || '';
+
+                            // Fill in form with existing data or resume data
+                            if (candidateData.success && candidateData.candidate) {
+                                const c = candidateData.candidate;
+                                document.getElementById('modal-name').value = c.name || resume.name || '';
+                                document.getElementById('modal-phone').value = c.phone || resume.phone || '';
+                                document.getElementById('modal-email').value = c.email || resume.email || '';
+                                document.getElementById('modal-skills').value = c.skills || '';
+                                document.getElementById('modal-experience').value = c.experience || resume.experience || '';
+                                document.getElementById('modal-screened-on').value = c.screened_on || '';
+                                document.getElementById('modal-screen-status').value = c.screen_status || 'toBeScreened';
+                                document.getElementById('modal-screened-remarks').value = c.screened_remarks || '';
+
+                                if (c.hr_member_id) {
+                                    document.getElementById('modal-hr-member-id').value = c.hr_member_id;
+                                }
+                            } else {
+                                // No existing data, use parsed resume data
+                                document.getElementById('modal-name').value = resume.name || '';
+                                document.getElementById('modal-phone').value = resume.phone || '';
+                                document.getElementById('modal-email').value = resume.email || '';
+                                document.getElementById('modal-skills').value = '';
+                                document.getElementById('modal-experience').value = resume.experience || '';
+                                document.getElementById('modal-screened-on').value = '';
+                                document.getElementById('modal-screen-status').value = 'toBeScreened';
+                                document.getElementById('modal-screened-remarks').value = '';
+                                document.getElementById('modal-hr-member-id').value = '';
+                            }
+
+                            // Display modal
+                            candidateModal.style.display = 'flex';
+                        });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching team members:', error);
+            });
+    }
+
+    // Save candidate details from modal
+    function saveCandidateDetails() {
+        const candidateData = {
+            resume_id: document.getElementById('modal-resume-id').value,
+            jd_id: document.getElementById('modal-jd-id').value,
+            name: document.getElementById('modal-name').value,
+            phone: document.getElementById('modal-phone').value,
+            email: document.getElementById('modal-email').value,
+            skills: document.getElementById('modal-skills').value,
+            experience: document.getElementById('modal-experience').value,
+            screened_on: document.getElementById('modal-screened-on').value,
+            screen_status: document.getElementById('modal-screen-status').value,
+            screened_remarks: document.getElementById('modal-screened-remarks').value,
+            screening_team: document.getElementById('modal-team-id').value,
+            hr_member_id: document.getElementById('modal-hr-member-id').value
+        };
+
+        fetch('/save_candidate_details/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(candidateData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                candidateModal.style.display = 'none';
+                // Update resume status to match screen status
+                updateResumeStatus(candidateData.resume_id, candidateData.screen_status);
+                // Reload resumes to reflect changes
+                loadResumes(currentJdId);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error saving candidate details:', error);
+            alert('Failed to save candidate details');
+        });
+    }
+
+    // Initialize
+    loadJDs();
+
+    // Close modal if clicked outside
+    window.addEventListener('click', function(event) {
+        if (event.target === candidateModal) {
+            candidateModal.style.display = 'none';
         }
     });
-}
-
-document.getElementById('export-btn').onclick = function() {
-    const jdId = document.getElementById('jd-select').value;
-    if (!jdId) return;
-    window.location.href = `/export_resumes_excel/?jd_id=${jdId}`;
-};
-
-const startBtn = document.getElementById('start-parse-btn');
-const exportBtn = document.getElementById('export-btn');
-let parsingInProgress = false;
-
-startBtn.onclick = function() {
-    if (parsingInProgress) return;
-    parsingInProgress = true;
-    startBtn.innerHTML = `<span class="spinner"></span> Stop Parsing`;
-    startBtn.disabled = true;
-    exportBtn.disabled = true;
-
-    const jdId = document.getElementById('jd-select').value;
-    if (!jdId) return;
-
-    fetch(`/parse_resumes/?jd_id=${jdId}`)
-        .then(res => res.json())
-        .then(data => {
-            renderTable(data.resumes || []);
-        })
-        .finally(() => {
-            parsingInProgress = false;
-            startBtn.innerHTML = `&#128269; Start Parsing`;
-            startBtn.disabled = false;
-            exportBtn.disabled = false;
-        });
-};
-
-function handleRecordBtnClick(resume_id, jd_id, name, phone, email, experience) {
-    console.log('Open Modal:', {
-        resume_id,
-        jd_id,
-        name,
-        phone,
-        email,
-        experience
-    });
-    openCandidateModal(resume_id, jd_id, name, phone, email, experience);
-}
-window.handleRecordBtnClick = handleRecordBtnClick;
-window.updateStatus = updateStatus;
+});

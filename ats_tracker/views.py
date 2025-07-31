@@ -18,7 +18,11 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 
 from .db_initializer import ATSDatabaseInitializer
+# python
+from django.views.decorators.csrf import csrf_exempt
 
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -1013,39 +1017,40 @@ def parse_resumes(request):
         return JsonResponse({'success': False, 'error': 'No resumes found for this JD'}, status=404)
     return JsonResponse({'success': True, 'resumes': parsed_resumes})
 
-
-# python
-from django.views.decorators.csrf import csrf_exempt
-
 @csrf_exempt
 def save_candidate_details(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         conn = get_db_conn()
         cursor = conn.cursor()
-        print("save_candidate_details -> Data received:", data)
-
-        cursor.execute("""
-            INSERT INTO candidates (
-                jd_id, resume_id, name, phone, email, skills, experience,
-                screened_on, screen_status, screened_remarks,
-                l1_date, l1_result, l1_comments,
-                l2_date, l2_result, l2_comments,
-                l3_date, l3_result, l3_comments,
-                screening_team, hr_member_id
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, [
-            data.get('jd_id'), data.get('resume_id'), data.get('name'), data.get('phone'), data.get('email'),
-            data.get('skills'), data.get('experience'), data.get('screened_on'), data.get('screen_status'),
-            data.get('screened_remarks'), data.get('l1_date'), data.get('l1_result'), data.get('l1_comments'),
-            data.get('l2_date'), data.get('l2_result'), data.get('l2_comments'),
-            data.get('l3_date'), data.get('l3_result'), data.get('l3_comments'),
-            data.get('screening_team'), data.get('hr_member_id')
-        ])
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return JsonResponse({'success': True})
+        try:
+            cursor.execute("""
+                INSERT INTO candidates (
+                    jd_id, resume_id, name, phone, email, skills, experience,
+                    screened_on, screen_status, screened_remarks,
+                    team_id, hr_member_id
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, [
+                data.get('jd_id'),
+                data.get('resume_id'),
+                data.get('name'),
+                data.get('phone'),
+                data.get('email'),
+                data.get('skills'),
+                data.get('experience'),
+                data.get('screened_on'),
+                data.get('screen_status'),
+                data.get('screened_remarks'),
+                data.get('screening_team'),  # This should be team_id
+                data.get('hr_member_id')
+            ])
+            conn.commit()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        finally:
+            cursor.close()
+            conn.close()
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
@@ -1064,6 +1069,36 @@ def update_candidate_screen_status(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+def get_jd_team_members(request):
+    jd_id = request.GET.get('jd_id')
+    if not jd_id:
+        return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT team_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+    jd_row = cursor.fetchone()
+    if not jd_row or not jd_row['team_id']:
+        cursor.close()
+        conn.close()
+        return JsonResponse({'success': True, 'team_id': None, 'team_name': '', 'members': []})
+    team_id = jd_row['team_id']
+    cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", (team_id,))
+    team_row = cursor.fetchone()
+    team_name = team_row['team_name'] if team_row else ''
+    cursor.execute("""
+        SELECT m.emp_id, m.first_name, m.last_name, m.email
+        FROM hr_team_members m
+        INNER JOIN team_members tm ON m.emp_id = tm.emp_id
+        WHERE tm.team_id = %s AND m.status='active'
+        ORDER BY m.first_name, m.last_name
+    """, (team_id,))
+    members = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'team_id': team_id, 'team_name': team_name, 'members': members})
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
