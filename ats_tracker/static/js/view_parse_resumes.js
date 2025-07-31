@@ -39,8 +39,7 @@ function renderTable(resumes, jdId) {
                     <span class="${r.status}">${r.status}</span>
                 </td>
                 <td>
-                    <button class="icon-btn select-btn" onclick="updateStatus(${r.resume_id}, 'selected')" title="Select">&#x2714;</button>
-                    <button class="icon-btn reject-btn" onclick="updateStatus(${r.resume_id}, 'rejected')" title="Reject">&#x2716;</button>
+
                    <button class="icon-btn record-btn"
                         onclick="handleRecordBtnClick(
                             ${r.resume_id},
