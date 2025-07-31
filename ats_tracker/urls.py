@@ -37,5 +37,6 @@ urlpatterns = [
     # urls.py
     path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
     path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
-
+    path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
+    path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
 ]
