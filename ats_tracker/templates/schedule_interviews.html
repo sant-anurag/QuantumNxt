@@ -54,56 +54,58 @@
             <span class="close-modal">&times;</span>
         </div>
         <form id="schedule-form">
-            <input type="hidden" id="candidate-id">
-            <input type="hidden" id="resume-id">
-
             <div class="modal-row">
                 <div class="form-group">
-                    <label for="candidate-name">Candidate Name:</label>
+                    <label for="candidate-name">Candidate Name</label>
                     <input type="text" id="candidate-name" readonly>
+                    <input type="hidden" id="candidate-id">
+                    <input type="hidden" id="resume-id">
                 </div>
                 <div class="form-group">
-                    <label for="candidate-email">Candidate Email:</label>
-                    <input type="text" id="candidate-email" readonly>
+                    <label for="candidate-email">Candidate Email</label>
+                    <input type="email" id="candidate-email" readonly>
                 </div>
             </div>
 
             <div class="modal-row">
                 <div class="form-group">
-                    <label for="interview-level">Interview Level:</label>
+                    <label for="interview-level">Interview Level *</label>
                     <select id="interview-level" required>
                         <option value="">Select Level</option>
-                        <option value="l1">L1 (Technical)</option>
-                        <option value="l2">L2 (Technical)</option>
-                        <option value="l3">L3 (Managerial)</option>
+                        <option value="l1">L1 - Technical Screening</option>
+                        <option value="l2">L2 - Technical Deep Dive</option>
+                        <option value="l3">L3 - Managerial Round</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="modal-row">
                 <div class="form-group">
-                    <label for="interview-date">Interview Date:</label>
+                    <label for="interview-date">Interview Date *</label>
                     <input type="date" id="interview-date" required>
                 </div>
                 <div class="form-group">
-                    <label for="interview-time">Interview Time:</label>
+                    <label for="interview-time">Interview Time *</label>
                     <input type="time" id="interview-time" required>
                 </div>
             </div>
 
             <div class="modal-row">
                 <div class="form-group">
-                    <label for="interviewer-name">Interviewer Name:</label>
-                    <input type="text" id="interviewer-name" required maxlength="100">
+                    <label for="interviewer-name">Interviewer Name *</label>
+                    <input type="text" id="interviewer-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="interviewer-email">Interviewer Email:</label>
-                    <input type="email" id="interviewer-email" required maxlength="100">
+                    <label for="interviewer-email">Interviewer Email *</label>
+                    <input type="email" id="interviewer-email" required>
                 </div>
             </div>
 
             <div id="modal-message" class="modal-message"></div>
 
             <div class="modal-actions">
-                <button type="submit" id="schedule-btn" class="btn primary-btn">Schedule</button>
                 <button type="button" id="cancel-btn" class="btn secondary-btn">Cancel</button>
+                <button type="submit" id="schedule-btn" class="btn primary-btn">Schedule Interview</button>
             </div>
         </form>
     </div>
