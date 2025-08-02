@@ -37,8 +37,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 candidates = data.candidates;
+
+                // Check if we have a message to display
+                if (data.message) {
+                    candidatesTable.innerHTML = `<tr><td colspan="9" class="text-center">${data.message}</td></tr>`;
+                    return;
+                }
+
                 if (candidates.length === 0) {
-                    candidatesTable.innerHTML = '<tr><td colspan="9" class="text-center">No candidates found for this JD</td></tr>';
+                    candidatesTable.innerHTML = '<tr><td colspan="9" class="text-center">No selected candidates found for this JD</td></tr>';
                     return;
                 }
 

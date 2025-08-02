@@ -18,16 +18,15 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 
 from .db_initializer import ATSDatabaseInitializer
-# python
-from django.views.decorators.csrf import csrf_exempt
-
-from django.views.decorators.csrf import csrf_exempt
 import json
+from django.http import JsonResponse
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
     initializer.initialize()
     initializer.close()
+    from django.contrib.auth.hashers import make_password
+    print(make_password('admin@123'))
 
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -74,7 +73,7 @@ def validate_user(username, password):
             return user_id, db_username, role,status
     cursor.close()
     conn.close()
-    return None, None, None
+    return None, None, None,None
 
 def home(request):
     return render(request, 'home.html')
@@ -1024,26 +1023,41 @@ def save_candidate_details(request):
         conn = get_db_conn()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                INSERT INTO candidates (
-                    jd_id, resume_id, name, phone, email, skills, experience,
-                    screened_on, screen_status, screened_remarks,
-                    team_id, hr_member_id
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, [
-                data.get('jd_id'),
-                data.get('resume_id'),
-                data.get('name'),
-                data.get('phone'),
-                data.get('email'),
-                data.get('skills'),
-                data.get('experience'),
-                data.get('screened_on'),
-                data.get('screen_status'),
-                data.get('screened_remarks'),
-                data.get('screening_team'),  # This should be team_id
-                data.get('hr_member_id')
-            ])
+            # First query to check for existing candidate
+            cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
+            row = cursor.fetchone()  # This fetches the result
+
+            if row:
+                print("save_candidate_details -> Existing candidate found:", row)
+                # Update logic
+                cursor.execute("""
+                    UPDATE candidates
+                    SET name=%s, phone=%s, email=%s, skills=%s, experience=%s,
+                        screened_on=%s, screen_status=%s, screened_remarks=%s,
+                        team_id=%s, hr_member_id=%s, updated_at=NOW()
+                    WHERE resume_id=%s
+                """, [
+                    data.get('name'), data.get('phone'), data.get('email'),
+                    data.get('skills'), data.get('experience'), data.get('screened_on'),
+                    data.get('screen_status'), data.get('screened_remarks'),
+                    data.get('screening_team'), data.get('hr_member_id'),
+                    data.get('resume_id')
+                ])
+                # No result to fetch after UPDATE
+            else:
+                # Insert logic
+                cursor.execute("""
+                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills, 
+                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    data.get('jd_id'), data.get('resume_id'), data.get('name'), data.get('phone'),
+                    data.get('email'), data.get('skills'), data.get('experience'), data.get('screened_on'),
+                    data.get('screen_status'), data.get('screened_remarks'),
+                    data.get('screening_team'), data.get('hr_member_id')
+                ])
+                # No result to fetch after INSERT
+
             conn.commit()
             return JsonResponse({'success': True})
         except Exception as e:
@@ -1068,9 +1082,6 @@ def update_candidate_screen_status(request):
         conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 
 def get_jd_team_members(request):
     jd_id = request.GET.get('jd_id')
@@ -1122,6 +1133,7 @@ def schedule_interviews_page(request):
     return render(request, 'schedule_interviews.html')
 
 def get_candidates_for_jd(request):
+    print("get_candidates_for_jd -> Request method:", request.method)
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
@@ -1129,6 +1141,15 @@ def get_candidates_for_jd(request):
     conn = get_db_conn()
     cursor = conn.cursor(dictionary=True)
     try:
+        # First check if there are any candidates at all for this JD
+        cursor.execute("SELECT COUNT(*) as total_count FROM candidates WHERE jd_id = %s", (jd_id,))
+        total_count = cursor.fetchone()['total_count']
+
+        # Then check how many are selected
+        cursor.execute("SELECT COUNT(*) as selected_count FROM candidates WHERE jd_id = %s AND screen_status = 'selected'", (jd_id,))
+        selected_count = cursor.fetchone()['selected_count']
+
+        # Now get only the selected candidates
         cursor.execute("""
             SELECT c.*, r.status as resume_status
             FROM candidates c
@@ -1137,8 +1158,23 @@ def get_candidates_for_jd(request):
             ORDER BY c.name
         """, (jd_id,))
         candidates = cursor.fetchall()
-        return JsonResponse({'success': True, 'candidates': candidates})
+
+        # Prepare meaningful message based on counts
+        message = ""
+        if total_count == 0:
+            message = "No selected candidates found for this JD."
+        elif selected_count == 0:
+            message = f"Found {total_count} candidates for this JD, but none have been Screened OK for interviews yet."
+
+        return JsonResponse({
+            'success': True,
+            'candidates': candidates,
+            'total_count': total_count,
+            'selected_count': selected_count,
+            'message': message
+        })
     except Exception as e:
+        print(f"get_candidates_for_jd -> Error: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
     finally:
         cursor.close()
