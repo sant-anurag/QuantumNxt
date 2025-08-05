@@ -4,7 +4,11 @@ pip install ldap3
 pip install mysql-connector-python
 pip install mysqlclient
 pip install pandas
-pip install textract
-pip install pdfplumber python-docx
 pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org spacy
-pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+pip install .\en_core_web_sm-3.8.0.tar.gz
+python.exe -m pip install pip<24.1
+pip install textract
+python.exe -m pip install --upgrade pip
+pip install pdfplumber python-docx
+
+
