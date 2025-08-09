@@ -185,29 +185,36 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    padding: auto;
+    background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.08);
 }
 
 .modal-header h2 {
     font-size: 1.3rem;
-    font-weight: 700;
-    color: #2d3748;
+    font-weight: 500;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.5px;
 }
 
 .close-modal {
-    font-size: 1.7rem;
-    color: #718096;
+    font-size: 2rem;
+    color: #fff;
     cursor: pointer;
+    margin-left: 18px;
     transition: color 0.2s;
 }
 
 .close-modal:hover {
-    color: #e53e3e;
+    color: #c0392b;
 }
 
 .modal-row {
     display: flex;
     gap: 18px;
+    margin-top: 8px;
     margin-bottom: 14px;
     flex-wrap: wrap;
 }
