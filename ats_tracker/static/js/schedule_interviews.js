@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancel-btn');
     const scheduleBtn = document.getElementById('schedule-btn');
     const modalMessage = document.getElementById('modal-message');
+    const schedule_btn = document.getElementById('schedule-btn');
+        const meetingLinkSent = document.getElementById('meeting-link-sent');
+    schedule_btn.disabled = true;
 
     // State variables
     let currentJdId = null;
@@ -197,7 +200,11 @@ document.addEventListener('DOMContentLoaded', function() {
             modalMessage.className = 'modal-message error';
             return;
         }
-
+        if (!meetingLinkSent.checked) {
+            modalMessage.textContent = 'Please confirm that the interview link has been sent.';
+            modalMessage.className = 'modal-message error';
+            return;
+        }
         // Prepare data for API
         const interviewData = {
             candidate_id: candidateId,
@@ -267,7 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
             closeModal();
         }
     });
-
+    meetingLinkSent.addEventListener('change', function() {
+        if (this.checked) {
+            schedule_btn.disabled = false;
+        } else {
+            schedule_btn.disabled = true;
+        }
+    });
     // Load JDs on page load
     loadJDs();
 });
