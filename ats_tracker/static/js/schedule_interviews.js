@@ -218,7 +218,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Disable schedule button
         scheduleBtn.disabled = true;
-        scheduleBtn.textContent = 'Scheduling...';
 
         // Send request to API
         fetch('/schedule_interview/', {
@@ -231,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                modalMessage.textContent = 'Interview scheduled successfully! An invite has been sent to the candidate and interviewer.';
+                modalMessage.textContent = 'Interview scheduled successfully!';
                 modalMessage.className = 'modal-message success';
                 // Reload candidates after successful scheduling
                 setTimeout(() => {
