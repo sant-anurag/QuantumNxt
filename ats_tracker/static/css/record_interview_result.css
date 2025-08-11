@@ -1,56 +1,89 @@
 .result-container {
-    max-width: 600px;
-    margin: 40px auto;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 32px;
-    font-family: 'Segoe UI', Arial, sans-serif;
+    max-width: 720px;
+    margin: 48px auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    padding: 32px 28px;
+    font-family: 'Inter', system-ui, Arial, sans-serif;
 }
-h1 {
-    color: #3498db;
+
+/* Page Title */
+.result-container h1 {
+    color: #2563eb;
     margin-bottom: 24px;
+    font-size: 1.6rem;
+    font-weight: 600;
 }
+
+/* Candidate Details Box */
 .candidate-details {
-    background: #f8f9fa;
+    background: #f9fafb;
     padding: 16px;
-    border-radius: 6px;
+    border-radius: 8px;
     margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
 }
+
+/* Form Group */
 .form-group {
     margin-bottom: 18px;
 }
-label {
-    font-weight: 600;
+.form-group label {
+    font-weight: 500;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    color: #374151;
 }
-select, textarea {
+
+/* Inputs and Selects */
+.form-group select,
+.form-group textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 15px;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    outline: none;
+}
+
+/* Primary Button */
 .btn.primary-btn {
-    background: #3498db;
+    background: #2563eb;
     color: #fff;
     border: none;
-    padding: 10px 24px;
-    border-radius: 4px;
-    font-size: 16px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 .btn.primary-btn:hover {
-    background: #2980b9;
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
 }
+
+/* Messages */
 .form-message {
     margin-bottom: 12px;
-    color: #e74c3c;
     font-weight: 500;
 }
+.form-message.error {
+    color: #dc2626;
+}
+
+/* Error Box */
 .error {
-    color: #e74c3c;
+    color: #dc2626;
     font-weight: bold;
     margin-bottom: 24px;
 }

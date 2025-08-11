@@ -1,185 +1,187 @@
-/* Container Styling */
-    .container,
-    .manage-container {
-        max-width: 1100px;
-        margin: 40px auto;
-        background: #fff;
-        padding: 32px 36px 36px 36px;
-        border-radius: 14px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    }
+/* ===== Container ===== */
+.container,
+.manage-container {
+    max-width: 1100px;
+    margin: 48px auto;
+    background: #ffffff;
+    padding: 32px 36px 36px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    font-family: 'Inter', system-ui, Arial, sans-serif;
+}
 
-    /* Header Styling */
-    .manage-container h2 {
-        font-size: 2.2rem;
-        font-weight: 800;
-        margin-bottom: 28px;
-        color: #fff;
-        letter-spacing: 0.7px;
-        background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-        padding: 22px 0 22px 32px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(49, 130, 206, 0.12);
-    }
+/* ===== Header ===== */
+.manage-container h2 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: rgba(181, 200, 255, 0.09);
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(208,218,255,0.3);
+}
+.manage-container h2::before {
+    content: "\f0c0"; /* FontAwesome users icon */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #2563eb;
+}
 
-    /* Search Bar Styling */
-    .search-bar {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 22px;
-        background: #f7fafc;
-        padding: 16px 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(49, 130, 206, 0.07);
-        align-items: center;
-    }
+/* ===== Search Bar ===== */
+.search-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 22px;
+    background: #f9fafb;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    align-items: center;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
 
-    #candidate-search {
-        flex: 1;
-        padding: 10px 16px;
-        border: 1.5px solid #cbd5e1;
-        border-radius: 8px;
-        font-size: 1.08rem;
-        background: #fff;
-        transition: border 0.2s;
-        box-shadow: 0 1px 4px rgba(49, 130, 206, 0.05);
-    }
+#candidate-search {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#candidate-search:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    outline: none;
+}
 
-    #candidate-search:focus {
-        border-color: #3182ce;
-        outline: none;
-    }
-
-    /* Search Button Styling */
-    #search-btn {
-        padding: 10px 24px;
-        background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-        color: #fff;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.08rem;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(49, 130, 206, 0.10);
-        transition: background 0.2s, box-shadow 0.2s;
-    }
-
-    #search-btn:hover {
-        background: linear-gradient(90deg, #2563eb 0%, #2f855a 100%);
-        box-shadow: 0 4px 16px rgba(49, 130, 206, 0.15);
-    }
-/* Update Button Styling */
-.update-btn {
-    padding: 9px 22px;
-    background: linear-gradient(90deg, #38a169 0%, #3182ce 100%);
+#search-btn {
+    padding: 10px 20px;
+    background: #2563eb;
     color: #fff;
     font-weight: 600;
     border: none;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.95rem;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.10);
-    transition: background 0.2s, box-shadow 0.2s;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+#search-btn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    transform: translateY(-1px);
 }
 
+/* ===== Update Button ===== */
+.update-btn {
+    padding: 8px 18px;
+    background: #38a169;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
 .update-btn:hover {
-    background: linear-gradient(90deg, #2f855a 0%, #2563eb 100%);
-    box-shadow: 0 4px 16px rgba(49, 130, 206, 0.15);
+    background: #2f855a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
 }
-    /* Table Responsive */
-    .table-responsive {
-        overflow-x: auto;
-    }
 
-    /* Table Styling */
-    #candidate-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: #fff;
-        border-radius: 10px;
-        font-size: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        margin-bottom: 18px;
-        overflow: hidden;
-    }
+/* ===== Table ===== */
+.table-responsive {
+    overflow-x: auto;
+}
 
-    #candidate-table th, #candidate-table td {
-        padding: 14px 12px;
-        text-align: left;
-        border-bottom: 1px solid #e2e8f0;
-    }
-
-    #candidate-table th {
-        background: #e9f2fb;
-        font-weight: 600;
-        color: #2d3748;
-    }
-/* Name Column Width */
+#candidate-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+#candidate-table th,
+#candidate-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+#candidate-table th {
+    background: #f3f4f6;
+    font-weight: 600;
+    color: #1f2937;
+}
 #candidate-table th:first-child,
 #candidate-table td:first-child {
     min-width: 180px;
-    width: 220px;
     max-width: 260px;
     word-break: break-word;
 }
-    #candidate-table tr:last-child td {
-        border-bottom: none;
-    }
+#candidate-table tr:last-child td {
+    border-bottom: none;
+}
+#candidate-table tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+#candidate-table tbody tr:hover td {
+    background: #eef2ff;
+    transition: background 0.2s;
+}
 
-    #candidate-table tr:hover td {
-        background: #f0f4f8;
-        transition: background 0.2s;
-    }
+/* ===== Status Dropdown ===== */
+.status-dropdown {
+    min-width: 120px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.status-dropdown:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    outline: none;
+}
 
-    /* Dropdown Styling */
-    .status-dropdown {
-        min-width: 120px;
-        padding: 7px 10px;
-        border-radius: 6px;
-        border: 1px solid #cbd5e1;
-        background: #f7fafc;
-        font-size: 1rem;
-        transition: border 0.2s;
-    }
+/* ===== Pagination ===== */
+#pagination {
+    margin-top: 14px;
+    text-align: center;
+}
+.page-link {
+    display: inline-block;
+    margin: 0 4px;
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #374151;
+    font-weight: 500;
+    border: none;
+    transition: background 0.2s, color 0.2s;
+}
+.page-link.active {
+    background: #2563eb;
+    color: #fff;
+}
+.page-link:hover:not(.active) {
+    background: #e5e7eb;
+}
 
-    .status-dropdown:focus {
-        border-color: #3182ce;
-        outline: none;
-    }
-
-    /* Pagination Styling */
-    #pagination {
-        margin-top: 10px;
-        text-align: center;
-    }
-
-    .page-link {
-        display: inline-block;
-        margin: 0 4px;
-        padding: 6px 14px;
-        background: #e9f2fb;
-        border-radius: 4px;
-        cursor: pointer;
-        color: #2d3748;
-        font-weight: 500;
-        border: none;
-        transition: background 0.2s, color 0.2s;
-    }
-
-    .page-link.active {
-        background: #3182ce;
-        color: #fff;
-    }
-
-    .page-link:hover:not(.active) {
-        background: #cbd5e1;
-    }
-
-    /* Status Message Styling */
-    #status-message {
-        margin-top: 10px;
-        color: #38a169;
-        font-weight: 500;
-        font-size: 1.1rem;
-    }
+/* ===== Status Message ===== */
+#status-message {
+    margin-top: 12px;
+    color: #16a34a;
+    font-weight: 500;
+    font-size: 1rem;
+}
