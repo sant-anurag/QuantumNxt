@@ -85,10 +85,14 @@
 
         </ul>
     </div>
+    <!-- ats_tracker/templates/home.html -->
     <div class="main-content">
-        <h1>Welcome to QuantumNxt ATS</h1>
-        <p>Select a menu item to get started.</p>
-        {% block content %}{% endblock %}
+        <div class="qnxt-header-gradient">
+            <h1>QuantumNxt</h1>
+        </div>
+        <div class="qnxt-body">
+            {% block content %}{% endblock %}
+        </div>
     </div>
     <script src="{% static 'js/home.js' %}"></script>
 </body>

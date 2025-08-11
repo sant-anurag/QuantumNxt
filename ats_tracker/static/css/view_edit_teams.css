@@ -1,59 +1,189 @@
-.ct-table-container { overflow-x: auto; }
-.ct-table th, .ct-table td { text-align: left; }
-.ct-table th { background: #f3f6fa; color: #174ea6; }
-.ct-table td { background: #fff; }
-.ct-link { color: #666de7; text-decoration: underline; cursor: pointer; }
-.ct-link:hover { color: #11b7ee; }
+/* ===== Match Add Member Form Header Style ===== */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: rgba(181, 200, 255, 0.09);
+    border-radius: 12px;
+    backdrop-filter: blur(7px);
+    border: 1px solid rgba(208,218,255,0.3);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.page-header i {
+    font-size: 1.5em;
+    color: #2563eb; /* match ATS primary blue */
+    transition: color 0.2s ease;
+}
+
+.page-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 6px rgba(159,186,255,0.1);
+}
+
+/* Keep spacing consistent with Add Member page */
+.ct-flex-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 1.4rem;
+}
+
+/* ===== Table Container ===== */
+.ct-table-container {
+    overflow-x: auto;
+}
+
+/* ===== Tables ===== */
+.ct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
+
+.ct-table th,
+.ct-table td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ct-table th {
+    background: #f3f4f6;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.ct-table td {
+    background: #fff;
+}
+
+.ct-table tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+.ct-table tbody tr:hover {
+    background: #eef2ff;
+}
+
+/* ===== Links ===== */
+.ct-link {
+    color: #3b82f6;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.ct-link:hover,
+.ct-link:focus {
+    color: #0ea5e9;
+    text-decoration: none;
+}
+
+/* ===== Modal Overlay ===== */
 .ct-modal-overlay {
     position: fixed;
-    top: 0; left: 270px; right: 0; bottom: 0;
-    background: rgba(34, 44, 64, 0.38);
+    top: 0;
+    left: 270px; /* adjust if you have a sidebar */
+    right: 0;
+    bottom: 0;
+    background: rgba(31, 41, 55, 0.45);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* ===== Modal Content ===== */
 .ct-modal-content {
     background: #fff;
-    border-radius: 18px;
-    box-shadow: 0 8px 44px 0 rgba(30, 60, 120, 0.19), 0 2px 8px 0 rgba(68,110,172,0.08);
-    padding: 36px 32px 28px 32px;
-    min-width: 340px;
-    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    padding: 28px 24px;
     width: 100%;
+    max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
 }
+
 .ct-close-modal {
     position: absolute;
-    top: 18px;
-    right: 22px;
-    font-size: 1.7em;
-    color: #b2b8d6;
+    top: 14px;
+    right: 18px;
+    font-size: 1.4rem;
+    color: #9ca3af;
     cursor: pointer;
     font-weight: 700;
     z-index: 2;
     transition: color 0.15s;
 }
-.ct-close-modal:hover { color: #e74c3c; }
-.ct-form-group label { font-weight: 600; color: #174ea6; }
-.ct-btn-primary { margin-top: 6px; }
-.ct-pagination { display: flex; gap: 7px; margin-top: 18px; }
-.ct-pagination button {
-    background: #f7fbfe;
-    border: 1.2px solid #dde6ee;
-    color: #666de7;
-    border-radius: 7px;
-    padding: 5px 13px;
-    font-weight: 600;
-    cursor: pointer;
+
+.ct-close-modal:hover {
+    color: #dc2626;
 }
+
+/* ===== Form Label inside Modal ===== */
+.ct-form-group label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+/* ===== Pagination ===== */
+.ct-pagination {
+    display: flex;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.ct-pagination button {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
 .ct-pagination button.active,
 .ct-pagination button:hover {
-    background: linear-gradient(90deg, #666de7 0%, #11b7ee 100%);
+    background: #2563eb;
     color: #fff;
-    border-color: #11b7ee;
+    border-color: #2563eb;
 }
-.ct-no-data { color: #da3c45; text-align: center; font-weight: 500; }
+
+/* ===== No Data State ===== */
+.ct-no-data {
+    color: #dc2626;
+    text-align: center;
+    font-weight: 500;
+    font-size: 0.95rem;
+    background: #fef2f2;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 768px) {
+    .ct-modal-content {
+        max-width: 94%;
+        padding: 20px 16px;
+    }
+}

@@ -151,14 +151,41 @@ body {
 
 .main-content {
     margin-left: 270px;
-    padding: 48px 44px;
+    padding-top: 20px;
     min-height: 100vh;
-    background: linear-gradient(160deg, #f9fbff 0%, #e6ebff 90%);
+    background: linear-gradient(120deg, #f7fafd 0%, #eef2f7 100%);
     transition: margin-left 0.3s cubic-bezier(.68,-0.55,.27,1.55);
     font-size: 1.12em;
     color: #2a2e4a;
 }
+/* ats_tracker/static/css/home.css */
+.qnxt-header-gradient {
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-around;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+}
 
+.qnxt-header-gradient h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.5px;
+
+    background: linear-gradient(90deg, #5661d2 0%, #38a169 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+}
+
+.qnxt-body {
+    color: #2a2e4a;
+    font-size: 1.08em;
+}
 .btn-primary {
     background: linear-gradient(92deg, #7280ff 0%, #5661d2 100%);
     color: #fff;
