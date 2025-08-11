@@ -1,271 +1,249 @@
-/* schedule_interviews.css */
-
+/* ===== Container ===== */
 .schedule-container {
     max-width: 1100px;
-    margin: 40px auto;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    padding: 32px 36px 36px 36px;
+    margin: 48px auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    padding: 32px;
+    font-family: 'Inter', system-ui, Arial, sans-serif;
 }
 
+/* ===== Page Title ===== */
 .page-title {
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin-bottom: 24px;
-    color: #fff;
-    letter-spacing: 0.5px;
-    background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-    padding: 18px 0 18px 24px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.08);
-}
-
-.filter-card {
-    background: #f0f4f8;
-    border-radius: 10px;
-    padding: 18px 24px;
-    margin-bottom: 28px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-.filter-row {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #1e293b;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 10px;
+    padding: 16px 20px;
+    background: rgba(181, 200, 255, 0.09);
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(208,218,255,0.3);
+    margin-bottom: 24px;
+}
+.page-title::before {
+    content: "\f073"; /* calendar icon from fontawesome */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #2563eb;
 }
 
+/* ===== Filter Card ===== */
+.filter-card {
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+    border: 1px solid #e5e7eb;
+}
+.filter-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
 .filter-field label {
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: 6px;
-    display: block;
-    color: #4a5568;
+    color: #374151;
 }
-
-.filter-field select {
-    width: 260px;
-    padding: 8px 12px;
-    border-radius: 6px;
+.filter-field select,
+.filter-field input {
+    padding: 10px 14px;
     border: 1px solid #cbd5e1;
+    border-radius: 8px;
     background: #fff;
-    font-size: 1rem;
-    transition: border 0.2s;
+    font-size: 0.95rem;
+    transition: border 0.2s, box-shadow 0.2s;
 }
-
-.filter-field select:focus {
-    border-color: #3182ce;
+.filter-field select:focus,
+.filter-field input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
     outline: none;
 }
 
-.candidates-section {
-    margin-top: 18px;
-}
-
+/* ===== Candidates Section ===== */
 .section-title {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 12px;
-    color: #2b6cb0;
+    color: #2563eb;
 }
 
+/* ===== Table ===== */
 .table-responsive {
     overflow-x: auto;
 }
-
 .data-table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    margin-bottom: 18px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
 }
-
 .data-table th, .data-table td {
-    padding: 12px 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
     text-align: left;
-    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.95rem;
 }
-
 .data-table th {
-    background: #e9f2fb;
+    background: #f3f4f6;
+    color: #1f2937;
     font-weight: 600;
-    color: #2d3748;
 }
-
-.data-table tr:last-child td {
-    border-bottom: none;
+.data-table tbody tr:nth-child(even) {
+    background: #f9fafb;
 }
-
+.data-table tbody tr:hover {
+    background: #eef2ff;
+}
 .data-table td.text-center {
     text-align: center;
-    color: #718096;
+    color: #6b7280;
 }
 
+/* ===== Buttons ===== */
 .btn {
-    padding: 7px 18px;
-    border-radius: 6px;
+    padding: 10px 20px;
+    border-radius: 8px;
     border: none;
-    font-size: 1rem;
+    font-size: 0.95rem;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-}
-
-.primary-btn {
-    background: #3182ce;
-    color: #fff;
     font-weight: 600;
+    transition: background 0.15s, box-shadow 0.15s;
 }
-
-/* Disabled state for primary button */
-.btn.primary-btn:disabled,
-#schedule-btn:disabled {
-    background: #e3e8f7 !important;
-    color: #a0aec0 !important;
-    cursor: not-allowed !important;
-    box-shadow: none !important;
-    border: 1px solid #cbd5e1 !important;
-    opacity: 0.7;
-}
-.primary-btn:hover {
+.primary-btn, .schedule-btn {
     background: #2563eb;
+    color: #fff;
 }
-
+.primary-btn:hover, .schedule-btn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
 .secondary-btn {
-    background: #e2e8f0;
-    color: #2d3748;
+    background: #e5e7eb;
+    color: #374151;
 }
-
 .secondary-btn:hover {
     background: #cbd5e1;
 }
-
-.schedule-btn {
-    background: #38a169;
-    color: #fff;
-    font-weight: 500;
-    border: none;
-    padding: 7px 16px;
-    border-radius: 5px;
-    transition: background 0.2s;
+.btn:disabled, #schedule-btn:disabled {
+    background: #e5e7eb !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
 }
 
-.schedule-btn:hover {
-    background: #2f855a;
-}
-
+/* ===== Modal ===== */
 .modal {
     display: none;
     position: fixed;
     z-index: 1000;
     left: 0; top: 0;
     width: 100vw; height: 100vh;
-    background: rgba(44, 62, 80, 0.18);
+    background: rgba(31,41,55,0.45);
     align-items: center;
     justify-content: center;
 }
 
+/* Modal Content */
 .modal-content {
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    padding: 32px 28px 24px 28px;
-    min-width: 420px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    padding: 0;
+    min-width: 340px;
     max-width: 98vw;
-    position: relative;
-    animation: modalFadeIn 0.3s;
+    animation: modalFadeIn 0.25s ease;
 }
-
 @keyframes modalFadeIn {
-    from { transform: scale(0.95); opacity: 0; }
+    from { transform: scale(0.96); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
 
+/* Modal Header */
 .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: auto;
-    background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.08);
+    background: linear-gradient(90deg, #2563eb, #38a169);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 12px 12px 0 0;
 }
-
 .modal-header h2 {
-    font-size: 1.3rem;
-    font-weight: 500;
-    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
     margin: 0;
-    letter-spacing: 0.5px;
 }
-
 .close-modal {
-    font-size: 2rem;
-    color: #fff;
+    font-size: 1.4rem;
     cursor: pointer;
-    margin-left: 18px;
-    transition: color 0.2s;
 }
-
 .close-modal:hover {
-    color: #c0392b;
+    color: #fca5a5;
 }
 
+/* Modal Body Rows */
 .modal-row {
     display: flex;
     gap: 18px;
-    margin-top: 8px;
-    margin-bottom: 14px;
+    padding: 18px;
     flex-wrap: wrap;
 }
 
+/* Form Fields in Modal */
 .form-group {
     flex: 1;
     min-width: 180px;
     display: flex;
     flex-direction: column;
+    margin-bottom: 14px;
 }
-
 .form-group label {
     font-weight: 500;
-    margin-bottom: 5px;
-    color: #4a5568;
+    margin-bottom: 6px;
+    color: #374151;
 }
-
 .form-group input,
 .form-group select {
-    padding: 8px 10px;
+    padding: 10px 12px;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
-    font-size: 1rem;
-    background: #f7fafc;
-    transition: border 0.2s;
+    font-size: 0.95rem;
+    background: #fff;
+    transition: border 0.2s, box-shadow 0.2s;
 }
-
 .form-group input:focus,
 .form-group select:focus {
-    border-color: #3182ce;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
     outline: none;
 }
 
+/* Checkbox in modal */
+.modal-content input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+/* Modal Message */
 .modal-message {
-    margin: 10px 0 0 0;
-    font-size: 1rem;
-    color: #718096;
-    min-height: 22px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+    min-height: 20px;
 }
+.modal-message.success { color: #16a34a; }
+.modal-message.error { color: #dc2626; }
 
-.modal-message.success {
-    color: #38a169;
-}
-
-.modal-message.error {
-    color: #e53e3e;
-}
-
+/* Modal Actions */
 .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 18px;
+    padding: 16px 18px;
+    border-top: 1px solid #f3f4f6;
 }
