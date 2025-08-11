@@ -1,241 +1,190 @@
-/* Container Styling */
+/* ===== Container ===== */
 .finalized-container {
     max-width: 1100px;
-    margin: 40px auto;
-    background: linear-gradient(135deg, #e9f2fb 0%, #f7fafc 100%);
-    padding: 36px 40px 40px 40px;
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(49, 130, 206, 0.13);
+    margin: 48px auto;
+    background: #ffffff;
+    padding: 32px 36px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    font-family: 'Inter', system-ui, Arial, sans-serif;
 }
 
-/* Header Styling */
+/* ===== Header ===== */
 .finalized-container h2 {
-    font-size: 2.4rem;
-    font-weight: 800;
-    margin-bottom: 32px;
-    color: #fff;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-    padding: 28px 0 28px 36px;
-    border-radius: 14px;
-    box-shadow: 0 6px 24px rgba(49, 130, 206, 0.18);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: rgba(181, 200, 255, 0.09);
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(208,218,255,0.3);
+    margin-bottom: 24px;
+}
+.finalized-container h2::before {
+    content: "\f2bb"; /* FontAwesome user-check icon */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #2563eb;
 }
 
-/* JD Select Bar Styling */
+/* ===== JD Select Bar ===== */
 .jd-select-bar {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 28px;
-    background: #f7fafc;
-    padding: 20px 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(49, 130, 206, 0.09);
+    margin-bottom: 24px;
+    background: #f9fafb;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
 }
-
 .jd-select-bar label {
-    font-weight: 600;
-    color: #2d3748;
-    font-size: 1.12rem;
+    font-weight: 500;
+    color: #374151;
 }
-
 #jd-select {
     min-width: 220px;
-    padding: 12px 18px;
-    border-radius: 10px;
-    border: 2px solid #3182ce;
-    font-size: 1.12rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
     background: #fff;
     transition: border 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.07);
 }
-
 #jd-select:focus {
-    border-color: #38a169;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
     outline: none;
-    box-shadow: 0 0 0 2px #c6f6d5;
 }
 
-/* Table Responsive */
-.table-responsive {
-    overflow-x: auto;
-}
+/* ===== Table ===== */
+.table-responsive { overflow-x: auto; }
 
-/* Table Styling */
 #finalized-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     background: #fff;
-    border-radius: 12px;
-    font-size: 1.04rem;
-    box-shadow: 0 4px 16px rgba(49, 130, 206, 0.09);
-    margin-bottom: 22px;
+    font-size: 0.95rem;
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
 }
-
 #finalized-table th, #finalized-table td {
-    padding: 16px 14px;
+    padding: 12px 14px;
     text-align: left;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e5e7eb;
 }
-
 #finalized-table th {
-    background: linear-gradient(90deg, #e9f2fb 0%, #c6f6d5 100%);
-    font-weight: 700;
-    color: #2d3748;
-    letter-spacing: 0.5px;
+    background: #f3f4f6;
+    font-weight: 600;
+    color: #1f2937;
 }
-
-#finalized-table th:first-child,
-#finalized-table td:first-child {
-    min-width: 180px;
-    width: 220px;
-    max-width: 260px;
-    word-break: break-word;
+#finalized-table tbody tr:nth-child(even) {
+    background: #f9fafb;
 }
-
-#finalized-table tr:last-child td {
-    border-bottom: none;
-}
-
-#finalized-table tr:hover td {
-    background: #f0f4f8;
+#finalized-table tbody tr:hover td {
+    background: #eef2ff;
     transition: background 0.2s;
 }
 
-/* View Details Link Styling */
+/* ===== View Details Link ===== */
 .view-details-link {
-    color: #3182ce;
-    font-weight: 600;
+    color: #2563eb;
+    font-weight: 500;
     text-decoration: underline;
     cursor: pointer;
-    border: none;
     background: none;
-    font-size: 1.04rem;
-    transition: color 0.2s;
+    border: none;
+    transition: color 0.15s;
 }
-
 .view-details-link:hover {
-    color: #38a169;
+    color: #0ea5e9;
 }
 
-/* Modal Overlay Styling */
+/* ===== Modal Overlay ===== */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(49, 130, 206, 0.22);
+    background: rgba(31,41,55,0.45);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
 }
 
-/* Modal Content Styling */
+/* ===== Modal ===== */
 .modal-content {
-    background: #f7fafc;
-    border-radius: 24px;
-    box-shadow: 0 20px 60px rgba(49, 130, 206, 0.25);
-    padding: 48px 64px 44px 64px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    padding: 0;
     width: auto;
-    position: relative;
-    animation: fadeIn 0.3s;
-    border: 2.5px solid #3182ce;
+    animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn {
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
+/* Modal Header */
 .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
-    background: linear-gradient(90deg, #3182ce 0%, #38a169 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(49, 130, 206, 0.13);
-    padding: 12px 24px;
+    background: linear-gradient(90deg, #2563eb, #38a169);
+    padding: 14px 18px;
+    border-radius: 12px 12px 0 0;
 }
-
 .modal-header h3 {
-    font-size: 2rem;
-    font-weight: 800;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: #fff;
     margin: 0;
-    letter-spacing: 1px;
-    background: none;
-    box-shadow: none;
-    padding: 0;
-    flex: 1;
 }
-
 .close-btn {
-    position: static;
-    font-size: 2.2rem;
+    font-size: 1.4rem;
     color: #fff;
     cursor: pointer;
-    font-weight: 900;
-    margin-left: 24px;
-    transition: color 0.2s, transform 0.2s;
-    background: none;
-    box-shadow: none;
+    font-weight: 700;
 }
-
 .close-btn:hover {
-    color: #38a169;
-    transform: scale(1.15);
+    color: #fca5a5;
 }
 
-.close-btn:hover {
-    color: #38a169;
-    transform: scale(1.15);
-}
-
+/* Candidate Details Grid */
 #candidate-details {
-    margin-top: 32px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 24px 48px;
-    background: #e9f2fb;
-    padding: 28px 32px;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(49, 130, 206, 0.10);
-    justify-content: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background: #f9fafb;
 }
-/* Detail Group Styling - Horizontal */
 .detail-group {
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     display: flex;
     align-items: center;
-    min-width: 260px;
-    max-width: 340px;
-    margin-bottom: 0;
-    background: #fff;
-    border-radius: 10px;
-    padding: 12px 18px;
-    box-shadow: 0 1px 6px rgba(49, 130, 206, 0.09);
-    white-space: nowrap;
-    overflow: hidden;
+    gap: 10px;
 }
-
-/* Label and Value Styling */
 .detail-label {
-    font-weight: 700;
-    color: #3182ce;
-    font-size: 0.8rem;
-    margin-right: 12px;
-    letter-spacing: 0.2px;
-    background: #e6fffa;
-    padding: 4px 10px;
-    border-radius: 6px;
-}
-
-.detail-value {
-    color: #2f855a;
-    font-size: 0.8rem;
     font-weight: 600;
-    word-break: keep-all;
+    color: #2563eb;
+    font-size: 0.85rem;
+    background: #eef2ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.detail-value {
+    color: #16a34a;
+    font-size: 0.85rem;
+    font-weight: 500;
     background: #f0fff4;
-    padding: 4px 10px;
-    border-radius: 6px;
-    min-width: 80px;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
