@@ -50,4 +50,8 @@ urlpatterns = [
     path('manage_candidate_status/', views.manage_candidate_status_page, name='manage_candidate_status'),
     path('manage_candidate_status_data/', views.manage_candidate_status_data, name='manage_candidate_status_data'),
     path('update_candidate_status/', views.update_candidate_status, name='update_candidate_status'),
+    path('view_finalized_candidates/', views.view_finalized_candidates, name='view_finalized_candidates'),
+    path('api/jds/', views.api_jds, name='api_jds'),
+    path('api/finalized_candidates/', views.api_finalized_candidates, name='api_finalized_candidates'),
+    path('api/candidate_details/', views.api_candidate_details, name='api_candidate_details'),
 ]

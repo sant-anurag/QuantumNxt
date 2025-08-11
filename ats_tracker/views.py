@@ -1452,3 +1452,45 @@ def update_candidate_status(request):
     finally:
         cursor.close()
         conn.close()
+
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+
+def view_finalized_candidates(request):
+    print("view_finalized_candidates -> Request method:", request.method)
+    return render(request, 'view_finalized_candidates.html')
+
+def api_jds(request):
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
+    jds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'jds': jds})
+
+def api_finalized_candidates(request):
+    jd_id = request.GET.get('jd_id')
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT candidate_id, name, email, phone, experience
+        FROM candidates
+        WHERE jd_id=%s AND l3_result='selected'
+        ORDER BY updated_at DESC
+    """, (jd_id,))
+    candidates = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'candidates': candidates})
+
+def api_candidate_details(request):
+    candidate_id = request.GET.get('candidate_id')
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
+    candidate = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'details': candidate})
