@@ -1,0 +1,56 @@
+.result-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 32px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+h1 {
+    color: #3498db;
+    margin-bottom: 24px;
+}
+.candidate-details {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+}
+.form-group {
+    margin-bottom: 18px;
+}
+label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+}
+select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 15px;
+}
+.btn.primary-btn {
+    background: #3498db;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+}
+.btn.primary-btn:hover {
+    background: #2980b9;
+}
+.form-message {
+    margin-bottom: 12px;
+    color: #e74c3c;
+    font-weight: 500;
+}
+.error {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-bottom: 24px;
+}

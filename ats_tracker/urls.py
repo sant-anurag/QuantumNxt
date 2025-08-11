@@ -45,4 +45,6 @@ urlpatterns = [
     path('schedule_interviews/', views.schedule_interviews_page, name='schedule_interviews_page'),
     path('get_candidates_for_jd/', views.get_candidates_for_jd, name='get_candidates_for_jd'),
     path('schedule_interview/', views.schedule_interview, name='schedule_interview'),
+    path('record_interview_result/', views.record_interview_result_page, name='record_interview_result_page'),
+    path('submit_interview_result/', views.submit_interview_result, name='submit_interview_result'),
 ]

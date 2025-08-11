@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <p>Dear {{ interviewer_name }},</p>
+    <p>
+        You are requested to record the result for the <b>{{ level }}</b> interview of candidate <b>{{ candidate.name }}</b>.<br>
+        Please click the link below to submit your feedback and result:
+    </p>
+    <p>
+        <a href="{{ result_url }}" style="background:#3498db;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;">Record Interview Result</a>
+    </p>
+    <p>
+        Candidate Details:<br>
+        Name: {{ candidate.name }}<br>
+        Email: {{ candidate.email }}<br>
+        Phone: {{ candidate.phone }}<br>
+        JD: {{ candidate.jd_id }}
+    </p>
+    <p>
+        If you have any questions, please contact HR at {{ hr_email }}.<br>
+        Thank you!
+    </p>
+</body>
+</html>

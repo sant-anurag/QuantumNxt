@@ -20,6 +20,11 @@ from django.views.decorators.csrf import csrf_exempt
 from .db_initializer import ATSDatabaseInitializer
 import json
 from django.http import JsonResponse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -44,6 +49,7 @@ def login_view(request):
             request.session['username'] = db_username
             request.session['role'] = role
             request.session['authenticated'] = True
+            request.session['email'] = username
             return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
@@ -113,6 +119,7 @@ def add_member(request):
             error = "Phone must be numeric and under 20 digits."
         else:
             try:
+                # Add HR team member
                 connection = get_db_connection()
                 cursor = connection.cursor()
                 cursor.execute("""
@@ -121,7 +128,20 @@ def add_member(request):
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, [first_name, last_name, email, phone, role, date_joined, status])
                 connection.commit()
-                message = f"Member {escape(first_name)} {escape(last_name)} added successfully!"
+
+                # Create user login for HR member
+                from django.contrib.auth.hashers import make_password
+                default_password = "Welcome@123"
+                password_hash = make_password(default_password)
+                cursor.execute("""
+                    INSERT INTO users (username, email, password_hash, role, is_active)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, [email, email, password_hash, "User", True])
+                connection.commit()
+
+                message = f"Member {escape(first_name)} {escape(last_name)} added successfully and login created!"
+
+                # creating login for the new member
             except Exception as e:
                 if 'Duplicate entry' in str(e):
                     error = "A member with this email already exists."
@@ -1023,12 +1043,54 @@ def save_candidate_details(request):
         conn = get_db_conn()
         cursor = conn.cursor()
         try:
+            # Always fetch after SELECT
+            cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
+            _ = cursor.fetchall()  # Fetch all results, even if you only need one
+
+            if _:
+                cursor.execute("""
+                    UPDATE candidates
+                    SET name=%s, phone=%s, email=%s, skills=%s, experience=%s,
+                        screened_on=%s, screen_status=%s, screened_remarks=%s,
+                        team_id=%s, hr_member_id=%s, updated_at=NOW()
+                    WHERE resume_id=%s
+                """, [
+                    data.get('name'), data.get('phone'), data.get('email'),
+                    data.get('skills'), data.get('experience'), data.get('screened_on'),
+                    data.get('screen_status'), data.get('screened_remarks'),
+                    data.get('screening_team'), data.get('hr_member_id'),
+                    data.get('resume_id')
+                ])
+            else:
+                cursor.execute("""
+                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
+                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    data.get('jd_id'), data.get('resume_id'), data.get('name'), data.get('phone'),
+                    data.get('email'), data.get('skills'), data.get('experience'), data.get('screened_on'),
+                    data.get('screen_status'), data.get('screened_remarks'),
+                    data.get('screening_team'), data.get('hr_member_id')
+                ])
+
+            conn.commit()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        finally:
+            cursor.close()
+            conn.close()
+    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        try:
             # First query to check for existing candidate
             cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
-            row = cursor.fetchone()  # This fetches the result
+            row = cursor.fetchone()  # <-- This fetches the result
 
             if row:
-                print("save_candidate_details -> Existing candidate found:", row)
                 # Update logic
                 cursor.execute("""
                     UPDATE candidates
@@ -1043,11 +1105,10 @@ def save_candidate_details(request):
                     data.get('screening_team'), data.get('hr_member_id'),
                     data.get('resume_id')
                 ])
-                # No result to fetch after UPDATE
             else:
                 # Insert logic
                 cursor.execute("""
-                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills, 
+                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
                     experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
@@ -1056,13 +1117,13 @@ def save_candidate_details(request):
                     data.get('screen_status'), data.get('screened_remarks'),
                     data.get('screening_team'), data.get('hr_member_id')
                 ])
-                # No result to fetch after INSERT
 
             conn.commit()
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
         finally:
+            # No unread results remain, safe to close
             cursor.close()
             conn.close()
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
@@ -1202,7 +1263,7 @@ def schedule_interview(request):
         conn = get_db_conn()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT c.name, c.email, c.jd_id, r.jd_summary
+            SELECT c.candidate_id, c.name, c.email, c.jd_id, r.jd_summary
             FROM candidates c
             JOIN recruitment_jds r ON c.jd_id = r.jd_id
             WHERE c.candidate_id = %s
@@ -1226,30 +1287,16 @@ def schedule_interview(request):
 
         conn.commit()
 
-        # Here you would integrate with MS Teams API to send calendar invites
-        # This is a simplified implementation
-        try:
-            # Simulate MS Teams integration
-            meeting_details = {
-                'subject': f"{level.upper()} Interview - {candidate['name']} for {candidate['jd_id']}",
-                'start_time': f"{date}T{time}:00",
-                'participants': [candidate['email'], interviewer_email],
-                'jd_summary': candidate['jd_summary']
-            }
-
-            # Log the meeting details (for demonstration)
-            print(f"Creating Teams meeting: {meeting_details}")
-
-            # In a real implementation, you would call MS Graph API here
-            # teams_meeting_link = create_teams_meeting(meeting_details)
-            teams_meeting_link = "https://teams.microsoft.com/meeting/sample-link"
-
-
-            conn.commit()
-
-        except Exception as e:
-            # Log the error but don't fail the entire operation
-            print(f"Teams integration error: {str(e)}")
+        token = f"{candidate_id}-{level}-{int(datetime.now().timestamp())}"  # Simple token
+        send_interview_result_email(
+            hr_email=request.user.email if request.user.is_authenticated else 'hr@yourdomain.com',
+            interviewer_email=interviewer_email,
+            candidate_id = candidate_id,
+            interviewer_name=interviewer_name,
+            candidate=candidate,
+            level=level,
+            token=token
+        )
 
         return JsonResponse({
             'success': True,
@@ -1263,3 +1310,80 @@ def schedule_interview(request):
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
+
+def send_interview_result_email(hr_email, interviewer_email, candidate_id,interviewer_name, candidate, level, token):
+    print("send_interview_result_email -> Sending email to interviewer:", interviewer_email)
+    print("send_interview_result_email -> Candidate details:", candidate, "candidiate id:", candidate_id)
+    print("HR email:", hr_email)
+    base_url = "http://127.0.0.1:8000/"
+    subject = f"Action Required: Record Interview Result for {candidate['name']} ({level.upper()})"
+    result_url = f"{base_url}/record_interview_result/?candidate_id={candidate['candidate_id']}&level={level}&token={token}"
+    html_content = render_to_string('interview_result_request.html', {
+        'interviewer_name': interviewer_name,
+        'candidate': candidate,
+        'level': level.upper(),
+        'result_url': result_url,
+        'hr_email': hr_email,
+    })
+    msg = MIMEMultipart()
+    msg['From'] = hr_email
+    msg['To'] = interviewer_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(html_content, 'html'))
+
+    # Use your SMTP config here
+    gmail_user = 'sant.vihangam@gmail.com'
+    gmail_app_password = 'pdsexaeusfdgvqsu'  # Use app password, not your Gmail password
+
+    # Send email via Gmail SMTP
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(gmail_user, gmail_app_password)
+    server.sendmail(gmail_user, interviewer_email, msg.as_string())
+    print("send_interview_result_email -> Email sent successfully")
+    server.quit()
+
+def record_interview_result_page(request):
+    candidate_id = request.GET.get('candidate_id')
+    level = request.GET.get('level')
+    token = request.GET.get('token')
+    # Optionally validate token here
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
+    candidate = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not candidate:
+        return render(request, 'record_interview_result.html', {'error': 'Candidate not found'})
+    return render(request, 'record_interview_result.html', {
+        'candidate': candidate,
+        'level': level,
+        'token': token
+    })
+
+@csrf_exempt
+def submit_interview_result(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    data = json.loads(request.body)
+    candidate_id = data.get('candidate_id')
+    level = data.get('level')
+    result = data.get('result')
+    comments = data.get('comments')
+    token = data.get('token')
+    # Optionally validate token here
+    if not all([candidate_id, level, result]):
+        return JsonResponse({'success': False, 'error': 'Missing fields'}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        UPDATE candidates
+        SET {level}_result = %s, {level}_comments = %s, updated_at = NOW()
+        WHERE candidate_id = %s
+    """, (result, comments, candidate_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True})
