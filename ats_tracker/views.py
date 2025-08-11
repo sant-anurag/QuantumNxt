@@ -1387,3 +1387,68 @@ def submit_interview_result(request):
     cursor.close()
     conn.close()
     return JsonResponse({'success': True})
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+def manage_candidate_status_page(request):
+    return render(request, "manage_candidate_status.html")
+
+def manage_candidate_status_data(request):
+    search = request.GET.get("search", "")
+    page = int(request.GET.get("page", 1))
+    limit = 10
+    offset = (page - 1) * limit
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    query = """
+        SELECT c.*, jd.jd_summary
+        FROM candidates c
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        WHERE c.screen_status = 'selected'
+    """
+    params = []
+    if search:
+        query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
+        params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+    query += " ORDER BY c.updated_at DESC LIMIT %s OFFSET %s"
+    params += [limit, offset]
+    cursor.execute(query, params)
+    candidates = cursor.fetchall()
+    cursor.execute("SELECT COUNT(*) as total FROM candidates WHERE screen_status = 'selected'" + (" AND (name LIKE %s OR email LIKE %s OR jd_id LIKE %s)" if search else ""), params[:3] if search else [])
+    total = cursor.fetchone()['total']
+    num_pages = (total // limit) + (1 if total % limit else 0)
+    cursor.close()
+    conn.close()
+    return JsonResponse({
+        "candidates": candidates,
+        "page": page,
+        "num_pages": num_pages
+    })
+
+@csrf_exempt
+def update_candidate_status(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
+    data = json.loads(request.body)
+    candidate_id = data.get("candidate_id")
+    l1_result = data.get("l1_result")
+    l2_result = data.get("l2_result")
+    l3_result = data.get("l3_result")
+    if not candidate_id:
+        return JsonResponse({"success": False, "error": "Candidate ID required"}, status=400)
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE candidates
+            SET l1_result=%s, l2_result=%s, l3_result=%s, updated_at=NOW()
+            WHERE candidate_id=%s
+        """, [l1_result, l2_result, l3_result, candidate_id])
+        conn.commit()
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+    finally:
+        cursor.close()
+        conn.close()

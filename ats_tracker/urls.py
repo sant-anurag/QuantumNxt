@@ -47,4 +47,7 @@ urlpatterns = [
     path('schedule_interview/', views.schedule_interview, name='schedule_interview'),
     path('record_interview_result/', views.record_interview_result_page, name='record_interview_result_page'),
     path('submit_interview_result/', views.submit_interview_result, name='submit_interview_result'),
+    path('manage_candidate_status/', views.manage_candidate_status_page, name='manage_candidate_status'),
+    path('manage_candidate_status_data/', views.manage_candidate_status_data, name='manage_candidate_status_data'),
+    path('update_candidate_status/', views.update_candidate_status, name='update_candidate_status'),
 ]
