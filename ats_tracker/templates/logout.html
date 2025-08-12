@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logged Out - QuantumNxt ATS</title>
+    <link rel="stylesheet" href="{% static 'css/logout.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="logout-container">
+        <div class="logout-card">
+            <i class="fas fa-sign-out-alt fa-3x logout-icon"></i>
+            <h2>You have been logged out</h2>
+            <p>Thank you for using QuantumNxt ATS.<br>
+            To access your account again, please log in.</p>
+            <a href="{% url 'login' %}" class="login-btn">Login</a>
+        </div>
+    </div>
+    <script src="{% static 'js/logout.js' %}"></script>
+</body>
+</html>

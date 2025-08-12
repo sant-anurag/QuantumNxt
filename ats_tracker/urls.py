@@ -54,4 +54,5 @@ urlpatterns = [
     path('api/jds/', views.api_jds, name='api_jds'),
     path('api/finalized_candidates/', views.api_finalized_candidates, name='api_finalized_candidates'),
     path('api/candidate_details/', views.api_candidate_details, name='api_candidate_details'),
+    path('logout/', views.logout_page, name='logout'),
 ]

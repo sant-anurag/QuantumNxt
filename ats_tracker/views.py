@@ -1494,3 +1494,11 @@ def api_candidate_details(request):
     cursor.close()
     conn.close()
     return JsonResponse({'details': candidate})
+
+# Python
+from django.contrib.auth import logout
+from django.shortcuts import render
+
+def logout_page(request):
+    logout(request)  # This logs out the user
+    return render(request, 'logout.html')
