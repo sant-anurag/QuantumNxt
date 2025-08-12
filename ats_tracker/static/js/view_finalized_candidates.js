@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(res => res.json())
         .then(data => {
             jdSelect.innerHTML = data.jds.map(jd =>
-                `<option value="${jd.jd_id}">${jd.jd_summary}</option>`
+                `<option value="${jd.jd_id}">${jd.jd_id} - ${jd.jd_summary}</option>`
             ).join('');
             if (data.jds.length) {
                 loadFinalizedCandidates(data.jds[0].jd_id);
