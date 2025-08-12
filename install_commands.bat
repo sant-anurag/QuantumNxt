@@ -9,6 +9,7 @@ pip install .\en_core_web_sm-3.8.0.tar.gz
 python.exe -m pip install pip<24.1
 pip install textract
 python.exe -m pip install --upgrade pip
-pip install pdfplumber python-docx
+pip install python-docx
+pip install pdfplumber==0.10.2
 
 
