@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap');
+
 /* ===== Container ===== */
 .schedule-container {
     max-width: 1100px;
-    margin: 48px auto;
+    margin: 40px auto 32px auto;
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.06);
@@ -9,23 +11,24 @@
     font-family: 'Inter', system-ui, Arial, sans-serif;
 }
 
-/* ===== Page Title ===== */
+/* ===== Page Title - Unified ATS Style ===== */
 .page-title {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: #1e293b;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 16px 20px;
+    padding: 14px 20px;
+    color: #666de7;
     background: rgba(181, 200, 255, 0.09);
-    border-radius: 10px;
+    border-radius: 12px;
     backdrop-filter: blur(6px);
     border: 1px solid rgba(208,218,255,0.3);
     margin-bottom: 24px;
 }
 .page-title::before {
-    content: "\f073"; /* calendar icon from fontawesome */
+    content: "\f073"; /* fontawesome calendar icon */
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
     color: #2563eb;
@@ -34,7 +37,7 @@
 /* ===== Filter Card ===== */
 .filter-card {
     background: #f9fafb;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 18px 20px;
     margin-bottom: 28px;
     border: 1px solid #e5e7eb;
@@ -65,7 +68,7 @@
     outline: none;
 }
 
-/* ===== Candidates Section ===== */
+/* ===== Section Title ===== */
 .section-title {
     font-size: 1.2rem;
     font-weight: 600;
@@ -85,7 +88,8 @@
     overflow: hidden;
     box-shadow: 0 1px 6px rgba(0,0,0,0.04);
 }
-.data-table th, .data-table td {
+.data-table th,
+.data-table td {
     padding: 12px 14px;
     border-bottom: 1px solid #e5e7eb;
     text-align: left;
@@ -115,22 +119,23 @@
     font-size: 0.95rem;
     cursor: pointer;
     font-weight: 600;
-    transition: background 0.15s, box-shadow 0.15s;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 .primary-btn, .schedule-btn {
-    background: #2563eb;
+    background: linear-gradient(96deg, #2563eb 0%, #11b7ee 100%);
     color: #fff;
 }
 .primary-btn:hover, .schedule-btn:hover {
-    background: #1d4ed8;
+    background: linear-gradient(97deg, #11b7ee 0%, #2563eb 100%);
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
 }
 .secondary-btn {
-    background: #e5e7eb;
-    color: #374151;
+    background: #f3f4f6;
+    color: #2563eb;
 }
 .secondary-btn:hover {
-    background: #cbd5e1;
+    background: #e5e8ff;
 }
 .btn:disabled, #schedule-btn:disabled {
     background: #e5e7eb !important;
@@ -143,14 +148,16 @@
     display: none;
     position: fixed;
     z-index: 1000;
-    left: 0; top: 0;
-    width: 100vw; height: 100vh;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(31,41,55,0.45);
     align-items: center;
     justify-content: center;
 }
 
-/* Modal Content */
+/* ===== Modal Content ===== */
 .modal-content {
     background: #fff;
     border-radius: 12px;
@@ -161,16 +168,22 @@
     animation: modalFadeIn 0.25s ease;
 }
 @keyframes modalFadeIn {
-    from { transform: scale(0.96); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+    from {
+        transform: scale(0.96);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
-/* Modal Header */
+/* ===== Modal Header ===== */
 .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(90deg, #2563eb, #38a169);
+    background: linear-gradient(90deg, #2563eb 0%, #11b7ee 100%);
     color: #fff;
     padding: 14px 18px;
     border-radius: 12px 12px 0 0;
@@ -188,15 +201,13 @@
     color: #fca5a5;
 }
 
-/* Modal Body Rows */
+/* ===== Modal Rows ===== */
 .modal-row {
     display: flex;
     gap: 18px;
     padding: 18px;
     flex-wrap: wrap;
 }
-
-/* Form Fields in Modal */
 .form-group {
     flex: 1;
     min-width: 180px;
@@ -212,7 +223,7 @@
 .form-group input,
 .form-group select {
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #cbd5e1;
     font-size: 0.95rem;
     background: #fff;
@@ -225,25 +236,39 @@
     outline: none;
 }
 
-/* Checkbox in modal */
+/* ===== Checkbox in Modal ===== */
 .modal-content input[type="checkbox"] {
     margin-right: 6px;
 }
 
-/* Modal Message */
+/* ===== Modal Message ===== */
 .modal-message {
     padding: 0 18px;
     font-size: 0.9rem;
     min-height: 20px;
 }
-.modal-message.success { color: #16a34a; }
-.modal-message.error { color: #dc2626; }
+.modal-message.success {
+    color: #16a34a;
+}
+.modal-message.error {
+    color: #dc2626;
+}
 
-/* Modal Actions */
+/* ===== Modal Actions ===== */
 .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
     padding: 16px 18px;
     border-top: 1px solid #f3f4f6;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+    }
+    .modal-row {
+        flex-direction: column;
+    }
 }
