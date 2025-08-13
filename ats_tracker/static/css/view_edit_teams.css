@@ -19,12 +19,18 @@
 }
 
 .page-header h2 {
-    margin: 0;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #1e293b;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 6px rgba(159,186,255,0.1);
+    margin-top: 0;
+    margin-bottom: 32px;
+    color: #233a63;
+    font-size: 2.1em;
+    font-family: 'Segoe UI Semibold', 'Segoe UI', Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    justify-content: flex-start;
+    line-height: 1.2;
+    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 /* Keep spacing consistent with Add Member page */

@@ -20,13 +20,18 @@
     gap: 18px;
 }
 .assign-jd-header h2 {
-    font-size: 1.3em;
-    color: #666de7;
+    margin-top: 0;
+    margin-bottom: 32px;
+    color: #233a63;
+    font-size: 2.1em;
+    font-family: 'Segoe UI Semibold', 'Segoe UI', Arial, sans-serif;
     font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    letter-spacing: 0.7px;
+    justify-content: flex-start;
+    line-height: 1.2;
+    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 .assign-jd-form {
     display: flex;

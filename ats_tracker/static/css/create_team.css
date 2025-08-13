@@ -60,13 +60,18 @@ body {
     border-bottom: 1px solid var(--ct-border);
 }
 .ct-card-header h2, .ct-card-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--ct-primary);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-top: 0;
+    margin-bottom: 32px;
+    color: #233a63;
+    font-size: 2.1em;
+    font-family: 'Segoe UI Semibold', 'Segoe UI', Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    justify-content: flex-start;
+    line-height: 1.2;
+    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .ct-card-body {

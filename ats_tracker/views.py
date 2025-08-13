@@ -1565,3 +1565,22 @@ def save_candidate_details_profile(request):
             """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
         return JsonResponse({'success': True, 'message': 'Candidate details updated successfully.'})
     return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+
+@csrf_exempt
+def candidate_suggestions(request):
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        if len(query) < 3:
+            return JsonResponse({'results': []})
+        conn = get_db_conn()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT candidate_id, name, email
+            FROM candidates
+            WHERE name LIKE %s OR email LIKE %s
+            LIMIT 8
+        """, [f"%{query}%", f"%{query}%"])
+        results = cursor.fetchall()
+        return JsonResponse({'results': results})
+    return JsonResponse({'results': []})

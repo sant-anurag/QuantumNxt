@@ -19,7 +19,7 @@ body {
     top: 0;
     width: 280px; /* Increased width */
     height: 100vh;
-    background: url('/static/bg/bg_sidebar3.png') center/cover no-repeat;
+    background: url('/static/bg/bg_sidebar4.png') center/cover no-repeat;
     backdrop-filter: blur(12px) saturate(180%);
 
 
