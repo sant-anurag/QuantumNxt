@@ -1510,7 +1510,8 @@ def candidate_profile(request):
     """Render the Candidate Profile page."""
     return render(request, 'candidate_profile.html')
 
-def get_candidate_details(request):
+@csrf_exempt
+def get_candidate_details_profile(request):
     """Fetch candidate details based on name or email using raw SQL."""
     if request.method == 'GET':
         search_query = request.GET.get('query', '').strip()
@@ -1519,7 +1520,7 @@ def get_candidate_details(request):
             conn = get_db_conn()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT candidate_id, name, email, phone, skills, experience, screened_remarks, 
+                SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
                        l1_comments, l2_comments, l3_comments, screen_status
                 FROM candidates
                 WHERE email LIKE %s OR name LIKE %s
@@ -1531,22 +1532,22 @@ def get_candidate_details(request):
                 return JsonResponse({
                     'success': True,
                     'data': {
-                        'candidate_id': candidate[0],
-                        'name': candidate[1],
-                        'email': candidate[2],
-                        'phone': candidate[3],
-                        'skills': candidate[4],
-                        'experience': candidate[5],
-                        'screened_remarks': candidate[6],
-                        'l1_comments': candidate[7],
-                        'l2_comments': candidate[8],
-                        'l3_comments': candidate[9],
-                        'status': candidate[10],
+                        'candidate_id': candidate['candidate_id'],
+                        'name': candidate['name'],
+                        'email': candidate['email'],
+                        'phone': candidate['phone'],
+                        'skills': candidate['skills'],
+                        'experience': candidate['experience'],
+                        'screened_remarks': candidate['screened_remarks'],
+                        'l1_comments': candidate['l1_comments'],
+                        'l2_comments': candidate['l2_comments'],
+                        'l3_comments': candidate['l3_comments'],
+                        'status': candidate['screen_status'],
                     }
                 })
         return JsonResponse({'success': False, 'message': 'Candidate not found.'})
 
-def save_candidate_details(request):
+def save_candidate_details_profile(request):
     """Save updated candidate details using raw SQL."""
     if request.method == 'POST':
         candidate_id = request.POST.get('candidate_id')

@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
             searchBtn.addEventListener('click', function () {
                 const query = searchInput.value.trim();
                 if (query.length > 0) {
-                    fetch(`/get_candidate_details/?query=${query}`)
+                    fetch(`/get_candidate_details_profile/?query=${query}`)
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     status: document.getElementById('candidate-status').value,
                 };
 
-                fetch('/save_candidate_details/', {
+                fetch('/save_candidate_details_profile/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

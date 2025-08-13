@@ -56,4 +56,6 @@ urlpatterns = [
     path('api/candidate_details/', views.api_candidate_details, name='api_candidate_details'),
     path('logout/', views.logout_page, name='logout'),
     path('candidate-profile/', views.candidate_profile, name='candidate_profile'),
+    path('get_candidate_details_profile/', views.get_candidate_details_profile, name='get_candidate_details_profile'),
+    path('save_candidate_details_profile/', views.save_candidate_details_profile, name='save_candidate_details_profile'),
 ]
