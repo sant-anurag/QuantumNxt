@@ -33,31 +33,41 @@ def login_view(request):
     initializer = ATSDatabaseInitializer()
     initializer.initialize()
     initializer.close()
-    from django.contrib.auth.hashers import make_password
-    print(make_password('admin@123'))
+
+    username = request.POST.get('username', '').strip()
+    password = request.POST.get('password', '').strip()
+    name = username  # Default name
 
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '').strip()
         if not username or not password:
             return render(request, 'login.html', {'error': 'Please enter both username/email and password.'})
 
         valid_user = validate_user(username, password)
-        print("login_view -> Valid user:", valid_user)
-        # If valid_user is not None, it means the user was found and password matched
-        # valid_user will be a tuple (user_id, db_username, role, status)
         if valid_user:
-            user_id, db_username, role,status = valid_user
+            user_id, db_username, role, status = valid_user
+            # Fetch name from hr_team_members table against email
+            conn = get_db_connection_ats()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT first_name, last_name FROM hr_team_members WHERE email=%s
+            """, [username])
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if row:
+                first_name, last_name = row
+                name = f"{first_name} {last_name}"
             request.session['user_id'] = user_id
             request.session['username'] = db_username
             request.session['role'] = role
             request.session['authenticated'] = True
             request.session['email'] = username
+            request.session['name'] = name  # Store name in session
             return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
-
-    return render(request, 'login.html',{ 'error': 'Click Submit to Proceed'})
+    print("login_view -> User Name:", name)
+    return render(request, 'login.html', {'error': 'Click Submit to Proceed'})
 
 # function to validate username and password with users table
 def validate_user(username, password):
@@ -85,7 +95,8 @@ def validate_user(username, password):
     return None, None, None,None
 
 def home(request):
-    return render(request, 'home.html')
+    name = request.session.get('name', 'Guest')
+    return render(request, 'home.html', {'name': name})
 
 
 def get_db_connection():
