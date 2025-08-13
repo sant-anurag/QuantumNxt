@@ -25,6 +25,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.db import connection
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -1502,3 +1505,62 @@ from django.shortcuts import render
 def logout_page(request):
     logout(request)  # This logs out the user
     return render(request, 'logout.html')
+
+def candidate_profile(request):
+    """Render the Candidate Profile page."""
+    return render(request, 'candidate_profile.html')
+
+def get_candidate_details(request):
+    """Fetch candidate details based on name or email using raw SQL."""
+    if request.method == 'GET':
+        search_query = request.GET.get('query', '').strip()
+        print("get_candidate_details -> Search query:", search_query)
+        if search_query:
+            conn = get_db_conn()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT candidate_id, name, email, phone, skills, experience, screened_remarks, 
+                       l1_comments, l2_comments, l3_comments, screen_status
+                FROM candidates
+                WHERE email LIKE %s OR name LIKE %s
+                LIMIT 1
+            """, [f"%{search_query}%", f"%{search_query}%"])
+            candidate = cursor.fetchone()
+            print("get_candidate_details -> Candidate found:", candidate)
+            if candidate:
+                return JsonResponse({
+                    'success': True,
+                    'data': {
+                        'candidate_id': candidate[0],
+                        'name': candidate[1],
+                        'email': candidate[2],
+                        'phone': candidate[3],
+                        'skills': candidate[4],
+                        'experience': candidate[5],
+                        'screened_remarks': candidate[6],
+                        'l1_comments': candidate[7],
+                        'l2_comments': candidate[8],
+                        'l3_comments': candidate[9],
+                        'status': candidate[10],
+                    }
+                })
+        return JsonResponse({'success': False, 'message': 'Candidate not found.'})
+
+def save_candidate_details(request):
+    """Save updated candidate details using raw SQL."""
+    if request.method == 'POST':
+        candidate_id = request.POST.get('candidate_id')
+        screened_remarks = request.POST.get('screened_remarks', '')
+        l1_comments = request.POST.get('l1_comments', '')
+        l2_comments = request.POST.get('l2_comments', '')
+        l3_comments = request.POST.get('l3_comments', '')
+        status = request.POST.get('status', '')
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE candidates
+                SET screened_remarks = %s, l1_comments = %s, l2_comments = %s, l3_comments = %s, screen_status = %s
+                WHERE candidate_id = %s
+            """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
+        return JsonResponse({'success': True, 'message': 'Candidate details updated successfully.'})
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'})

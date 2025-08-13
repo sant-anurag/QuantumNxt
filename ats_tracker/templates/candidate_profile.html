@@ -1,0 +1,63 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/candidate_profile.css' %}">
+<div class="candidate-profile-container">
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Enter Candidate Name or Email">
+        <div id="suggestions" class="suggestions hidden"></div>
+        <button id="search-btn" class="btn-primary">Search</button>
+        <button id="reset-btn" class="btn-secondary">Reset</button>
+    </div>
+
+    <div id="candidate-details" class="candidate-details hidden">
+        <div class="profile-header">
+            <div class="profile-picture">
+                <img id="profile-img" src="{% static 'images/default-profile.png' %}" alt="Profile Picture">
+            </div>
+            <div class="profile-info">
+                <h2 id="candidate-name">Candidate Name</h2>
+                <p id="candidate-email">Email: candidate@example.com</p>
+                <p id="candidate-phone">Phone: +1234567890</p>
+                <p id="candidate-experience">Experience: 5 years</p>
+                <p id="candidate-skills">Skills: Python, Django, JavaScript</p>
+            </div>
+        </div>
+
+        <div class="profile-body">
+            <div class="field">
+                <label for="screened-remarks">Screened Remarks:</label>
+                <textarea id="screened-remarks" rows="4" placeholder="Enter remarks here..."></textarea>
+            </div>
+            <div class="field">
+                <label for="l1-comments">L1 Comments:</label>
+                <textarea id="l1-comments" rows="4" placeholder="Enter L1 comments here..."></textarea>
+            </div>
+            <div class="field">
+                <label for="l2-comments">L2 Comments:</label>
+                <textarea id="l2-comments" rows="4" placeholder="Enter L2 comments here..."></textarea>
+            </div>
+            <div class="field">
+                <label for="l3-comments">L3 Comments:</label>
+                <textarea id="l3-comments" rows="4" placeholder="Enter L3 comments here..."></textarea>
+            </div>
+            <div class="field">
+                <label for="candidate-status">Status:</label>
+                <select id="candidate-status">
+                    <option value="toBeScreened">To Be Screened</option>
+                    <option value="selected">Selected</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="onHold">On Hold</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="profile-footer">
+            <button id="edit-btn" class="btn-primary">Edit</button>
+            <button id="save-btn" class="btn-success hidden">Save</button>
+        </div>
+    </div>
+</div>
+<script src="{% static 'js/candidate_profile.js' %}"></script>
+{% endblock %}

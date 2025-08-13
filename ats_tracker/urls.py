@@ -55,4 +55,5 @@ urlpatterns = [
     path('api/finalized_candidates/', views.api_finalized_candidates, name='api_finalized_candidates'),
     path('api/candidate_details/', views.api_candidate_details, name='api_candidate_details'),
     path('logout/', views.logout_page, name='logout'),
+    path('candidate-profile/', views.candidate_profile, name='candidate_profile'),
 ]
