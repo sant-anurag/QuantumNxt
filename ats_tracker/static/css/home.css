@@ -19,8 +19,12 @@ body {
     top: 0;
     width: 280px; /* Increased width */
     height: 100vh;
-    background: rgba(32, 38, 62, 0.82); /* Enhanced glass effect */
-    backdrop-filter: saturate(180%) blur(18px);
+    background: url('/static/bg/bg_sidebar3.png') center/cover no-repeat;
+    backdrop-filter: blur(12px) saturate(180%);
+
+
+
+color: #fff; /* White font color */
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
     border-right: 1px solid rgba(255, 255, 255, 0.18);
     transition: width 0.3s cubic-bezier(.68,-0.55,.27,1.55);
@@ -55,7 +59,9 @@ body {
     display: flex;
     align-items: center;
     padding: 14px 25px;
-    color: #d4d8f0;
+    color: #fff; /* White font color */
+    background: transparent; /* Ensure no background overrides */
+    transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
     text-decoration: none;
     font-size: 1.12em;
     font-weight: 500;
@@ -63,10 +69,7 @@ body {
     margin: 4px 16px 4px 5px;
     position: relative;
     white-space: nowrap; /* Single line! */
-    transition:
-        background 0.3s ease-in-out,
-        color 0.3s ease-in-out,
-        transform 0.18s ease;
+
 }
 .menu > li > a:hover,
 .menu > li.active > a {
@@ -81,7 +84,8 @@ body {
     position: absolute;
     left: 20px; top: 50%; transform: translateY(-50%);
     width: 8px; height: 8px; border-radius: 50%;
-    background: #6e75b3;
+    background: rgba(255, 255, 255, 0.2); /* Slight white overlay on hover */
+    color: #fff; /* Keep font color white */
     opacity: 0;
     transition: opacity 0.23s ease-in-out;
 }
