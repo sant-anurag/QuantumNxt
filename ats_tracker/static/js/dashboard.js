@@ -10,6 +10,7 @@ function fetchDashboardData() {
             renderMonthlyReportTable(data.monthly_report);
             renderCustomerPieChart(data.customer_pie);
             renderClosedJDsBarChart(data.closed_jds_bar);
+            renderInProgressCandidatesTable(data.in_progress_candidates);
         });
 }
 
@@ -131,5 +132,28 @@ function renderClosedJDsBarChart(barData) {
             plugins: { legend: { display: false } },
             scales: { y: { beginAtZero: true } }
         }
+    });
+}
+
+function renderInProgressCandidatesTable(candidates) {
+    const tbody = document.getElementById('in-progress-candidates-table').querySelector('tbody');
+    tbody.innerHTML = '';
+    if (!candidates || candidates.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No in-progress candidates found.</td></tr>`;
+        return;
+    }
+    candidates.forEach(c => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${c.candidate_id}</td>
+                <td>${c.name}</td>
+                <td>${c.jd_id}</td>
+                <td>${c.l1_result || ''}</td>
+                <td>${c.l2_result || ''}</td>
+                <td>${c.l3_result || ''}</td>
+                <td>${c.company_name || ''}</td>
+                <td>${c.team_name || ''}</td>
+            </tr>
+        `;
     });
 }

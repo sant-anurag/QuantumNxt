@@ -1677,6 +1677,7 @@ def dashboard_data(request):
         GROUP BY cu.company_name
     """, (emp_id,))
     pie_rows = cursor.fetchall()
+
     customer_pie = {
         "labels": [row['company_name'] for row in pie_rows],
         "data": [row['jd_count'] for row in pie_rows]
@@ -1689,6 +1690,29 @@ def dashboard_data(request):
         "labels": bar_labels,
         "data": bar_data
     }
+    # In Progress Candidates
+    cursor.execute("""
+            SELECT 
+                c.candidate_id,
+                c.name,
+                c.jd_id,
+                c.l1_result,
+                c.l2_result,
+                c.l3_result,
+                cu.company_name,
+                t.team_name
+            FROM candidates c
+            LEFT JOIN recruitment_jds r ON c.jd_id = r.jd_id
+            LEFT JOIN customers cu ON r.company_id = cu.company_id
+            LEFT JOIN teams t ON c.team_id = t.team_id
+            WHERE c.hr_member_id = %s
+              AND r.jd_status = 'active'
+              AND (c.screen_status IN ('toBeScreened', 'onHold', 'selected'))
+              AND (c.l3_result IS NULL OR c.l3_result != 'selected')
+            ORDER BY c.updated_at DESC
+            LIMIT 30
+        """, (emp_id,))
+    in_progress_candidates = cursor.fetchall()
 
     cursor.close()
     conn.close()
@@ -1697,5 +1721,6 @@ def dashboard_data(request):
         "pending_jds": pending_jds,
         "monthly_report": monthly_report,
         "customer_pie": customer_pie,
-        "closed_jds_bar": closed_jds_bar
+        "closed_jds_bar": closed_jds_bar,
+        "in_progress_candidates": in_progress_candidates
     })
