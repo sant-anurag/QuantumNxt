@@ -61,4 +61,6 @@ urlpatterns = [
     path('candidate_suggestions/', views.candidate_suggestions, name='candidate_suggestions'),
 
     path('dashboard_data/', views.dashboard_data, name='dashboard_data'),
+    path('offer_letter/', views.offer_letter_page, name='offer_letter'),
+    path('api/generate_offer/', views.generate_offer_letter, name='generate_offer_letter'),
 ]

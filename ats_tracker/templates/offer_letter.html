@@ -1,0 +1,22 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/offer_letter.css' %}">
+<div class="container">
+    <h1>Offer Letter Management</h1>
+    <form id="salaryForm">
+        <label>Candidate ID: <input type="number" name="candidate_id" required></label>
+        <label>Basic: <input type="number" name="basic" step="0.01" required></label>
+        <label>HRA: <input type="number" name="hra" step="0.01" required></label>
+        <label>Special Allowance: <input type="number" name="special_allowance" step="0.01"></label>
+        <label>PF: <input type="number" name="pf" step="0.01"></label>
+        <label>Gratuity: <input type="number" name="gratuity" step="0.01"></label>
+        <label>Bonus: <input type="number" name="bonus" step="0.01"></label>
+        <label>Other: <input type="number" name="other" step="0.01"></label>
+        <button type="submit" id="createOfferBtn">Create Offer</button>
+    </form>
+    <div id="offerLetterPreview"></div>
+</div>
+<script src="{% static 'js/offer_letter.js' %}"></script>
+{% endblock %}

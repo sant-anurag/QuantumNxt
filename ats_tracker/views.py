@@ -1724,3 +1724,60 @@ def dashboard_data(request):
         "closed_jds_bar": closed_jds_bar,
         "in_progress_candidates": in_progress_candidates
     })
+
+# Python
+from django.shortcuts import render
+from django.http import JsonResponse
+import json
+
+def offer_letter_page(request):
+    return render(request, 'offer_letter.html')
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def generate_offer_letter(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        candidate_id = data.get('candidate_id')
+        basic = float(data.get('basic', 0))
+        hra = float(data.get('hra', 0))
+        special_allowance = float(data.get('special_allowance', 0))
+        pf = float(data.get('pf', 0))
+        gratuity = float(data.get('gratuity', 0))
+        bonus = float(data.get('bonus', 0))
+        other = float(data.get('other', 0))
+        total_ctc = sum([basic, hra, special_allowance, pf, gratuity, bonus, other])
+
+        # Save to DB
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO offer_letters (candidate_id, basic, hra, special_allowance, pf, gratuity, bonus, other, total_ctc)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, [candidate_id, basic, hra, special_allowance, pf, gratuity, bonus, other, total_ctc])
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        # Generate offer letter HTML
+        offer_html = f"""
+        <div class='offer-letter'>
+            <h2>Offer Letter</h2>
+            <p>Candidate ID: {candidate_id}</p>
+            <table class='salary-stack'>
+                <tr><th>Component</th><th>Amount (INR)</th></tr>
+                <tr><td>Basic</td><td>{basic:.2f}</td></tr>
+                <tr><td>HRA</td><td>{hra:.2f}</td></tr>
+                <tr><td>Special Allowance</td><td>{special_allowance:.2f}</td></tr>
+                <tr><td>PF</td><td>{pf:.2f}</td></tr>
+                <tr><td>Gratuity</td><td>{gratuity:.2f}</td></tr>
+                <tr><td>Bonus</td><td>{bonus:.2f}</td></tr>
+                <tr><td>Other</td><td>{other:.2f}</td></tr>
+                <tr class='total'><td>Total CTC</td><td>{total_ctc:.2f}</td></tr>
+            </table>
+            <p>Congratulations! Please find your salary stack above.</p>
+        </div>
+        """
+        return JsonResponse({'success': True, 'offer_html': offer_html})
+    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)

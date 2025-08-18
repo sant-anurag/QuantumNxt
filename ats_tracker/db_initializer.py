@@ -147,6 +147,21 @@ class ATSDatabaseInitializer:
                 FOREIGN KEY (team_id) REFERENCES teams(team_id)
             );
         """)
+        self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS offer_letters (
+                    offer_id INT AUTO_INCREMENT PRIMARY KEY,
+                    candidate_id INT,
+                    basic DECIMAL(10,2),
+                    hra DECIMAL(10,2),
+                    special_allowance DECIMAL(10,2),
+                    pf DECIMAL(10,2),
+                    gratuity DECIMAL(10,2),
+                    bonus DECIMAL(10,2),
+                    other DECIMAL(10,2),
+                    total_ctc DECIMAL(10,2),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
         self.conn.commit()
 
         print("Database, HR team members, and teams tables created.")
