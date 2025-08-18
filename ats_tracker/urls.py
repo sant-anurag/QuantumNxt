@@ -59,4 +59,6 @@ urlpatterns = [
     path('get_candidate_details_profile/', views.get_candidate_details_profile, name='get_candidate_details_profile'),
     path('save_candidate_details_profile/', views.save_candidate_details_profile, name='save_candidate_details_profile'),
     path('candidate_suggestions/', views.candidate_suggestions, name='candidate_suggestions'),
+
+    path('dashboard_data/', views.dashboard_data, name='dashboard_data'),
 ]

@@ -1,0 +1,96 @@
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 18px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(31,38,135,0.18);
+}
+.dashboard-title {
+    font-size: 2.3em;
+    font-weight: 700;
+    color: #5661d2;
+    margin-bottom: 24px;
+    text-align: center;
+}
+.dashboard-shortcuts {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+}
+.shortcut-btn {
+    background: linear-gradient(92deg, #7280ff 0%, #5661d2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 18px 38px;
+    font-size: 1.12em;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(78, 88, 235, 0.4);
+    cursor: pointer;
+    transition: background 0.28s, box-shadow 0.25s, transform 0.14s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.shortcut-btn i {
+    font-size: 1.4em;
+}
+.shortcut-btn:hover {
+    background: linear-gradient(92deg, #8797ff 0%, #3f44aa 100%);
+    box-shadow: 0 12px 36px rgba(114, 131, 255, 0.66);
+    transform: scale(1.07);
+}
+.dashboard-sections {
+    display: flex;
+    gap: 32px;
+    margin-top: 12px;
+}
+.dashboard-left, .dashboard-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+.dashboard-card {
+    background: linear-gradient(120deg, #eef2f7 0%, #dbe6ff 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(86,97,210,0.13);
+    padding: 24px;
+    min-height: 320px;
+    margin-bottom: 0;
+}
+.dashboard-card h3 {
+    font-size: 1.18em;
+    color: #5661d2;
+    margin-bottom: 16px;
+}
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #f7fafd;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(86,97,210,0.08);
+}
+.dashboard-table th, .dashboard-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e3e8ff;
+}
+.dashboard-table th {
+    background: #eef2f7;
+    color: #5661d2;
+    font-weight: 600;
+}
+.dashboard-table tr:last-child td {
+    border-bottom: none;
+}
+@media (max-width: 1100px) {
+    .dashboard-sections {
+        flex-direction: column;
+        gap: 18px;
+    }
+}

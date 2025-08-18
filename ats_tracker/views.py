@@ -1568,12 +1568,13 @@ def save_candidate_details_profile(request):
         l3_comments = request.POST.get('l3_comments', '')
         status = request.POST.get('status', '')
 
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                UPDATE candidates
-                SET screened_remarks = %s, l1_comments = %s, l2_comments = %s, l3_comments = %s, screen_status = %s
-                WHERE candidate_id = %s
-            """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
+        conn = get_db_conn()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            UPDATE candidates
+            SET screened_remarks = %s, l1_comments = %s, l2_comments = %s, l3_comments = %s, screen_status = %s
+            WHERE candidate_id = %s
+        """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
         return JsonResponse({'success': True, 'message': 'Candidate details updated successfully.'})
     return JsonResponse({'success': False, 'message': 'Invalid request method.'})
 
@@ -1595,3 +1596,98 @@ def candidate_suggestions(request):
         results = cursor.fetchall()
         return JsonResponse({'results': results})
     return JsonResponse({'results': []})
+
+from django.shortcuts import render
+from django.http import JsonResponse
+import mysql.connector
+from datetime import datetime, timedelta
+
+def dashboard_data(request):
+    email = request.user.username
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="ats"
+    )
+    cursor = conn.cursor(dictionary=True)
+
+    # Get emp_id for logged-in HR member
+    cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=%s", (email,))
+    emp_row = cursor.fetchone()
+    emp_id = emp_row['emp_id'] if emp_row else None
+
+    # Pending/Active JDs assigned to user
+    cursor.execute("""
+        SELECT r.jd_id, r.jd_summary, r.jd_status, r.created_at, cu.company_name
+        FROM recruitment_jds r
+        JOIN candidates c ON r.jd_id = c.jd_id
+        JOIN customers cu ON r.company_id = cu.company_id
+        WHERE c.hr_member_id = %s AND r.jd_status = 'active'
+        GROUP BY r.jd_id
+        ORDER BY r.created_at DESC
+    """, (emp_id,))
+    pending_jds = cursor.fetchall()
+
+    # Monthly closed JDs and candidates (last 6 months)
+    monthly_report = []
+    for i in range(6, 0, -1):
+        month_start = (datetime.now().replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT r.jd_id) AS closed_jds
+            FROM recruitment_jds r
+            JOIN candidates c ON r.jd_id = c.jd_id
+            WHERE c.hr_member_id = %s AND r.jd_status = 'closed'
+            AND r.closure_date BETWEEN %s AND %s
+        """, (emp_id, month_start.date(), month_end.date()))
+        closed_jds = cursor.fetchone()['closed_jds'] or 0
+
+        cursor.execute("""
+            SELECT COUNT(*) AS candidates
+            FROM candidates
+            WHERE hr_member_id = %s AND screen_status = 'selected'
+            AND l1_result = 'selected'
+            AND l3_result = 'selected'
+            AND created_at BETWEEN %s AND %s
+        """, (emp_id, month_start.date(), month_end.date()))
+        candidates = cursor.fetchone()['candidates'] or 0
+
+        monthly_report.append({
+            "month": month_start.strftime("%b %Y"),
+            "closed_jds": closed_jds,
+            "candidates": candidates
+        })
+
+    # Pie chart: active JDs by customer
+    cursor.execute("""
+        SELECT cu.company_name, COUNT(DISTINCT r.jd_id) AS jd_count
+        FROM recruitment_jds r
+        JOIN customers cu ON r.company_id = cu.company_id
+        JOIN candidates c ON r.jd_id = c.jd_id
+        WHERE c.hr_member_id = %s AND r.jd_status = 'active'
+        GROUP BY cu.company_name
+    """, (emp_id,))
+    pie_rows = cursor.fetchall()
+    customer_pie = {
+        "labels": [row['company_name'] for row in pie_rows],
+        "data": [row['jd_count'] for row in pie_rows]
+    }
+
+    # Bar chart: closed JDs in last 6 months
+    bar_labels = [row['month'] for row in monthly_report]
+    bar_data = [row['closed_jds'] for row in monthly_report]
+    closed_jds_bar = {
+        "labels": bar_labels,
+        "data": bar_data
+    }
+
+    cursor.close()
+    conn.close()
+
+    return JsonResponse({
+        "pending_jds": pending_jds,
+        "monthly_report": monthly_report,
+        "customer_pie": customer_pie,
+        "closed_jds_bar": closed_jds_bar
+    })
