@@ -39,7 +39,7 @@ function renderPendingJDsPage() {
                             <td>${jd.jd_summary}</td>
                             <td>${jd.company_name}</td>
                             <td>${jd.jd_status}</td>
-                            <td>${jd.created_at}</td>`;
+                            <td>${jd.not_finalized_count}</td>`;
             tbody.appendChild(tr);
         });
     }

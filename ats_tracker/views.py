@@ -1621,14 +1621,18 @@ def dashboard_data(request):
     # Pending/Active JDs assigned to user via team membership
     # Python
     cursor.execute("""
-        SELECT r.jd_id, r.jd_summary, r.jd_status, r.created_at, cu.company_name
+        SELECT 
+            r.jd_id, 
+            r.jd_summary, 
+            r.jd_status, 
+            cu.company_name,
+            COUNT(CASE WHEN c.l3_result IS NULL OR c.l3_result != 'selected' THEN 1 END) AS not_finalized_count
         FROM recruitment_jds r
-        JOIN teams t ON r.team_id = t.team_id
-        JOIN team_members tm ON t.team_id = tm.team_id
-        JOIN hr_team_members m ON tm.emp_id = m.emp_id
         JOIN customers cu ON r.company_id = cu.company_id
-        WHERE m.emp_id = %s AND r.jd_status = 'active'
-        ORDER BY r.created_at DESC
+        JOIN candidates c ON r.jd_id = c.jd_id
+        WHERE c.hr_member_id = %s AND r.jd_status = 'active'
+        GROUP BY r.jd_id, r.jd_summary, r.jd_status, cu.company_name
+        ORDER BY r.jd_id DESC
     """, (emp_id,))
     pending_jds = cursor.fetchall()
     print("dashboard_data -> Pending JDs:", pending_jds)
