@@ -89,6 +89,17 @@
 .dashboard-table tr:last-child td {
     border-bottom: none;
 }
+#customerPieChart {
+    width: 320px;
+    height: 320px;
+    max-width: 100%;
+
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(86, 97, 210, 0.08);
+    padding: 18px;
+    display: block;
+    margin: 0 auto;
+}
 .dashboard-pagination {
     display: flex;
     gap: 6px;
