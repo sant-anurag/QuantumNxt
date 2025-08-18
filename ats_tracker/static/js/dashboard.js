@@ -13,22 +13,71 @@ function fetchDashboardData() {
         });
 }
 
+let pendingJDsData = [];
+let pendingJDsPage = 1;
+const pendingJDsPageSize = 5;
+
 function renderPendingJDsTable(jds) {
+    pendingJDsData = jds || [];
+    pendingJDsPage = 1;
+    renderPendingJDsPage();
+}
+
+function renderPendingJDsPage() {
     const tbody = document.getElementById("pending-jds-table").querySelector("tbody");
     tbody.innerHTML = "";
-    if (jds.length === 0) {
+    const start = (pendingJDsPage - 1) * pendingJDsPageSize;
+    const end = start + pendingJDsPageSize;
+    const pageData = pendingJDsData.slice(start, end);
+
+    if (pendingJDsData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5">No active/pending JDs assigned.</td></tr>`;
-        return;
+    } else {
+        pageData.forEach(jd => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${jd.jd_id}</td>
+                            <td>${jd.jd_summary}</td>
+                            <td>${jd.company_name}</td>
+                            <td>${jd.jd_status}</td>
+                            <td>${jd.created_at}</td>`;
+            tbody.appendChild(tr);
+        });
     }
-    jds.forEach(jd => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${jd.jd_id}</td>
-                        <td>${jd.jd_summary}</td>
-                        <td>${jd.company_name}</td>
-                        <td>${jd.jd_status}</td>
-                        <td>${jd.created_at}</td>`;
-        tbody.appendChild(tr);
-    });
+    renderPendingJDsPagination();
+}
+
+function renderPendingJDsPagination() {
+    let pagination = document.getElementById("pending-jds-pagination");
+    if (!pagination) {
+        pagination = document.createElement("div");
+        pagination.id = "pending-jds-pagination";
+        pagination.className = "dashboard-pagination";
+        document.getElementById("pending-jds-table").after(pagination);
+    }
+    pagination.innerHTML = "";
+
+    const totalPages = Math.ceil(pendingJDsData.length / pendingJDsPageSize);
+    if (totalPages <= 1) return;
+
+    const prevBtn = document.createElement("button");
+    prevBtn.textContent = "Prev";
+    prevBtn.disabled = pendingJDsPage === 1;
+    prevBtn.onclick = () => { pendingJDsPage--; renderPendingJDsPage(); };
+    pagination.appendChild(prevBtn);
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement("button");
+        pageBtn.textContent = i;
+        pageBtn.className = i === pendingJDsPage ? "active" : "";
+        pageBtn.onclick = () => { pendingJDsPage = i; renderPendingJDsPage(); };
+        pagination.appendChild(pageBtn);
+    }
+
+    const nextBtn = document.createElement("button");
+    nextBtn.textContent = "Next";
+    nextBtn.disabled = pendingJDsPage === totalPages;
+    nextBtn.onclick = () => { pendingJDsPage++; renderPendingJDsPage(); };
+    pagination.appendChild(nextBtn);
 }
 
 function renderMonthlyReportTable(report) {

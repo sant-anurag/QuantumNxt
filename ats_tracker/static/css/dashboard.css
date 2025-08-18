@@ -78,6 +78,7 @@
 .dashboard-table th, .dashboard-table td {
     padding: 12px 16px;
     text-align: left;
+    font-size: 0.95em;
     border-bottom: 1px solid #e3e8ff;
 }
 .dashboard-table th {
@@ -87,6 +88,31 @@
 }
 .dashboard-table tr:last-child td {
     border-bottom: none;
+}
+.dashboard-pagination {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    margin: 10px 0 0 0;
+}
+.dashboard-pagination button {
+    background: #eef2f7;
+    border: 1px solid #5661d2;
+    color: #5661d2;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.98em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.dashboard-pagination button.active,
+.dashboard-pagination button:hover:not(:disabled) {
+    background: #5661d2;
+    color: #fff;
+}
+.dashboard-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 @media (max-width: 1100px) {
     .dashboard-sections {

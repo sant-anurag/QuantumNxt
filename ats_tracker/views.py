@@ -1603,7 +1603,8 @@ import mysql.connector
 from datetime import datetime, timedelta
 
 def dashboard_data(request):
-    email = request.user.username
+    email = request.session['email'] if 'email' in request.session else None
+    print("dashboard_data -> User email:", email)
     conn = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -1616,18 +1617,21 @@ def dashboard_data(request):
     cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=%s", (email,))
     emp_row = cursor.fetchone()
     emp_id = emp_row['emp_id'] if emp_row else None
-
-    # Pending/Active JDs assigned to user
+    print("dashboard_data -> Employee ID:", emp_id)
+    # Pending/Active JDs assigned to user via team membership
+    # Python
     cursor.execute("""
         SELECT r.jd_id, r.jd_summary, r.jd_status, r.created_at, cu.company_name
         FROM recruitment_jds r
-        JOIN candidates c ON r.jd_id = c.jd_id
+        JOIN teams t ON r.team_id = t.team_id
+        JOIN team_members tm ON t.team_id = tm.team_id
+        JOIN hr_team_members m ON tm.emp_id = m.emp_id
         JOIN customers cu ON r.company_id = cu.company_id
-        WHERE c.hr_member_id = %s AND r.jd_status = 'active'
-        GROUP BY r.jd_id
+        WHERE m.emp_id = %s AND r.jd_status = 'active'
         ORDER BY r.created_at DESC
     """, (emp_id,))
     pending_jds = cursor.fetchall()
+    print("dashboard_data -> Pending JDs:", pending_jds)
 
     # Monthly closed JDs and candidates (last 6 months)
     monthly_report = []
