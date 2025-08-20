@@ -1,0 +1,124 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/team_reports.css' %}">
+<div class="team-reports-container glass-card">
+    <h1 class="team-reports-title">Team-wise Reports</h1>
+    <form id="teamReportFilter" class="team-report-filter">
+        <input type="text" name="team_search" placeholder="Search Team..." class="filter-input">
+        <select name="team_member" class="filter-select">
+            <option value="">All Members</option>
+        </select>
+        <select name="jd_status" class="filter-select">
+            <option value="">All JD Status</option>
+            <option value="active">Active</option>
+            <option value="closed">Closed</option>
+            <option value="on hold">On Hold</option>
+        </select>
+        <select name="customer" class="filter-select">
+            <option value="">All Customers</option>
+        </select>
+        <input type="date" name="start_date" class="filter-date">
+        <input type="date" name="end_date" class="filter-date">
+        <button type="submit" class="btn-primary">Apply Filters</button>
+        <button type="button" id="exportBtn" class="btn-primary">Export</button>
+    </form>
+    <div id="teamReportContent">
+        <!-- Team Overview -->
+        <section class="report-section">
+            <h2>Team Overview</h2>
+            <table class="report-table" id="teamOverviewTable">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Team Lead</th>
+                        <th>Members</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <!-- Recruitment Metrics -->
+        <section class="report-section">
+            <h2>Recruitment Metrics</h2>
+            <table class="report-table" id="recruitmentMetricsTable">
+                <thead>
+                    <tr>
+                        <th>Total JDs</th>
+                        <th>In Progress</th>
+                        <th>Closed</th>
+                        <th>Avg. Closure Time (days)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <!-- Candidate Pipeline -->
+        <section class="report-section">
+            <h2>Candidate Pipeline</h2>
+            <table class="report-table" id="candidatePipelineTable">
+                <thead>
+                    <tr>
+                        <th>Sourced</th>
+                        <th>L1</th>
+                        <th>L2</th>
+                        <th>L3</th>
+                        <th>Offered</th>
+                        <th>Accepted</th>
+                        <th>Rejected</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <!-- Performance Analytics -->
+        <section class="report-section">
+            <h2>Performance Analytics</h2>
+            <div class="charts-row">
+                <div class="chart-card">
+                    <canvas id="conversionRateChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <canvas id="successRateChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <canvas id="monthlyTrendsChart"></canvas>
+                </div>
+            </div>
+        </section>
+        <!-- Team Member Contribution -->
+        <section class="report-section">
+            <h2>Team Member Contribution</h2>
+            <table class="report-table" id="memberContributionTable">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>JDs Handled</th>
+                        <th>Candidates Processed</th>
+                        <th>Offers Made</th>
+                        <th>Top Performer</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <!-- Customer/Client Distribution -->
+        <section class="report-section">
+            <h2>Customer/Client Distribution</h2>
+            <table class="report-table" id="customerDistributionTable">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>JDs Handled</th>
+                        <th>Candidates Placed</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/team_reports.js' %}"></script>
+{% endblock %}

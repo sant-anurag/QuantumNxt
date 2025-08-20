@@ -63,4 +63,10 @@ urlpatterns = [
     path('dashboard_data/', views.dashboard_data, name='dashboard_data'),
     path('offer_letter/', views.offer_letter_page, name='offer_letter'),
     path('api/generate_offer/', views.generate_offer_letter, name='generate_offer_letter'),
+    path('team_reports/', views.team_reports_page, name='team_reports'),
+    path('api/team_report_filters/', views.team_report_filters, name='team_report_filters'),
+    path('api/team_reports/', views.team_reports_api, name='team_reports_api'),
+    path('api/team_reports/export/', views.team_reports_export, name='team_reports_export'),
+    # ... other urls
+
 ]
