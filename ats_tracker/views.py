@@ -2248,7 +2248,7 @@ def ccr_reports_api(request):
     total_l1 = row["l1"] or 1
     total_l2 = row["l2"] or 1
     total_l3 = row["l3"] or 1
-    stage_data.append(round((row["l1"] / total_screened) * 100, 2))
+    stage_data.append(round((int(row["l1"] or 0) / total_screened) * 100, 2))
     stage_data.append(round((row["l2"] / total_l1) * 100, 2))
     stage_data.append(round((row["l3"] / total_l2) * 100, 2))
     stage_data.append(round((row["final_selected"] / total_l3) * 100, 2))
@@ -2312,7 +2312,8 @@ def ccr_reports_api(request):
     jd_rates = []
     for r in cursor.fetchall():
         total = r["total"] or 1
-        conversion_pct = round((r["final_selected"] / total) * 100, 2) if total else 0
+        final_selected = r["final_selected"] or 0
+        conversion_pct = round((int(final_selected) / total) * 100, 2) if total else 0
         jd_rates.append({
             "jd_summary": r["jd_summary"],
             "team_name": r["team_name"],
