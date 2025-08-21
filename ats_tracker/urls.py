@@ -67,6 +67,12 @@ urlpatterns = [
     path('api/team_report_filters/', views.team_report_filters, name='team_report_filters'),
     path('api/team_reports/', views.team_reports_api, name='team_reports_api'),
     path('api/team_reports/export/', views.team_reports_export, name='team_reports_export'),
+
+    path('task_progress_reports/', views.task_progress_reports_page, name='task_progress_reports'),
+    path('api/team_report_filters/', views.team_report_filters, name='team_report_filters'),
+    path('api/team_reports/', views.team_reports_api, name='team_reports_api'),
+    path('api/team_reports/export/', views.team_reports_export, name='team_reports_export'),
+    path('api/jds/<str:jd_id>/', views.api_jd_detail, name='api_jd_detail'),
     # ... other urls
 
 ]

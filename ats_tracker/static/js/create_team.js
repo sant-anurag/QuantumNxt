@@ -127,6 +127,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     cb.checked = e.target.checked;
                 });
             }
+            // Sync radio button for team lead selection
+            if (e.target.type === "radio" && e.target.name === "team_lead") {
+                const value = e.target.value;
+                document.querySelectorAll(`input[name="team_lead"]`).forEach(rb => {
+                    rb.checked = (rb.value === value);
+                });
+
+            }
         });
 
         // Disable button on submit

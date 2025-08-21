@@ -42,7 +42,9 @@ class ATSDatabaseInitializer:
             CREATE TABLE IF NOT EXISTS teams (
                 team_id INT AUTO_INCREMENT PRIMARY KEY,
                 team_name VARCHAR(100) NOT NULL UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                lead_emp_id INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (lead_emp_id) REFERENCES hr_team_members(emp_id)
             );
         """)
         self.cursor.execute("""

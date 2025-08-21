@@ -170,9 +170,10 @@ def add_member(request):
                     cursor.close()
                 if 'connection' in locals():
                     connection.close()
-
+    name = request.session.get('name', 'Guest')
     return render(request, 'add_member.html', {
         'message': message,
+        'name': name,
         'error': error
     })
 
@@ -184,16 +185,19 @@ def create_team(request):
     message = error = None
     members = []
     teams = []
+    print("create_team -> Request method:", request.POST)
     if request.method == "POST":
         team_name = request.POST.get("team_name", "").strip()
         selected_members = request.POST.getlist("members")
+        team_lead = request.POST.get("team_lead", "").strip()
+        print("create_team -> Team Name:", team_name, "Selected Members:", selected_members, "Team Lead:", team_lead)
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
         else:
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO teams (team_name) VALUES (%s)", [team_name])
+                cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
                 team_id = cursor.lastrowid
                 for emp_id in selected_members:
                     cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
@@ -229,10 +233,12 @@ def create_team(request):
             cursor.close()
         if 'conn' in locals():
             conn.close()
+    name = request.session.get('name', 'Guest')
     return render(request, "create_team.html", {
         "members": members,
         "teams": teams,
         "message": message,
+        "name": name,
         "error": error
     })
 
@@ -274,7 +280,9 @@ def view_edit_teams(request):
             cursor.close()
         if 'conn' in locals():
             conn.close()
-    return render(request, 'view_edit_teams.html', {'teams': teams})
+    name = request.session.get('name', 'Guest')
+    return render(request, 'view_edit_teams.html', {'teams': teams,
+                                                    'name': name})
 
 def team_members_api(request, team_id):
     members = []
@@ -780,7 +788,8 @@ def upload_resume_page(request):
     jds = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render(request, 'upload_resume.html', {'jds': jds})
+    name = request.session.get('name', 'Guest')
+    return render(request, 'upload_resume.html', {'jds': jds,'name': name})
 
 @csrf_exempt
 def upload_resume(request):
@@ -896,7 +905,8 @@ def download_resume(request, resume_id):
 
 
 def view_parse_resumes_page(request):
-    return render(request, 'view_parse_resumes.html')
+    name = request.session.get('name', 'Guest')
+    return render(request, 'view_parse_resumes.html', {'name': name})
 
 @csrf_exempt
 def view_parse_resumes(request):
@@ -1470,7 +1480,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 def view_finalized_candidates(request):
     print("view_finalized_candidates -> Request method:", request.method)
-    return render(request, 'view_finalized_candidates.html')
+    name = request.session.get('name', 'Guest')
+    return render(request, 'view_finalized_candidates.html', {'name': name})
 
 def api_jds(request):
     conn = get_db_conn()
@@ -1515,8 +1526,9 @@ def logout_page(request):
     return render(request, 'logout.html')
 
 def candidate_profile(request):
+    name = request.session.get('name', 'Guest')
     """Render the Candidate Profile page."""
-    return render(request, 'candidate_profile.html')
+    return render(request, 'candidate_profile.html', {'name': name})
 
 @csrf_exempt
 def get_candidate_details_profile(request):
@@ -1730,7 +1742,8 @@ from django.http import JsonResponse
 import json
 
 def offer_letter_page(request):
-    return render(request, 'offer_letter.html')
+    name = request.session.get('name', 'Guest')
+    return render(request, 'offer_letter.html', {'name': name})
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -1790,7 +1803,8 @@ from datetime import datetime, timedelta
 
 
 def team_reports_page(request):
-    return render(request, 'team_reports.html')
+    name = request.session.get('name', 'Guest')
+    return render(request, 'team_reports.html', {'name': name})
 
 def team_report_filters(request):
     conn = get_db_conn()
@@ -1987,6 +2001,188 @@ def team_reports_export(request):
             closed,
             ''  # Avg closure time can be added if needed
         ])
+    cursor.close()
+    conn.close()
+    return response
+
+import mysql.connector
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
+import csv
+
+def task_progress_reports_page(request):
+    name = request.session.get('name', 'Guest')
+    return render(request, "task_progress_reports.html", {"name": name})
+
+def team_report_filters(request):
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({"teams": teams})
+
+def team_reports_api(request):
+    team_id = request.GET.get("team_id")
+    jd_status = request.GET.get("jd_status")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor(dictionary=True)
+
+    # JD Progress Overview
+    jd_query = """
+        SELECT jd.jd_id, jd.jd_summary, t.team_name, jd.jd_status, jd.total_profiles,
+            jd.profiles_in_progress, jd.profiles_completed, jd.profiles_selected,
+            jd.profiles_rejected, jd.profiles_on_hold
+        FROM recruitment_jds jd
+        LEFT JOIN teams t ON jd.team_id = t.team_id
+        WHERE 1=1
+    """
+    params = []
+    if team_id:
+        jd_query += " AND jd.team_id = %s"
+        params.append(team_id)
+    if jd_status:
+        jd_query += " AND jd.jd_status = %s"
+        params.append(jd_status)
+    if from_date:
+        jd_query += " AND jd.created_at >= %s"
+        params.append(from_date)
+    if to_date:
+        jd_query += " AND jd.created_at <= %s"
+        params.append(to_date)
+    cursor.execute(jd_query, params)
+    jd_progress = cursor.fetchall()
+
+    # Profile Status Breakdown (Pie)
+    status_counts = {"toBeScreened": 0, "selected": 0, "rejected": 0, "onHold": 0}
+    cursor.execute("SELECT screen_status, COUNT(*) as cnt FROM candidates GROUP BY screen_status")
+    for row in cursor.fetchall():
+        status_counts[row["screen_status"]] = row["cnt"]
+    profile_status_chart = {
+        "labels": ["To Be Screened", "Selected", "Rejected", "On Hold"],
+        "data": [
+            status_counts.get("toBeScreened", 0),
+            status_counts.get("selected", 0),
+            status_counts.get("rejected", 0),
+            status_counts.get("onHold", 0)
+        ]
+    }
+
+    # JD Completion Rate (Bar)
+    jd_completion_chart = {
+        "labels": [jd["jd_id"] for jd in jd_progress],
+        "data": [
+            int((jd["profiles_selected"] / jd["total_profiles"] * 100) if jd["total_profiles"] else 0)
+            for jd in jd_progress
+        ]
+    }
+
+    # Team/Member Contribution
+    cursor.execute("""
+        SELECT c.jd_id, t.team_name, CONCAT(m.first_name, ' ', m.last_name) AS member_name,
+            COUNT(c.candidate_id) AS profiles_processed,
+            SUM(c.screen_status='selected') AS selected,
+            SUM(c.screen_status='rejected') AS rejected,
+            SUM(c.screen_status='onHold') AS on_hold
+        FROM candidates c
+        LEFT JOIN teams t ON c.team_id = t.team_id
+        LEFT JOIN hr_team_members m ON c.hr_member_id = m.emp_id
+        GROUP BY c.jd_id, t.team_name, member_name
+    """)
+    team_contribution = cursor.fetchall()
+
+    # Timeline/Trend Analysis (Line)
+    cursor.execute("""
+        SELECT DATE(screened_on) as date, 
+            SUM(screen_status='selected') as selected,
+            SUM(screen_status='rejected') as rejected,
+            SUM(screen_status='onHold') as on_hold,
+            COUNT(*) as processed
+        FROM candidates
+        WHERE screened_on IS NOT NULL
+        GROUP BY DATE(screened_on)
+        ORDER BY date ASC
+    """)
+    rows = cursor.fetchall()
+    labels = [r["date"].strftime("%Y-%m-%d") for r in rows]
+    timeline_chart = {
+        "labels": labels,
+        "datasets": [
+            {"label": "Processed", "data": [r["processed"] for r in rows], "borderColor": "#2563eb", "fill": False},
+            {"label": "Selected", "data": [r["selected"] for r in rows], "borderColor": "#16a34a", "fill": False},
+            {"label": "Rejected", "data": [r["rejected"] for r in rows], "borderColor": "#dc2626", "fill": False},
+            {"label": "On Hold", "data": [r["on_hold"] for r in rows], "borderColor": "#f59e42", "fill": False}
+        ]
+    }
+
+    cursor.close()
+    conn.close()
+    return JsonResponse({
+        "jd_progress": jd_progress,
+        "profile_status_chart": profile_status_chart,
+        "jd_completion_chart": jd_completion_chart,
+        "team_contribution": team_contribution,
+        "timeline_chart": timeline_chart
+    })
+
+def api_jd_detail(request, jd_id):
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT c.candidate_id, c.name, c.email, c.phone, c.screen_status as status,
+            t.team_name, CONCAT(m.first_name, ' ', m.last_name) AS member_name
+        FROM candidates c
+        LEFT JOIN teams t ON c.team_id = t.team_id
+        LEFT JOIN hr_team_members m ON c.hr_member_id = m.emp_id
+        WHERE c.jd_id = %s
+    """, (jd_id,))
+    candidates = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({"candidates": candidates})
+
+def team_reports_export(request):
+    team_id = request.GET.get("team_id")
+    jd_status = request.GET.get("jd_status")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor()
+    query = """
+        SELECT jd.jd_id, jd.jd_summary, t.team_name, jd.jd_status, jd.total_profiles,
+            jd.profiles_in_progress, jd.profiles_completed, jd.profiles_selected,
+            jd.profiles_rejected, jd.profiles_on_hold
+        FROM recruitment_jds jd
+        LEFT JOIN teams t ON jd.team_id = t.team_id
+        WHERE 1=1
+    """
+    params = []
+    if team_id:
+        query += " AND jd.team_id = %s"
+        params.append(team_id)
+    if jd_status:
+        query += " AND jd.jd_status = %s"
+        params.append(jd_status)
+    if from_date:
+        query += " AND jd.created_at >= %s"
+        params.append(from_date)
+    if to_date:
+        query += " AND jd.created_at <= %s"
+        params.append(to_date)
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=task_progress_report.csv"
+    writer = csv.writer(response)
+    writer.writerow([
+        "JD ID", "Summary", "Team", "Status", "Total Profiles",
+        "In Progress", "Completed", "Selected", "Rejected", "On Hold"
+    ])
+    for row in rows:
+        writer.writerow(row)
     cursor.close()
     conn.close()
     return response
