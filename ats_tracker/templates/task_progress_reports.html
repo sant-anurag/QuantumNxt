@@ -1,0 +1,107 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/task_progress_reports.css' %}">
+<div class="tpr-main">
+    <div class="tpr-header">
+        <h2><i class="fas fa-tasks"></i> Task Progress Reports</h2>
+        <div class="tpr-filters">
+            <select id="filter-team"></select>
+            <select id="filter-jd-status">
+                <option value="">All JD Status</option>
+                <option value="active">Active</option>
+                <option value="closed">Closed</option>
+                <option value="on hold">On Hold</option>
+            </select>
+            <input type="date" id="filter-from-date">
+            <input type="date" id="filter-to-date">
+            <button id="tpr-filter-btn" class="tpr-btn-primary"><i class="fas fa-filter"></i> Filter</button>
+            <button id="tpr-export-btn" class="tpr-btn-secondary"><i class="fas fa-file-export"></i> Export</button>
+        </div>
+    </div>
+    <div class="tpr-section">
+        <h3>JD Progress Overview</h3>
+        <div class="tpr-table-container">
+            <table class="tpr-table" id="jd-progress-table">
+                <thead>
+                    <tr>
+                        <th>JD ID</th>
+                        <th>Summary</th>
+                        <th>Team</th>
+                        <th>Status</th>
+                        <th>Total Profiles</th>
+                        <th>In Progress</th>
+                        <th>Completed</th>
+                        <th>Selected</th>
+                        <th>Rejected</th>
+                        <th>On Hold</th>
+                        <th>Completion %</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="tpr-section tpr-charts">
+        <div>
+            <h3>Profile Status Breakdown</h3>
+            <canvas id="profileStatusChart"></canvas>
+        </div>
+        <div>
+            <h3>JD Completion Rate</h3>
+            <canvas id="jdCompletionChart"></canvas>
+        </div>
+    </div>
+    <div class="tpr-section">
+        <h3>Team/Member Contribution</h3>
+        <div class="tpr-table-container">
+            <table class="tpr-table" id="team-contribution-table">
+                <thead>
+                    <tr>
+                        <th>JD ID</th>
+                        <th>Team</th>
+                        <th>Member</th>
+                        <th>Profiles Processed</th>
+                        <th>Selected</th>
+                        <th>Rejected</th>
+                        <th>On Hold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="tpr-section">
+        <h3>Timeline/Trend Analysis</h3>
+        <canvas id="timelineChart"></canvas>
+    </div>
+    <div class="tpr-section" id="jd-drilldown-section" style="display:none;">
+        <h3>JD Detailed Drilldown</h3>
+        <div class="tpr-table-container">
+            <table class="tpr-table" id="jd-drilldown-table">
+                <thead>
+                    <tr>
+                        <th>Candidate Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Assigned Team</th>
+                        <th>Assigned Member</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/task_progress_reports.js' %}"></script>
+{% endblock %}
