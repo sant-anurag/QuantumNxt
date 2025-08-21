@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap');
+
+:root {
+    --ccr-bg: #f9fafb;
+    --ccr-card-bg: #fff;
+    --ccr-border: #e5e7eb;
+    --ccr-shadow: 0 4px 16px rgba(0,0,0,0.07);
+    --ccr-primary: #2563eb;
+    --ccr-primary-light: #3b82f6;
+    --ccr-accent: #0ea5e9;
+    --ccr-radius: 12px;
+    --ccr-radius-pill: 22px;
+    --ccr-table-header: #f3f4f6;
+    --ccr-table-rowalt: #f9fafb;
+    --ccr-table-border: #e5e7eb;
+    --ccr-text: #1f2937;
+    --ccr-muted: #6b7280;
+}
+
+body {
+    font-family: 'Inter', Arial, sans-serif;
+    color: var(--ccr-text);
+    background: var(--ccr-bg);
+}
+
+.ccr-main {
+    background: var(--ccr-bg);
+    border-radius: var(--ccr-radius);
+    max-width: 1200px;
+    margin: 48px auto;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.ccr-header {
+    background: var(--ccr-card-bg);
+    border-radius: var(--ccr-radius);
+    box-shadow: var(--ccr-shadow);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 0;
+}
+
+.ccr-header h2 {
+    font-size: 2.1em;
+    font-weight: 700;
+    color: #233a63;
+    margin: 0;
+    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.ccr-filters {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ccr-filters select,
+.ccr-filters input[type="date"] {
+    background: #fff;
+    border: 1px solid var(--ccr-border);
+    border-radius: var(--ccr-radius-pill);
+    font-size: 0.95rem;
+    padding: 8px 16px;
+    color: var(--ccr-text);
+    transition: border-color .2s, box-shadow .2s;
+}
+.ccr-filters select:focus,
+.ccr-filters input[type="date"]:focus {
+    border-color: var(--ccr-primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    outline: none;
+}
+
+.ccr-btn-primary, .ccr-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: var(--ccr-radius-pill);
+    padding: 10px 28px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.ccr-btn-primary {
+    background: var(--ccr-primary);
+    color: #fff;
+}
+.ccr-btn-primary:hover {
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+.ccr-btn-secondary {
+    background: #fff;
+    color: var(--ccr-primary);
+    border: 1px solid var(--ccr-border);
+}
+.ccr-btn-secondary:hover {
+    background: var(--ccr-primary-light);
+    color: #fff;
+    border-color: var(--ccr-primary);
+}
+
+.ccr-section {
+    background: var(--ccr-card-bg);
+    border-radius: var(--ccr-radius);
+    box-shadow: var(--ccr-shadow);
+    padding: 24px;
+    margin-bottom: 0;
+}
+
+.ccr-section h3 {
+    margin-top: 0;
+    color: #233a63;
+    font-size: 1.3em;
+    margin-bottom: 18px;
+    font-weight: 600;
+}
+
+.ccr-table-container {
+    overflow-x: auto;
+}
+
+.ccr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+    margin-bottom: 0;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ccr-table th, .ccr-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ccr-table-border);
+    text-align: left;
+}
+.ccr-table th {
+    background: var(--ccr-table-header);
+    color: var(--ccr-text);
+    font-weight: 600;
+}
+.ccr-table tbody tr:nth-child(even) {
+    background: var(--ccr-table-rowalt);
+}
+.ccr-table tbody tr:hover {
+    background: #eef2ff;
+}
+
+.ccr-charts {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+.ccr-charts > div {
+    flex: 1 1 350px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 0;
+}
+
+.ccr-chart-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+    .ccr-charts {
+        flex-direction: column;
+        gap: 18px;
+    }
+    .ccr-section, .ccr-header {
+        padding: 16px;
+    }
+}

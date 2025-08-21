@@ -73,6 +73,10 @@ urlpatterns = [
     path('api/team_reports/', views.team_reports_api, name='team_reports_api'),
     path('api/team_reports/export/', views.team_reports_export, name='team_reports_export'),
     path('api/jds/<str:jd_id>/', views.api_jd_detail, name='api_jd_detail'),
+    path('candidate_conversion_rates/', views.candidate_conversion_rates_page, name='candidate_conversion_rates'),
+    path('api/ccr_filters/', views.ccr_filters, name='ccr_filters'),
+    path('api/ccr_reports/', views.ccr_reports_api, name='ccr_reports_api'),
+    path('api/ccr_reports/export/', views.ccr_reports_export, name='ccr_reports_export'),
     # ... other urls
 
 ]
