@@ -2186,3 +2186,260 @@ def team_reports_export(request):
     cursor.close()
     conn.close()
     return response
+
+import mysql.connector
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
+import csv
+
+def candidate_conversion_rates_page(request):
+    name = request.session.get('name', 'Guest')
+    return render(request, "candidate_conversion_rates.html",{'name': name})
+
+def ccr_filters(request):
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds")
+    jds = cursor.fetchall()
+    cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({"jds": jds, "teams": teams})
+
+def ccr_reports_api(request):
+    jd_id = request.GET.get("jd_id")
+    team_id = request.GET.get("team_id")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor(dictionary=True)
+
+    # Overall Funnel
+    funnel_labels = ["Screened", "L1 Cleared", "L2 Cleared", "L3 Cleared", "Final Selected"]
+    funnel_query = """
+        SELECT
+            COUNT(*) as total,
+            SUM(screen_status='selected') as screened,
+            SUM(l1_result='selected') as l1,
+            SUM(l2_result='selected') as l2,
+            SUM(l3_result='selected') as l3,
+            SUM(l3_result='selected' AND screen_status='selected') as final_selected
+        FROM candidates WHERE 1=1
+    """
+    params = []
+    if jd_id:
+        funnel_query += " AND jd_id = %s"
+        params.append(jd_id)
+    if team_id:
+        funnel_query += " AND team_id = %s"
+        params.append(team_id)
+    if from_date:
+        funnel_query += " AND created_at >= %s"
+        params.append(from_date)
+    if to_date:
+        funnel_query += " AND created_at <= %s"
+        params.append(to_date)
+    cursor.execute(funnel_query, params)
+    row = cursor.fetchone()
+    funnel_data = [row["screened"], row["l1"], row["l2"], row["l3"], row["final_selected"]]
+
+    # Stage-wise Conversion Rates
+    stage_labels = ["Screen → L1", "L1 → L2", "L2 → L3", "L3 → Final"]
+    stage_data = []
+    total_screened = row["screened"] or 1
+    total_l1 = row["l1"] or 1
+    total_l2 = row["l2"] or 1
+    total_l3 = row["l3"] or 1
+    stage_data.append(round((row["l1"] / total_screened) * 100, 2))
+    stage_data.append(round((row["l2"] / total_l1) * 100, 2))
+    stage_data.append(round((row["l3"] / total_l2) * 100, 2))
+    stage_data.append(round((row["final_selected"] / total_l3) * 100, 2))
+
+    # Trend Analysis
+    cursor.execute("""
+        SELECT DATE(created_at) as date,
+            SUM(screen_status='selected') as screened,
+            SUM(l1_result='selected') as l1,
+            SUM(l2_result='selected') as l2,
+            SUM(l3_result='selected') as l3
+        FROM candidates
+        WHERE 1=1
+        {} {} {} {}
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+    """.format(
+        "AND jd_id = %s" if jd_id else "",
+        "AND team_id = %s" if team_id else "",
+        "AND created_at >= %s" if from_date else "",
+        "AND created_at <= %s" if to_date else ""
+    ), tuple(filter(None, [jd_id, team_id, from_date, to_date])))
+    rows = cursor.fetchall()
+    trend_labels = [str(r["date"]) for r in rows]
+    trend_datasets = [
+        {"label": "Screened", "data": [r["screened"] for r in rows], "borderColor": "#2563eb", "fill": False},
+        {"label": "L1", "data": [r["l1"] for r in rows], "borderColor": "#3b82f6", "fill": False},
+        {"label": "L2", "data": [r["l2"] for r in rows], "borderColor": "#0ea5e9", "fill": False},
+        {"label": "L3", "data": [r["l3"] for r in rows], "borderColor": "#16a34a", "fill": False},
+    ]
+
+    # JD-wise Conversion Rates
+    jd_query = """
+        SELECT jd.jd_id, jd.jd_summary, t.team_name,
+            COUNT(c.candidate_id) as total,
+            SUM(c.screen_status='selected') as screened,
+            SUM(c.l1_result='selected') as l1,
+            SUM(c.l2_result='selected') as l2,
+            SUM(c.l3_result='selected') as l3,
+            SUM(c.l3_result='selected' AND c.screen_status='selected') as final_selected
+        FROM recruitment_jds jd
+        LEFT JOIN teams t ON jd.team_id = t.team_id
+        LEFT JOIN candidates c ON jd.jd_id = c.jd_id
+        WHERE 1=1
+    """
+    jd_params = []
+    if team_id:
+        jd_query += " AND jd.team_id = %s"
+        jd_params.append(team_id)
+    if jd_id:
+        jd_query += " AND jd.jd_id = %s"
+        jd_params.append(jd_id)
+    if from_date:
+        jd_query += " AND c.created_at >= %s"
+        jd_params.append(from_date)
+    if to_date:
+        jd_query += " AND c.created_at <= %s"
+        jd_params.append(to_date)
+    jd_query += " GROUP BY jd.jd_id, jd.jd_summary, t.team_name"
+    cursor.execute(jd_query, jd_params)
+    jd_rates = []
+    for r in cursor.fetchall():
+        total = r["total"] or 1
+        conversion_pct = round((r["final_selected"] / total) * 100, 2) if total else 0
+        jd_rates.append({
+            "jd_summary": r["jd_summary"],
+            "team_name": r["team_name"],
+            "total": r["total"],
+            "screened": r["screened"],
+            "l1": r["l1"],
+            "l2": r["l2"],
+            "l3": r["l3"],
+            "final_selected": r["final_selected"],
+            "conversion_pct": conversion_pct
+        })
+
+    # Team/Member Conversion Performance
+    cursor.execute("""
+        SELECT t.team_name, CONCAT(m.first_name, ' ', m.last_name) AS member_name,
+            COUNT(c.candidate_id) as total,
+            SUM(c.l3_result='selected' AND c.screen_status='selected') as final_selected
+        FROM candidates c
+        LEFT JOIN teams t ON c.team_id = t.team_id
+        LEFT JOIN hr_team_members m ON c.hr_member_id = m.emp_id
+        WHERE 1=1
+        {} {} {} {}
+        GROUP BY t.team_name, member_name
+    """.format(
+        "AND c.jd_id = %s" if jd_id else "",
+        "AND c.team_id = %s" if team_id else "",
+        "AND c.created_at >= %s" if from_date else "",
+        "AND c.created_at <= %s" if to_date else ""
+    ), tuple(filter(None, [jd_id, team_id, from_date, to_date])))
+    team_rates = []
+    for r in cursor.fetchall():
+        total = r["total"] or 1
+        conversion_pct = round((r["final_selected"] / total) * 100, 2) if total else 0
+        team_rates.append({
+            "team_name": r["team_name"],
+            "member_name": r["member_name"],
+            "total": r["total"],
+            "final_selected": r["final_selected"],
+            "conversion_pct": conversion_pct
+        })
+
+    # Time-to-Conversion Metrics
+    cursor.execute("""
+        SELECT jd.jd_summary,
+            AVG(DATEDIFF(c.l1_date, c.screened_on)) as screen_l1,
+            AVG(DATEDIFF(c.l2_date, c.l1_date)) as l1_l2,
+            AVG(DATEDIFF(c.l3_date, c.l2_date)) as l2_l3,
+            AVG(DATEDIFF(c.updated_at, c.l3_date)) as l3_final
+        FROM candidates c
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        WHERE c.screened_on IS NOT NULL AND c.l1_date IS NOT NULL AND c.l2_date IS NOT NULL AND c.l3_date IS NOT NULL
+        {} {} {} {}
+        GROUP BY jd.jd_summary
+    """.format(
+        "AND c.jd_id = %s" if jd_id else "",
+        "AND c.team_id = %s" if team_id else "",
+        "AND c.created_at >= %s" if from_date else "",
+        "AND c.created_at <= %s" if to_date else ""
+    ), tuple(filter(None, [jd_id, team_id, from_date, to_date])))
+    time_metrics = []
+    for r in cursor.fetchall():
+        time_metrics.append({
+            "jd_summary": r["jd_summary"],
+            "screen_l1": round(r["screen_l1"] or 0, 1),
+            "l1_l2": round(r["l1_l2"] or 0, 1),
+            "l2_l3": round(r["l2_l3"] or 0, 1),
+            "l3_final": round(r["l3_final"] or 0, 1)
+        })
+
+    cursor.close()
+    conn.close()
+    return JsonResponse({
+        "funnel": {"labels": funnel_labels, "data": funnel_data},
+        "stage_rates": {"labels": stage_labels, "data": stage_data},
+        "trend": {"labels": trend_labels, "datasets": trend_datasets},
+        "jd_rates": jd_rates,
+        "team_rates": team_rates,
+        "time_metrics": time_metrics
+    })
+
+def ccr_reports_export(request):
+    jd_id = request.GET.get("jd_id")
+    team_id = request.GET.get("team_id")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor()
+    query = """
+        SELECT jd.jd_summary, t.team_name,
+            COUNT(c.candidate_id) as total,
+            SUM(c.screen_status='selected') as screened,
+            SUM(c.l1_result='selected') as l1,
+            SUM(c.l2_result='selected') as l2,
+            SUM(c.l3_result='selected') as l3,
+            SUM(c.l3_result='selected' AND c.screen_status='selected') as final_selected
+        FROM recruitment_jds jd
+        LEFT JOIN teams t ON jd.team_id = t.team_id
+        LEFT JOIN candidates c ON jd.jd_id = c.jd_id
+        WHERE 1=1
+    """
+    params = []
+    if team_id:
+        query += " AND jd.team_id = %s"
+        params.append(team_id)
+    if jd_id:
+        query += " AND jd.jd_id = %s"
+        params.append(jd_id)
+    if from_date:
+        query += " AND c.created_at >= %s"
+        params.append(from_date)
+    if to_date:
+        query += " AND c.created_at <= %s"
+        params.append(to_date)
+    query += " GROUP BY jd.jd_summary, t.team_name"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename=candidate_conversion_rates.csv"
+    writer = csv.writer(response)
+    writer.writerow([
+        "JD", "Team", "Total Candidates", "Screened", "L1 Cleared", "L2 Cleared", "L3 Cleared", "Final Selected"
+    ])
+    for row in rows:
+        writer.writerow(row)
+    cursor.close()
+    conn.close()
+    return response

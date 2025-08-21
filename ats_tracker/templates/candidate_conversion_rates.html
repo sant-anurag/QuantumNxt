@@ -1,0 +1,91 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/candidate_conversion_rates.css' %}">
+<div class="ccr-main">
+    <div class="ccr-header">
+        <h2><i class="fas fa-exchange-alt"></i> Candidate Conversion Rates</h2>
+        <div class="ccr-filters">
+            <select id="filter-jd"><option value="">All JDs</option></select>
+            <select id="filter-team"><option value="">All Teams</option></select>
+            <input type="date" id="filter-from-date">
+            <input type="date" id="filter-to-date">
+            <button class="ccr-btn-primary" id="ccr-filter-btn"><i class="fas fa-filter"></i> Filter</button>
+            <button class="ccr-btn-secondary" id="ccr-export-btn"><i class="fas fa-file-export"></i> Export</button>
+        </div>
+    </div>
+    <div class="ccr-section">
+        <h3>Overall Conversion Funnel</h3>
+        <div class="ccr-chart-container">
+            <canvas id="conversionFunnelChart"></canvas>
+        </div>
+    </div>
+    <div class="ccr-section ccr-charts">
+        <div>
+            <h3>Stage-wise Conversion Rates</h3>
+            <canvas id="stageConversionChart"></canvas>
+        </div>
+        <div>
+            <h3>Trend Analysis</h3>
+            <canvas id="conversionTrendChart"></canvas>
+        </div>
+    </div>
+    <div class="ccr-section">
+        <h3>JD-wise Conversion Rates</h3>
+        <div class="ccr-table-container">
+            <table class="ccr-table" id="jd-conversion-table">
+                <thead>
+                    <tr>
+                        <th>JD</th>
+                        <th>Team</th>
+                        <th>Total Candidates</th>
+                        <th>Screened</th>
+                        <th>L1 Cleared</th>
+                        <th>L2 Cleared</th>
+                        <th>L3 Cleared</th>
+                        <th>Final Selected</th>
+                        <th>Conversion %</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="ccr-section">
+        <h3>Team/Member Conversion Performance</h3>
+        <div class="ccr-table-container">
+            <table class="ccr-table" id="team-conversion-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Member</th>
+                        <th>Total Candidates</th>
+                        <th>Final Selected</th>
+                        <th>Conversion %</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="ccr-section">
+        <h3>Time-to-Conversion Metrics</h3>
+        <div class="ccr-table-container">
+            <table class="ccr-table" id="time-conversion-table">
+                <thead>
+                    <tr>
+                        <th>JD</th>
+                        <th>Avg Screen → L1 (days)</th>
+                        <th>Avg L1 → L2 (days)</th>
+                        <th>Avg L2 → L3 (days)</th>
+                        <th>Avg L3 → Final (days)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/candidate_conversion_rates.js' %}"></script>
+{% endblock %}
