@@ -49,6 +49,7 @@
                                 <th>Emp ID</th>
                                 <th>Email</th>
                                 <th>Phone</th>
+                                <th>Team Lead ?</th>
                             </tr>
                         </thead>
                         <tbody id="members-table-body">
@@ -64,6 +65,9 @@
                                 <td>{{ member.emp_id }}</td>
                                 <td>{{ member.email }}</td>
                                 <td>{{ member.phone|default:"-" }}</td>
+                                <td>
+                                    <input type="radio" name="team_lead" form="create-team-form" value="{{ member.emp_id }}" {% if forloop.first %}checked{% endif %}>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>

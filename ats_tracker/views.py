@@ -180,16 +180,19 @@ def create_team(request):
     message = error = None
     members = []
     teams = []
+    print("create_team -> Request method:", request.POST)
     if request.method == "POST":
         team_name = request.POST.get("team_name", "").strip()
         selected_members = request.POST.getlist("members")
+        team_lead = request.POST.get("team_lead", "").strip()
+        print("create_team -> Team Name:", team_name, "Selected Members:", selected_members, "Team Lead:", team_lead)
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
         else:
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO teams (team_name) VALUES (%s)", [team_name])
+                cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
                 team_id = cursor.lastrowid
                 for emp_id in selected_members:
                     cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
