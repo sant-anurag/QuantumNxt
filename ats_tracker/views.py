@@ -28,6 +28,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
+import environ
+
+
+
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -46,7 +50,7 @@ def login_view(request):
         if valid_user:
             user_id, db_username, role, status = valid_user
             # Fetch name from hr_team_members table against email
-            conn = get_db_connection_ats()
+            conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT first_name, last_name FROM hr_team_members WHERE email=%s
@@ -73,7 +77,7 @@ def login_view(request):
 def validate_user(username, password):
     print("validate_user -> Username:", username)
     print("validate_user -> Password:", password)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT user_id, username, email, password_hash, role, is_active
@@ -250,19 +254,12 @@ def team_members(request, team_id):
             conn.close()
     return JsonResponse({"members": members})
 
-def get_db_connection_ats():
-    return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ats',
-        charset='utf8mb4'
-    )
+
 
 def view_edit_teams(request):
     teams = []
     try:
-        conn = get_db_connection_ats()
+        conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
@@ -283,7 +280,7 @@ def team_members_api(request, team_id):
     members = []
     available_members = []
     try:
-        conn = get_db_connection_ats()
+        conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         # Get team members
         cursor.execute("""
@@ -316,7 +313,7 @@ def add_member_api(request, team_id):
         emp_id = data.get('emp_id')
         if not emp_id:
             return HttpResponseBadRequest("emp_id required")
-        conn = get_db_connection_ats()
+        conn = get_db_connection()
         cursor = conn.cursor()
         # Insert into team_members, ignore if already exists
         cursor.execute("""
@@ -339,7 +336,7 @@ def remove_member_api(request, team_id):
         emp_id = data.get('emp_id')
         if not emp_id:
             return HttpResponseBadRequest("emp_id required")
-        conn = get_db_connection_ats()
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             DELETE FROM team_members WHERE team_id = %s AND emp_id = %s
@@ -379,7 +376,7 @@ def jd_list(request):
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Join with customers to get company name
     query = """
@@ -428,7 +425,7 @@ def create_jd(request):
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
         try:
-            conn = get_db_connection_ats()
+            conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO recruitment_jds
@@ -450,7 +447,7 @@ def create_jd(request):
         # Fetch companies for dropdown
         companies = []
         try:
-            conn = get_db_connection_ats()
+            conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
             companies = cursor.fetchall()
@@ -469,7 +466,7 @@ def create_jd(request):
 @csrf_exempt
 def jd_detail(request, jd_id):
     print("jd_detail -> Request method:", request.method)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     if request.method == "GET":
         cursor.execute("""
@@ -522,7 +519,7 @@ def create_customer(request):
             error = "Phone number too long."
         else:
             try:
-                conn = get_db_connection_ats()
+                conn = get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO customers (company_name, contact_person_name, contact_email, contact_phone)
@@ -549,7 +546,7 @@ def create_customer(request):
 
 def view_edit_jds(request):
     print("view_edit_jds -> Request method:", request.method)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
@@ -581,7 +578,7 @@ def view_edit_jds(request):
 
 def get_jd(request, jd_id):
     print("get_jd details-> Request method:", request.method)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills,
@@ -610,7 +607,7 @@ def update_jd(request, jd_id):
     print("update_jd -> Request method:", request.method)
     if request.method == 'POST':
         data = json.loads(request.body)
-        conn = get_db_connection_ats()
+        conn = get_db_connection()
         cursor = conn.cursor()
         print("update_jd -> Data received:", data)
 
@@ -648,7 +645,7 @@ def update_jd(request, jd_id):
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 def assign_jd_data(request):
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
@@ -671,7 +668,7 @@ def assign_jd(request):
     team_id = data.get("team_id")
     if not jd_id or not team_id:
         return JsonResponse({"error": "JD and Team required"}, status=400)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)  # <-- Use dictionary=True
     cursor.execute("UPDATE recruitment_jds SET team_id=%s WHERE jd_id=%s", [team_id, jd_id])
     conn.commit()
@@ -702,7 +699,7 @@ def employee_view_page(request):
 
 def employee_view_data(request):
     print("employee_view_data -> Request method:", request.method)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT emp_id, first_name, last_name, email, role, status
@@ -719,7 +716,7 @@ def employee_view_report(request):
     emp_id = request.GET.get("emp_id")
     if not emp_id:
         return JsonResponse({"error": "emp_id required"}, status=400)
-    conn = get_db_connection_ats()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Member details
     cursor.execute("""
@@ -1620,13 +1617,14 @@ def dashboard_data(request):
     print("dashboard_data -> Employee ID:", emp_id)
     # Pending/Active JDs assigned to user via team membership
     # Python
+    # Logic Fault @1627
     cursor.execute("""
         SELECT 
             r.jd_id, 
             r.jd_summary, 
             r.jd_status, 
             cu.company_name,
-            COUNT(CASE WHEN c.l3_result IS NULL OR c.l3_result != 'selected' THEN 1 END) AS not_finalized_count
+            COUNT(CASE WHEN (c.l3_result IS NULL OR c.l3_result != 'selected') AND (c.l3_result != 'rejected' AND c.l2_result != 'rejected' AND c.l1_result != 'rejected' AND c.screen_status != 'rejected') THEN 1 END) AS not_finalized_count
         FROM recruitment_jds r
         JOIN customers cu ON r.company_id = cu.company_id
         JOIN candidates c ON r.jd_id = c.jd_id
@@ -1634,6 +1632,7 @@ def dashboard_data(request):
         GROUP BY r.jd_id, r.jd_summary, r.jd_status, cu.company_name
         ORDER BY r.jd_id DESC
     """, (emp_id,))
+
     pending_jds = cursor.fetchall()
     print("dashboard_data -> Pending JDs:", pending_jds)
 
