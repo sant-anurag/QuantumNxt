@@ -12,6 +12,7 @@
         justify-content: space-between;
         margin-bottom: 20px;
         position: relative;
+        gap: 20px;
     }
 
     .search-bar input {
@@ -82,10 +83,18 @@
         color: #333;
     }
 
+    .profile-body textarea {
+        width: calc(100% - 20px);
+    }
+
+    .profile-body input,
+    .profile-body select {
+        width: 100%;
+    }
+
     .profile-body input,
     .profile-body textarea,
     .profile-body select {
-        width: 100%;
         padding: 10px;
         font-size: 1em;
         border: 1px solid #ccc;
