@@ -80,6 +80,6 @@ urlpatterns = [
     # ... other urls
 
     # settings urls
-    
+    path('user/', views.user_profile, name='user_profile')
 
 ]
