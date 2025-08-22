@@ -25,9 +25,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.db import connection
+from django.contrib.auth import logout
+
 
 
 def login_view(request):
@@ -46,24 +45,45 @@ def login_view(request):
         valid_user = validate_user(username, password)
         if valid_user:
             user_id, db_username, role, status = valid_user
-            # Fetch name from hr_team_members table against email
+
+            # Check for existing active session
             conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT first_name, last_name FROM hr_team_members WHERE email=%s
-            """, [username])
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT session_id FROM user_sessions WHERE user_id=%s", (user_id,))
+            existing_session = cursor.fetchone()
+            if existing_session:
+                cursor.close()
+                conn.close()
+                return render(request, 'login.html', {'error': 'User already logged in elsewhere.'})
+
+            # Create new session
+            import uuid
+            session_id = str(uuid.uuid4())
+            expires_at = datetime.now() + timedelta(hours=2)
+            cursor.execute(
+                "INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES (%s, %s, %s)",
+                (session_id, user_id, expires_at)
+            )
+
+            # Fetch name from hr_team_members table against email
+            cursor.execute("SELECT first_name, last_name FROM hr_team_members WHERE email=%s", [username])
             row = cursor.fetchone()
+            if row:
+                first_name, last_name = row['first_name'], row['last_name']
+                name = f"{first_name} {last_name}"
+
+            conn.commit()
             cursor.close()
             conn.close()
-            if row:
-                first_name, last_name = row
-                name = f"{first_name} {last_name}"
+
             request.session['user_id'] = user_id
             request.session['username'] = db_username
             request.session['role'] = role
             request.session['authenticated'] = True
             request.session['email'] = username
-            request.session['name'] = name  # Store name in session
+            request.session['name'] = name
+            request.session['session_id'] = session_id  # Store session_id
+
             return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
@@ -1514,11 +1534,15 @@ def api_candidate_details(request):
     conn.close()
     return JsonResponse({'details': candidate})
 
-# Python
-from django.contrib.auth import logout
-from django.shortcuts import render
-
 def logout_page(request):
+    session_id = request.session.get('session_id')
+    if session_id:
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
     logout(request)  # This logs out the user
     return render(request, 'logout.html')
 
