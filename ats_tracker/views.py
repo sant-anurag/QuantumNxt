@@ -2491,3 +2491,60 @@ def logout_session_api(request):
             conn.close()
             return JsonResponse({'success': True})
     return JsonResponse({'success': False})
+
+import mysql.connector
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+
+def access_permissions(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT user_id, username, email, role, is_active, created_at FROM users")
+    users = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render(request, "access_permissions.html", {"users": users})
+
+
+from django.contrib.auth.hashers import check_password, make_password
+
+@csrf_exempt
+def change_password(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        old_password = data.get("old_password")
+        new_password = data.get("new_password")
+        user_id = request.session.get("user_id")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT password_hash FROM users WHERE user_id=%s", (user_id,))
+        row = cursor.fetchone()
+        if not row or not check_password(old_password, row[0]):
+            cursor.close()
+            conn.close()
+            return JsonResponse({"success": False, "message": "Current password is incorrect."})
+        new_password_hash = make_password(new_password)
+        cursor.execute("UPDATE users SET password_hash=%s WHERE user_id=%s", (new_password_hash, user_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({"success": True, "message": "Password changed successfully."})
+    return JsonResponse({"success": False, "message": "Invalid request."})
+
+@csrf_exempt
+def change_role(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        user_id = data.get("user_id")
+        role = data.get("role")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET role=%s WHERE user_id=%s", (role, user_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({"success": True, "message": "Role updated successfully."})
+    return JsonResponse({"success": False, "message": "Invalid request."})

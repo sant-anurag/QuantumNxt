@@ -84,4 +84,7 @@ urlpatterns = [
 
     path('manage_sessions/', views.manage_sessions_view, name='manage_sessions'),
     path('manage_sessions/logout_session/', views.logout_session_api, name='logout_session_api'),
+    path('access_permissions/', views.access_permissions, name='access_permissions'),
+    path('access_permissions/change_password/', views.change_password, name='change_password'),
+    path('access_permissions/change_role/', views.change_role, name='change_role'),
 ]

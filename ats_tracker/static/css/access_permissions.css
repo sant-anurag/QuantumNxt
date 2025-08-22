@@ -1,0 +1,137 @@
+.access-permissions-container {
+        max-width: 900px;
+        margin: 38px auto;
+        padding: 38px 38px 28px 38px;
+        background: rgba(255,255,255,0.22);
+        border-radius: 22px;
+        box-shadow: 0 10px 42px rgba(100,120,255,0.19);
+        border: 1px solid rgba(255,255,255,0.28);
+        backdrop-filter: saturate(180%) blur(18px);
+    }
+
+    .ap-title {
+        font-size: 2em;
+        font-weight: 700;
+        color: #5661d2;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .ap-section {
+        margin-bottom: 32px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid #e3e7fa;
+    }
+
+    .ap-section:last-child {
+        border-bottom: none;
+    }
+
+    .ap-form {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .ap-form input, .ap-form select {
+        padding: 8px 14px;
+        border-radius: 7px;
+        border: 1px solid #bfc5e8;
+        font-size: 1em;
+        background: #f7fafd;
+        color: #232946;
+        transition: border 0.18s;
+        min-width: 180px;
+    }
+
+    .ap-form input:focus, .ap-form select:focus {
+        border: 1.5px solid #5661d2;
+        outline: none;
+    }
+
+    .ap-form button {
+        margin-left: 8px;
+    }
+
+    .ap-msg {
+        margin-left: 12px;
+        font-size: 0.98em;
+        color: #38a169;
+        font-weight: 500;
+    }
+
+    .ap-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(100,120,255,0.07);
+        font-size: 0.97em;
+    }
+
+    .ap-table th, .ap-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e3e7fa;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .ap-table th {
+        background: #f7fafd;
+        color: #5661d2;
+        font-weight: 600;
+        font-size: 0.98em;
+        letter-spacing: 0.02em;
+        border-bottom: 2px solid #e3e7fa;
+    }
+
+    .ap-table tr:hover td {
+        background: #eef2ff;
+    }
+
+    #userTablePagination {
+        margin-top: 12px;
+        text-align: center;
+    }
+    #userTablePagination button {
+        background: #e3e7fa;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 12px;
+        color: #5661d2;
+        font-weight: 500;
+        font-size: 0.97em;
+        cursor: pointer;
+        margin: 0 2px;
+        transition: background 0.18s, color 0.18s;
+    }
+    #userTablePagination button.active,
+    #userTablePagination button:hover {
+        background: #5661d2;
+        color: #fff;
+    }
+
+    @media (max-width: 900px) {
+        .access-permissions-container {
+            max-width: 98vw;
+            padding: 18px 6vw 18px 6vw;
+            font-size: 0.97em;
+        }
+        .ap-table th, .ap-table td {
+            max-width: 90px;
+            font-size: 0.95em;
+        }
+        .ap-form input, .ap-form select {
+            min-width: 120px;
+            font-size: 0.95em;
+        }
+    }
