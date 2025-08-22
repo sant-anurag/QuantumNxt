@@ -77,9 +77,7 @@ urlpatterns = [
     path('api/ccr_filters/', views.ccr_filters, name='ccr_filters'),
     path('api/ccr_reports/', views.ccr_reports_api, name='ccr_reports_api'),
     path('api/ccr_reports/export/', views.ccr_reports_export, name='ccr_reports_export'),
-    # ... other urls
 
-    # settings urls
-    
-
+    path('manage_sessions/', views.manage_sessions_view, name='manage_sessions'),
+    path('manage_sessions/logout_session/', views.logout_session_api, name='logout_session_api'),
 ]

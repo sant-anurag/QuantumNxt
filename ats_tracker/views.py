@@ -1,4 +1,3 @@
-# ats_tracker/views.py
 import os
 import json
 from datetime import datetime
@@ -18,7 +17,7 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 
 from .db_initializer import ATSDatabaseInitializer
-import json
+
 from django.http import JsonResponse
 import smtplib
 from email.mime.text import MIMEText
@@ -26,7 +25,6 @@ from email.mime.multipart import MIMEMultipart
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import logout
-
 
 
 def login_view(request):
@@ -196,9 +194,6 @@ def add_member(request):
         'error': error
     })
 
-# python
-
-from django.http import JsonResponse
 
 def create_team(request):
     message = error = None
@@ -786,7 +781,6 @@ def employee_view_report(request):
         team['jds'] = cursor.fetchall()
     conn.close()
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
-
 
 
 def get_db_conn():
@@ -2469,3 +2463,44 @@ def ccr_reports_export(request):
     cursor.close()
     conn.close()
     return response
+
+
+def manage_sessions_view(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT us.session_id, us.user_id, us.expires_at, u.username, u.role
+        FROM user_sessions us
+        JOIN users u ON us.user_id = u.user_id
+        WHERE us.expires_at > NOW()
+        ORDER BY us.expires_at DESC
+    """)
+    sessions = []
+    for row in cursor.fetchall():
+        sessions.append({
+            'session_id': row['session_id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'role': row['role'],
+            'expires_at': row['expires_at'].strftime('%Y-%m-%d %H:%M')
+        })
+    cursor.close()
+    conn.close()
+    print(sessions)
+    name = request.session.get('name', 'Guest')
+    return render(request, 'manage_sessions.html', {'sessions': json.dumps(sessions), 'name': name})
+
+@csrf_exempt
+def logout_session_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        if session_id:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
