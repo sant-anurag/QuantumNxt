@@ -20,40 +20,40 @@
         <li>
             <a href="#"><i class="fas fa-users"></i> Teams</a>
             <ul class="submenu">
-                <li><a href="{% url 'add_member' %}">Add Member</a></li>
-                <li><a href="{% url 'create_team' %}">Create Team</a></li>
-                <li><a href="{% url 'view_edit_teams' %}">Manage Teams</a></li>
+                <li><a href="{% url 'add_member' %}"><i class="fas fa-user-plus"></i> Add Member</a></li>
+                <li><a href="{% url 'create_team' %}"><i class="fas fa-users-cog"></i> Create Team</a></li>
+                <li><a href="{% url 'view_edit_teams' %}"><i class="fas fa-edit"></i> Manage Teams</a></li>
             </ul>
         </li>
         <li>
             <a href="#"><i class="fas fa-tasks"></i> Recruitment Tasks</a>
             <ul class="submenu">
-                <li><a href="{% url 'jd_create' %}">Create New JD</a></li>
-                <li><a href="{% url 'view_edit_jds' %}">View/Edit JDs</a></li>
-                <li><a href="{% url 'assign_jd_page' %}">Assign JDs</a></li>
-                <li><a href="{% url 'employee_view_page' %}">Employee View</a></li>
+                <li><a href="{% url 'jd_create' %}"><i class="fas fa-file-medical"></i> Create New JD</a></li>
+                <li><a href="{% url 'view_edit_jds' %}"><i class="fas fa-list-alt"></i> View/Edit JDs</a></li>
+                <li><a href="{% url 'assign_jd_page' %}"><i class="fas fa-user-tag"></i> Assign JDs</a></li>
+                <li><a href="{% url 'employee_view_page' %}"><i class="fas fa-user-friends"></i> Employee View</a></li>
             </ul>
         </li>
         <li>
             <a href="#"><i class="fas fa-file-alt"></i> Manage resume</a>
             <ul class="submenu">
-                <li><a href="{% url 'upload_resume_page' %}">Upload Resume</a></li>
-                <li><a href="{% url 'view_parse_resumes_page' %}?jd_id=1">View/Screen Resumes</a></li>
+                <li><a href="{% url 'upload_resume_page' %}"><i class="fas fa-file-upload"></i> Upload Resume</a></li>
+                <li><a href="{% url 'view_parse_resumes_page' %}?jd_id=1"><i class="fas fa-search"></i> View/Screen Resumes</a></li>
             </ul>
         </li>
         <li>
             <a href="#"><i class="fas fa-calendar-check"></i> Interview Workflow</a>
             <ul class="submenu">
-                <li><a href="{% url 'schedule_interviews_page' %}">Schedule Interviews</a></li>
-                <li><a href="{% url 'manage_candidate_status' %}">Manage Candidate Status</a></li>
+                <li><a href="{% url 'schedule_interviews_page' %}"><i class="fas fa-calendar-plus"></i> Schedule Interviews</a></li>
+                <li><a href="{% url 'manage_candidate_status' %}"><i class="fas fa-user-check"></i> Manage Candidate Status</a></li>
             </ul>
         </li>
         <li>
             <a href="#"><i class="fas fa-user-tie"></i> Candidates</a>
             <ul class="submenu">
-                <li><a href="{% url 'view_finalized_candidates' %}">View Finalized Candidates</a></li>
-                <li><a href="{% url 'candidate_profile' %}">Candidate Profiles</a></li>
-                <li><a href="{% url 'offer_letter' %}">Offer Letter Management</a></li>
+                <li><a href="{% url 'view_finalized_candidates' %}"><i class="fas fa-check-circle"></i> View Finalized Candidates</a></li>
+                <li><a href="{% url 'candidate_profile' %}"><i class="fas fa-id-card"></i> Candidate Profiles</a></li>
+                <li><a href="{% url 'offer_letter' %}"><i class="fas fa-file-signature"></i> Offer Letter Management</a></li>
             </ul>
         </li>
         <li>
@@ -61,16 +61,16 @@
             <ul class="submenu">
                 <li><a href="{% url 'team_reports' %}"><i class="fas fa-users-cog"></i> Team-wise Reports</a></li>
                 <li><a href="{% url 'task_progress_reports' %}"><i class="fas fa-tasks"></i> Task Progress Reports</a></li>
-                <li><a href="{% url 'candidate_conversion_rates' %}"><i class="fas fa-chart-line"></i> Candidate Conversion Rates</a></li>
+                <li><a href="{% url 'candidate_conversion_rates' %}"><i class="fas fa-chart-line"></i> Conversion Analytics</a></li>
             </ul>
         </li>
         <li>
             <a href="#"><i class="fas fa-cog"></i> Settings</a>
             <ul class="submenu">
-                <li><a href="#">User Profile</a></li>
-                <li><a href="#">Notification Preferences</a></li>
-                <li><a href="#">Access Control & Permissions</a></li>
-                <li><a href="{% url 'create_customer' %}">Create Customer</a></li>
+                <li><a href="#"><i class="fas fa-user"></i> User Profile</a></li>
+                <li><a href="#"><i class="fas fa-bell"></i> Notification</a></li>
+                <li><a href="#"><i class="fas fa-shield-alt"></i> Access & Permissions</a></li>
+                <li><a href="{% url 'create_customer' %}"><i class="fas fa-building"></i> Create Customer</a></li>
             </ul>
         </li>
         <!-- add a logout menu item-->

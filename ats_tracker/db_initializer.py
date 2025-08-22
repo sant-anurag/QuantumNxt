@@ -121,6 +121,7 @@ class ATSDatabaseInitializer:
                 email VARCHAR(100),
                 skills TEXT,
                 experience VARCHAR(20),
+                shared_on DATE,
                 screened_on DATE,
                 screen_status ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 screened_remarks TEXT,
