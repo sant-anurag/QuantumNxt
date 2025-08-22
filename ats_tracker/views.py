@@ -111,6 +111,8 @@ def get_db_connection():
         database='ats',
         charset='utf8mb4'
     )
+
+
 def add_member(request):
     print("add_member -> Request method:", request.method)
     message = ''
@@ -259,8 +261,6 @@ def team_members(request, team_id):
         if 'conn' in locals():
             conn.close()
     return JsonResponse({"members": members})
-
-
 
 def view_edit_teams(request):
     teams = []
@@ -1192,6 +1192,7 @@ def get_jd_team_members(request):
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'team_id': team_id, 'team_name': team_name, 'members': members})
+
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
@@ -1331,7 +1332,6 @@ def schedule_interview(request):
             cursor.close()
         if 'conn' in locals():
             conn.close()
-
 
 def send_interview_result_email(hr_email, interviewer_email, candidate_id,interviewer_name, candidate, level, token):
     print("send_interview_result_email -> Sending email to interviewer:", interviewer_email)
