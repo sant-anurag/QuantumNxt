@@ -41,13 +41,17 @@ def login_view(request):
             return render(request, 'login.html', {'error': 'Please enter both username/email and password.'})
 
         valid_user = validate_user(username, password)
-        if valid_user:
+        print("login_view -> Valid User:", valid_user)
+        if valid_user and valid_user[0] is not None:
             user_id, db_username, role, status = valid_user
 
             # Check for existing active session
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT session_id FROM user_sessions WHERE user_id=%s", (user_id,))
+            cursor.execute(
+                "SELECT session_id, expires_at FROM user_sessions WHERE user_id=%s AND expires_at > %s",
+                (user_id, datetime.now())
+            )
             existing_session = cursor.fetchone()
             if existing_session:
                 cursor.close()
@@ -57,7 +61,8 @@ def login_view(request):
             # Create new session
             import uuid
             session_id = str(uuid.uuid4())
-            expires_at = datetime.now() + timedelta(hours=2)
+            session_expiry = settings.SESSION_COOKIE_AGE  # seconds
+            expires_at = datetime.now() + timedelta(seconds=session_expiry)
             cursor.execute(
                 "INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES (%s, %s, %s)",
                 (session_id, user_id, expires_at)
