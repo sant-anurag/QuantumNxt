@@ -25,6 +25,16 @@ class ATSDatabaseInitializer:
                     );
                 """)
         self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            session_id VARCHAR(128) PRIMARY KEY,
+            user_id INT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        )
+        """)
+
+        self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS hr_team_members (
                 emp_id INT AUTO_INCREMENT PRIMARY KEY,
                 first_name VARCHAR(50) NOT NULL,

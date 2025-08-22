@@ -80,6 +80,8 @@ urlpatterns = [
     # ... other urls
 
     # settings urls
-    path('user/', views.user_profile, name='user_profile')
+    path('user/', views.user_profile, name='user_profile'),
 
+    path('manage_sessions/', views.manage_sessions_view, name='manage_sessions'),
+    path('manage_sessions/logout_session/', views.logout_session_api, name='logout_session_api'),
 ]

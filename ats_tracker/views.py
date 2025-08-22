@@ -1,4 +1,3 @@
-# ats_tracker/views.py
 import os
 import json
 from datetime import datetime
@@ -18,16 +17,14 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 
 from .db_initializer import ATSDatabaseInitializer
-import json
+
 from django.http import JsonResponse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.db import connection
+from django.contrib.auth import logout
 
 
 def login_view(request):
@@ -46,24 +43,45 @@ def login_view(request):
         valid_user = validate_user(username, password)
         if valid_user:
             user_id, db_username, role, status = valid_user
-            # Fetch name from hr_team_members table against email
+
+            # Check for existing active session
             conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT first_name, last_name FROM hr_team_members WHERE email=%s
-            """, [username])
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT session_id FROM user_sessions WHERE user_id=%s", (user_id,))
+            existing_session = cursor.fetchone()
+            if existing_session:
+                cursor.close()
+                conn.close()
+                return render(request, 'login.html', {'error': 'User already logged in elsewhere.'})
+
+            # Create new session
+            import uuid
+            session_id = str(uuid.uuid4())
+            expires_at = datetime.now() + timedelta(hours=2)
+            cursor.execute(
+                "INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES (%s, %s, %s)",
+                (session_id, user_id, expires_at)
+            )
+
+            # Fetch name from hr_team_members table against email
+            cursor.execute("SELECT first_name, last_name FROM hr_team_members WHERE email=%s", [username])
             row = cursor.fetchone()
+            if row:
+                first_name, last_name = row['first_name'], row['last_name']
+                name = f"{first_name} {last_name}"
+
+            conn.commit()
             cursor.close()
             conn.close()
-            if row:
-                first_name, last_name = row
-                name = f"{first_name} {last_name}"
+
             request.session['user_id'] = user_id
             request.session['username'] = db_username
             request.session['role'] = role
             request.session['authenticated'] = True
             request.session['email'] = username
-            request.session['name'] = name  # Store name in session
+            request.session['name'] = name
+            request.session['session_id'] = session_id  # Store session_id
+
             return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
@@ -176,9 +194,6 @@ def add_member(request):
         'error': error
     })
 
-# python
-
-from django.http import JsonResponse
 
 def create_team(request):
     message = error = None
@@ -406,10 +421,12 @@ def jd_list(request):
     cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
     companies = cursor.fetchall()
     conn.close()
+    name = request.session.get('name', 'Guest')
     return render(request, "jd_create.html", {
         "jds": jds,
         "total": total,
         "page": page,
+        "name": name,
         "search": search,
         "page_range": page_range,
         "companies": companies
@@ -575,8 +592,10 @@ def view_edit_jds(request):
     companies = cursor.fetchall()
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = cursor.fetchall()
+    name = request.session.get('name', 'Guest')
     return render(request, 'view_edit_jds.html', {
         'jds': jds,
+        'name': name,
         'companies': companies,
         'teams': teams
     })
@@ -664,7 +683,6 @@ def assign_jd_data(request):
     return JsonResponse({"jds": jds, "teams": teams})
 
 @csrf_exempt
-@csrf_exempt
 def assign_jd(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -697,10 +715,12 @@ def assign_jd(request):
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
 
 def assign_jd_page(request):
-    return render(request, "assign_jd.html")
+    name = request.session.get('name', 'Guest')
+    return render(request, "assign_jd.html",{'name': name})
 
 def employee_view_page(request):
-    return render(request, "employee_view.html")
+    name = request.session.get('name', 'Guest')
+    return render(request, "employee_view.html",{'name': name})
 
 def employee_view_data(request):
     print("employee_view_data -> Request method:", request.method)
@@ -761,7 +781,6 @@ def employee_view_report(request):
         team['jds'] = cursor.fetchall()
     conn.close()
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
-
 
 
 def get_db_conn():
@@ -1514,11 +1533,15 @@ def api_candidate_details(request):
     conn.close()
     return JsonResponse({'details': candidate})
 
-# Python
-from django.contrib.auth import logout
-from django.shortcuts import render
-
 def logout_page(request):
+    session_id = request.session.get('session_id')
+    if session_id:
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
     logout(request)  # This logs out the user
     return render(request, 'logout.html')
 
@@ -2491,3 +2514,43 @@ def user_profile(request):
     except mysql.connector.Error as err:
         return HttpResponse(f"Database error: {err}", status=500)
     return render(request, "user_profile.html", {"user": userDetails})
+
+def manage_sessions_view(request):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT us.session_id, us.user_id, us.expires_at, u.username, u.role
+        FROM user_sessions us
+        JOIN users u ON us.user_id = u.user_id
+        WHERE us.expires_at > NOW()
+        ORDER BY us.expires_at DESC
+    """)
+    sessions = []
+    for row in cursor.fetchall():
+        sessions.append({
+            'session_id': row['session_id'],
+            'user_id': row['user_id'],
+            'username': row['username'],
+            'role': row['role'],
+            'expires_at': row['expires_at'].strftime('%Y-%m-%d %H:%M')
+        })
+    cursor.close()
+    conn.close()
+    print(sessions)
+    name = request.session.get('name', 'Guest')
+    return render(request, 'manage_sessions.html', {'sessions': json.dumps(sessions), 'name': name})
+
+@csrf_exempt
+def logout_session_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        if session_id:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return JsonResponse({'success': True})
+    return JsonResponse({'success': False})

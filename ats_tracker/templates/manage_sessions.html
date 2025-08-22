@@ -1,0 +1,21 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/manage_sessions.css' %}">
+<div class="glass-card" style="max-width:900px;margin:auto;">
+    <h2 style="text-align:center;margin-bottom:18px;">
+        <i class="fas fa-user-lock"></i> Active User Sessions
+    </h2>
+    <div class="session-controls">
+        <input type="text" id="searchInput" placeholder="Search by username..." />
+    </div>
+    <div id="sessionsTableContainer">
+        <!-- Table will be rendered by JS -->
+    </div>
+    <div id="paginationContainer"></div>
+</div>
+<script src="{% static 'js/manage_sessions.js' %}"></script>
+<script>
+    window.sessionData = {{ sessions|safe }};
+</script>
+{% endblock %}

@@ -1,0 +1,130 @@
+/* QuantumNxt/ats_tracker/static/css/manage_sessions.css */
+.glass-card {
+    background: rgba(255,255,255,0.22);
+    border-radius: 22px;
+    box-shadow: 0 10px 42px rgba(100,120,255,0.19);
+    border: 1px solid rgba(255,255,255,0.28);
+    backdrop-filter: saturate(180%) blur(18px);
+    padding: 38px 38px 28px 38px;
+    margin-top: 38px;
+    max-width: 1100px;
+    min-width: 420px;
+    font-size: 1em;
+}
+
+.session-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 18px;
+}
+
+#searchInput {
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: 1px solid #bfc5e8;
+    font-size: 0.98em;
+    width: 220px;
+    background: #f7fafd;
+    color: #232946;
+    transition: border 0.18s;
+}
+#searchInput:focus {
+    border: 1.5px solid #5661d2;
+    outline: none;
+}
+
+.sessions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 0.97em;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(100,120,255,0.07);
+}
+
+.sessions-table th, .sessions-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e3e7fa;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.sessions-table th {
+    background: #f7fafd;
+    color: #5661d2;
+    font-weight: 600;
+    font-size: 0.98em;
+    letter-spacing: 0.02em;
+    border-bottom: 2px solid #e3e7fa;
+}
+
+.sessions-table tr:hover td {
+    background: #eef2ff;
+}
+
+.logout-btn {
+    background: linear-gradient(92deg,#7280ff 0%,#5661d2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 0.97em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.22s, box-shadow 0.18s, transform 0.14s;
+    box-shadow: 0 2px 8px rgba(114,131,255,0.10);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.logout-btn i {
+    font-size: 1em;
+}
+.logout-btn:hover {
+    background: linear-gradient(92deg,#8797ff 0%,#3f44aa 100%);
+    box-shadow: 0 4px 16px rgba(114,131,255,0.22);
+    transform: scale(1.04);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 12px;
+}
+.pagination button {
+    background: #e3e7fa;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 12px;
+    color: #5661d2;
+    font-weight: 500;
+    font-size: 0.97em;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+.pagination button.active, .pagination button:hover {
+    background: #5661d2;
+    color: #fff;
+}
+
+@media (max-width: 900px) {
+    .glass-card {
+        max-width: 98vw;
+        padding: 18px 6vw 18px 6vw;
+        font-size: 0.97em;
+    }
+    .sessions-table th, .sessions-table td {
+        max-width: 90px;
+        font-size: 0.95em;
+    }
+    #searchInput {
+        width: 120px;
+        font-size: 0.95em;
+    }
+}
