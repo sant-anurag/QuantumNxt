@@ -426,10 +426,12 @@ def jd_list(request):
     cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
     companies = cursor.fetchall()
     conn.close()
+    name = request.session.get('name', 'Guest')
     return render(request, "jd_create.html", {
         "jds": jds,
         "total": total,
         "page": page,
+        "name": name,
         "search": search,
         "page_range": page_range,
         "companies": companies
@@ -595,8 +597,10 @@ def view_edit_jds(request):
     companies = cursor.fetchall()
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = cursor.fetchall()
+    name = request.session.get('name', 'Guest')
     return render(request, 'view_edit_jds.html', {
         'jds': jds,
+        'name': name,
         'companies': companies,
         'teams': teams
     })
@@ -684,7 +688,6 @@ def assign_jd_data(request):
     return JsonResponse({"jds": jds, "teams": teams})
 
 @csrf_exempt
-@csrf_exempt
 def assign_jd(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -717,10 +720,12 @@ def assign_jd(request):
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
 
 def assign_jd_page(request):
-    return render(request, "assign_jd.html")
+    name = request.session.get('name', 'Guest')
+    return render(request, "assign_jd.html",{'name': name})
 
 def employee_view_page(request):
-    return render(request, "employee_view.html")
+    name = request.session.get('name', 'Guest')
+    return render(request, "employee_view.html",{'name': name})
 
 def employee_view_data(request):
     print("employee_view_data -> Request method:", request.method)
