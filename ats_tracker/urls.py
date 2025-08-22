@@ -79,4 +79,7 @@ urlpatterns = [
     path('api/ccr_reports/export/', views.ccr_reports_export, name='ccr_reports_export'),
     # ... other urls
 
+    # settings urls
+    
+
 ]
