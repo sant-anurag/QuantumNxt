@@ -1,0 +1,61 @@
+<!-- create a html page for user profile -->
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/user_profile.css' %}">
+<div class="profile-card">
+    <section class="card-header">
+        <div class="profile-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="profile-info">
+            <h2>{{ user.name }}</h2>
+            <p class="email">{{ user.email }}</p>
+            <p class="role">{{ user.role }}</p>
+
+        </div>
+    </section>
+    <section class="card-body">
+        <div class="profile-row">
+            <div class="profile-label">Employee ID</div>
+            <div class="profile-value" data-fulltext="{{ user.emp_id }}">{{ user.emp_id }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Name</div>
+            <div class="profile-value" data-fulltext="{{ user.name }}">{{ user.name }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Email</div>
+            <div class="profile-value" data-fulltext="{{ user.email }}">{{ user.email }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Phone</div>
+            <div class="profile-value" data-fulltext="{{ user.phone }}">{{ user.phone }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Date Joined</div>
+            <div class="profile-value" data-fulltext="{{ user.date_joined }}">{{ user.date_joined }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Role</div>
+            <div class="profile-value" data-fulltext="{{ user.role }}">{{ user.role }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Team ID</div>
+            <div class="profile-value" data-fulltext="{{ user.team_id }}">{{ user.team_id }}</div>
+        </div>
+        <div class="profile-row">
+            <div class="profile-label">Team Name</div>
+            <div class="profile-value" data-fulltext="{{ user.team_name }}">{{ user.team_name }}</div>
+        </div>
+    </section>
+    <script>
+        document.querySelectorAll('.profile-value').forEach(el => {
+        if (el.scrollWidth > el.clientWidth) {
+            el.setAttribute('title', el.dataset.fulltext);
+        }
+        });
+
+    </script>
+</div>
+{% endblock %}

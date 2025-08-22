@@ -2469,6 +2469,56 @@ def ccr_reports_export(request):
     conn.close()
     return response
 
+def user_profile(request):
+    try:
+        
+        # get user email from request session
+        email = request.session['email'] if 'email' in request.session else None
+        # if not email:
+        #     return redirect("login")
+
+        conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                t.emp_id,
+                CONCAT(t.first_name, ' ', t.last_name) AS name,
+                t.email,
+                t.phone,
+                t.role,
+                t.date_joined,
+                tm.team_id,
+                teams.team_name
+            FROM hr_team_members t
+            JOIN team_members tm ON t.emp_id = tm.emp_id
+            JOIN teams ON tm.team_id = teams.team_id
+            WHERE t.email = %s
+        """, (email,))
+        userDetails = cursor.fetchone()
+
+        if not userDetails:
+            return redirect('login')
+
+        userDetails = {
+            "emp_id": userDetails[0],
+            "name": userDetails[1],
+            "email": userDetails[2],
+            "phone": userDetails[3],
+            "role": userDetails[4],
+            "date_joined": userDetails[5],
+            "team_id": userDetails[6],
+            "team_name": userDetails[7]
+        } if userDetails else {}
+
+        if not userDetails:
+            return redirect('login')
+        print("Fetched user data:", userDetails)
+        cursor.close()
+        conn.close()
+    except mysql.connector.Error as err:
+        return HttpResponse(f"Database error: {err}", status=500)
+    return render(request, "user_profile.html", {"user": userDetails})
 
 def manage_sessions_view(request):
     conn = get_db_connection()
