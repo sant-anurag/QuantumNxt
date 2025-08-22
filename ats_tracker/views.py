@@ -1123,52 +1123,6 @@ def save_candidate_details(request):
             cursor.close()
             conn.close()
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        conn = get_db_conn()
-        cursor = conn.cursor()
-        try:
-            # First query to check for existing candidate
-            cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
-            row = cursor.fetchone()  # <-- This fetches the result
-
-            if row:
-                # Update logic
-                cursor.execute("""
-                    UPDATE candidates
-                    SET name=%s, phone=%s, email=%s, skills=%s, experience=%s,
-                        screened_on=%s, screen_status=%s, screened_remarks=%s,
-                        team_id=%s, hr_member_id=%s, updated_at=NOW()
-                    WHERE resume_id=%s
-                """, [
-                    data.get('name'), data.get('phone'), data.get('email'),
-                    data.get('skills'), data.get('experience'), data.get('screened_on'),
-                    data.get('screen_status'), data.get('screened_remarks'),
-                    data.get('screening_team'), data.get('hr_member_id'),
-                    data.get('resume_id')
-                ])
-            else:
-                # Insert logic
-                cursor.execute("""
-                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
-                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, [
-                    data.get('jd_id'), data.get('resume_id'), data.get('name'), data.get('phone'),
-                    data.get('email'), data.get('skills'), data.get('experience'), data.get('screened_on'),
-                    data.get('screen_status'), data.get('screened_remarks'),
-                    data.get('screening_team'), data.get('hr_member_id')
-                ])
-
-            conn.commit()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
-        finally:
-            # No unread results remain, safe to close
-            cursor.close()
-            conn.close()
-    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
 def update_candidate_screen_status(request):
