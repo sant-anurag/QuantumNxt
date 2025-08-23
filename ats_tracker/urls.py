@@ -87,4 +87,6 @@ urlpatterns = [
     path('access_permissions/', views.access_permissions, name='access_permissions'),
     path('access_permissions/change_password/', views.change_password, name='change_password'),
     path('access_permissions/change_role/', views.change_role, name='change_role'),
+    path('status_report/', views.status_report_page, name='status_report'),
+    path('status_report/generate/', views.generate_status_report, name='generate_status_report'),
 ]

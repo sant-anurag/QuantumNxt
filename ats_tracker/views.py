@@ -18,7 +18,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .db_initializer import ATSDatabaseInitializer
 
-from django.http import JsonResponse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -2509,8 +2508,6 @@ def access_permissions(request):
     return render(request, "access_permissions.html", {"users": users})
 
 
-from django.contrib.auth.hashers import check_password, make_password
-
 @csrf_exempt
 def change_password(request):
     if request.method == "POST":
@@ -2548,3 +2545,79 @@ def change_role(request):
         conn.close()
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .db_initializer import ATSDatabaseInitializer
+
+def status_report_page(request):
+    db = ATSDatabaseInitializer()
+    db.cursor.execute("USE ats")
+    db.cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = [{"team_id": t[0], "team_name": t[1]} for t in db.cursor.fetchall()]
+    db.cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+    members = [{"emp_id": m[0], "first_name": m[1], "last_name": m[2]} for m in db.cursor.fetchall()]
+    db.close()
+    return render(request, 'status_report.html', {"teams": teams, "members": members})
+
+@csrf_exempt
+def generate_status_report(request):
+    if request.method == "POST":
+        db = ATSDatabaseInitializer()
+        db.cursor.execute("USE ats")
+        report_type = request.POST.get("report_type")
+        team_id = request.POST.get("team_id")
+        member_id = request.POST.get("member_id")
+        date = request.POST.get("date")
+        from_date = request.POST.get("from_date")
+        to_date = request.POST.get("to_date")
+
+        where = []
+        params = []
+        if team_id and team_id != "all":
+            where.append("c.team_id=%s")
+            params.append(team_id)
+        if member_id and member_id != "all":
+            where.append("c.hr_member_id=%s")
+            params.append(member_id)
+        if report_type == "daily" and date:
+            where.append("DATE(c.shared_on)=%s")
+            params.append(date)
+        elif report_type == "weekly" and date:
+            where.append("YEARWEEK(c.shared_on, 1)=YEARWEEK(%s, 1)")
+            params.append(date)
+        elif report_type == "custom" and from_date and to_date:
+            where.append("DATE(c.shared_on) BETWEEN %s AND %s")
+            params.extend([from_date, to_date])
+
+        where_clause = " AND ".join(where) if where else "1=1"
+        db.cursor.execute(f"""
+            SELECT
+                cu.company_name,
+                j.jd_summary,
+                c.jd_id,
+                DATE_FORMAT(c.shared_on, '%%d-%%b-%%Y') AS shared_on,
+                COUNT(c.candidate_id) AS profile_count,
+                GROUP_CONCAT(c.screened_remarks SEPARATOR ', ') AS feedback
+            FROM candidates c
+            JOIN recruitment_jds j ON c.jd_id = j.jd_id
+            JOIN customers cu ON j.company_id = cu.company_id
+            WHERE {where_clause}
+            GROUP BY cu.company_name, j.jd_summary, c.jd_id, shared_on
+            ORDER BY shared_on DESC
+        """, tuple(params))
+        rows = db.cursor.fetchall()
+        report = []
+        for idx, r in enumerate(rows):
+            report.append({
+                "company_name": r[0],
+                "jd_summary": r[1],
+                "jd_id": r[2],
+                "shared_on": r[3],
+                "profile_count": r[4],
+                "feedback": r[5] or ""
+            })
+        db.close()
+        return JsonResponse({"report": report, "message": "Report generated."})
+    return JsonResponse({"report": [], "message": "Invalid request."})
