@@ -1,261 +1,356 @@
 @import url('https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap');
 
-:root {
-    --ct-bg: #f9fafb;
-    --ct-card-bg: #ffffff;
-    --ct-border: #e5e7eb;
-    --ct-border-strong: #cbd5e1;
-    --ct-shadow: 0 4px 16px rgba(0,0,0,0.05);
-    --ct-primary: #2563eb;
-    --ct-primary-light: #3b82f6;
-    --ct-accent: #0ea5e9;
-    --ct-danger: #dc2626;
-    --ct-success: #16a34a;
-    --ct-radius: 12px;
-    --ct-radius-pill: 22px;
-    --ct-table-header: #f3f4f6;
-    --ct-table-rowalt: #f9fafb;
-    --ct-table-border: #e5e7eb;
-    --ct-text: #1f2937;
-    --ct-muted: #6b7280;
-}
-
-/* ====== Container ====== */
-body {
-    font-family: 'Inter', Arial, sans-serif;
-    color: var(--ct-text);
-    background: var(--ct-bg);
-}
-
-.ct-main {
-    background: var(--ct-bg);
-    border-radius: var(--ct-radius);
-    max-width: 1200px;
-    margin: 48px auto;
-    padding: 0 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-}
-
-/* ====== Cards ====== */
-.ct-card {
-    background: var(--ct-card-bg);
-    border-radius: var(--ct-radius);
-    border: 1px solid var(--ct-border);
-    box-shadow: var(--ct-shadow);
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    overflow: hidden;
-    transition: box-shadow 0.2s ease;
-}
-.ct-card:hover {
-    box-shadow: 0 6px 28px rgba(0,0,0,0.08);
-}
-
-.ct-card-header {
-    background: var(--ct-table-header);
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--ct-border);
-}
-.ct-card-header h2, .ct-card-header h3 {
-    margin-top: 0;
-    margin-bottom: 32px;
-    color: #233a63;
-    font-size: 2.1em;
-    font-family: 'Segoe UI Semibold', 'Segoe UI', Arial, sans-serif;
-    font-weight: 700;
-    letter-spacing: 0.7px;
-    justify-content: flex-start;
-    line-height: 1.2;
-    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.ct-card-body {
-    padding: 20px 24px;
-}
-
-/* ====== Form ====== */
-.ct-form-group {
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.ct-form-group label {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--ct-text);
-    margin-bottom: 6px;
-}
-
-#team_name {
-    background: #fff;
-    border: 1px solid var(--ct-border);
-    border-radius: var(--ct-radius-pill);
-    font-size: 0.95rem;
-    padding: 12px 16px;
-    color: var(--ct-text);
-    transition: border-color .2s, box-shadow .2s;
-}
-#team_name:focus {
-    border-color: var(--ct-primary);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-    outline: none;
-}
-
-/* ====== Buttons ====== */
-.ct-btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--ct-primary);
-    color: white;
-    font-weight: 600;
-    font-size: 0.95rem;
-    border: none;
-    border-radius: var(--ct-radius-pill);
-    padding: 10px 28px;
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-}
-.ct-btn-primary:hover {
-    background: #1d4ed8;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    transform: translateY(-1px);
-}
-
-/* ====== Alerts ====== */
-.ct-alert {
-    border-radius: 8px;
-    font-size: 0.92rem;
-    font-weight: 500;
-    padding: 11px 16px 11px 40px;
-    margin-bottom: 16px;
-    border: 1px solid;
-    position: relative;
-}
-.ct-alert-success {
-    color: var(--ct-success);
-    border-color: #bbf7d0;
-    background: #ecfdf5;
-}
-.ct-alert-error {
-    color: var(--ct-danger);
-    border-color: #fecaca;
-    background: #fef2f2;
-}
-
-/* ====== Table ====== */
-.ct-table-container {
-    overflow-x: auto;
-}
-.ct-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-}
-.ct-table th, .ct-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--ct-table-border);
-    text-align: left;
-}
-.ct-table th {
-    background: var(--ct-table-header);
-    color: var(--ct-text);
-    font-weight: 600;
-}
-.ct-table tbody tr:nth-child(even) {
-    background: var(--ct-table-rowalt);
-}
-.ct-table tbody tr:hover {
-    background: #eef2ff;
-}
-/* Add below existing table styles */
-.ct-table input[type="radio"] {
-    accent-color: var(--ct-primary);
-    margin-left: 8px;
-}
-/* ====== Search box ====== */
-.ct-search-box {
-    display: flex;
-    align-items: center;
-    background: #fff;
-    border: 1px solid var(--ct-border);
-    border-radius: var(--ct-radius-pill);
-    padding: 4px 12px;
-}
-.ct-search-box input[type="text"] {
-    border: none;
-    background: transparent;
-    font-size: 0.95rem;
-    outline: none;
-    padding: 6px;
-}
-
-/* ====== Pagination ====== */
-.ct-pagination {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-top: 16px;
-}
-.ct-pagination button {
-    background: #fff;
-    border: 1px solid var(--ct-border);
-    color: var(--ct-text);
-    border-radius: 6px;
-    padding: 4px 10px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-.ct-pagination button.active,
-.ct-pagination button:hover {
-    background: var(--ct-primary);
-    color: #fff;
-    border-color: var(--ct-primary);
-}
-
-/* ====== Modal ====== */
-.ct-modal-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.ct-modal-content {
-    background: #fff;
-    border-radius: var(--ct-radius);
-    padding: 24px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    max-width: 600px;
-    width: 90%;
-}
-.ct-close-modal {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    font-size: 1.4rem;
-    color: var(--ct-muted);
-    cursor: pointer;
-}
-
-/* ====== Responsive ====== */
-@media (max-width: 768px) {
-    .ct-card-header, .ct-card-body {
-        padding: 16px;
+    :root {
+        --ct-bg: #f9fafb;
+        --ct-card-bg: #ffffff;
+        --ct-border: #e5e7eb;
+        --ct-border-strong: #cbd5e1;
+        --ct-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        --ct-primary: #2563eb;
+        --ct-primary-light: #3b82f6;
+        --ct-accent: #0ea5e9;
+        --ct-danger: #dc2626;
+        --ct-success: #16a34a;
+        --ct-radius: 12px;
+        --ct-radius-pill: 22px;
+        --ct-table-header: #f3f4f6;
+        --ct-table-rowalt: #f9fafb;
+        --ct-table-border: #e5e7eb;
+        --ct-text: #1f2937;
+        --ct-muted: #6b7280;
     }
-    .ct-search-box {
+
+    /* ====== Container ====== */
+    body {
+        font-family: 'Inter', Arial, sans-serif;
+        color: var(--ct-text);
+        background: var(--ct-bg);
+    }
+
+    .ct-main {
+        background: var(--ct-bg);
+        border-radius: var(--ct-radius);
+        max-width: 1200px;
+        margin: 48px auto;
+        padding: 0 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+    }
+
+    /* ====== Cards ====== */
+    .ct-card {
+        background: var(--ct-card-bg);
+        border-radius: var(--ct-radius);
+        border: 1px solid var(--ct-border);
+        box-shadow: var(--ct-shadow);
+        display: flex;
+        flex-direction: column;
         width: 100%;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease;
     }
+    .ct-card:hover {
+        box-shadow: 0 6px 28px rgba(0,0,0,0.08);
+    }
+
+    .ct-card-header {
+        background: var(--ct-table-header);
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--ct-border);
+    }
+    .ct-card-header h2, .ct-card-header h3 {
+        margin-top: 0;
+        margin-bottom: 32px;
+        color: #233a63;
+        font-size: 2.1em;
+        font-family: 'Segoe UI Semibold', 'Segoe UI', Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.7px;
+        justify-content: flex-start;
+        line-height: 1.2;
+        background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .ct-card-body {
+        padding: 20px 24px;
+    }
+
+    /* ====== Form ====== */
+    .ct-form-group {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ct-form-group label {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--ct-text);
+        margin-bottom: 6px;
+    }
+
+    #team_name {
+        background: #fff;
+        border: 1px solid var(--ct-border);
+        border-radius: var(--ct-radius-pill);
+        font-size: 0.95rem;
+        padding: 12px 16px;
+        color: var(--ct-text);
+        transition: border-color .2s, box-shadow .2s;
+    }
+    #team_name:focus {
+        border-color: var(--ct-primary);
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        outline: none;
+    }
+
+    /* ====== Buttons ====== */
+    .ct-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--ct-primary);
+        color: white;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: none;
+        border-radius: var(--ct-radius-pill);
+        padding: 10px 28px;
+        cursor: pointer;
+        transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .ct-btn-primary:hover {
+        background: #1d4ed8;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+    }
+
+    /* ====== Alerts ====== */
+    .ct-alert {
+        border-radius: 8px;
+        font-size: 0.92rem;
+        font-weight: 500;
+        padding: 11px 16px 11px 40px;
+        margin-bottom: 16px;
+        border: 1px solid;
+        position: relative;
+    }
+    .ct-alert-success {
+        color: var(--ct-success);
+        border-color: #bbf7d0;
+        background: #ecfdf5;
+    }
+    .ct-alert-error {
+        color: var(--ct-danger);
+        border-color: #fecaca;
+        background: #fef2f2;
+    }
+
+    /* ====== Table ====== */
+    .ct-table-container {
+        overflow-x: auto;
+    }
+    .ct-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+    .ct-table th, .ct-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--ct-table-border);
+        text-align: left;
+    }
+    .ct-table th {
+        background: var(--ct-table-header);
+        color: var(--ct-text);
+        font-weight: 600;
+    }
+    .ct-table tbody tr:nth-child(even) {
+        background: var(--ct-table-rowalt);
+    }
+    .ct-table tbody tr:hover {
+        background: #eef2ff;
+    }
+    /* Add below existing table styles */
+    .ct-table input[type="radio"] {
+        accent-color: var(--ct-primary);
+        margin-left: 8px;
+    }
+    /* ====== Search box ====== */
+    .ct-search-box {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--ct-border);
+        border-radius: var(--ct-radius-pill);
+        padding: 4px 12px;
+    }
+    .ct-search-box input[type="text"] {
+        border: none;
+        background: transparent;
+        font-size: 0.95rem;
+        outline: none;
+        padding: 6px;
+    }
+
+    /* ====== Pagination ====== */
     .ct-pagination {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-top: 16px;
+    }
+    .ct-pagination button {
+        background: #fff;
+        border: 1px solid var(--ct-border);
+        color: var(--ct-text);
+        border-radius: 6px;
+        padding: 4px 10px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    .ct-pagination button.active,
+    .ct-pagination button:hover {
+        background: var(--ct-primary);
+        color: #fff;
+        border-color: var(--ct-primary);
+    }
+
+    /* ====== Modal Improvements ====== */
+    .ct-modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        right: 0; bottom: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
         justify-content: center;
     }
+
+    .ct-modal-content {
+        background: #fff;
+        border-radius: var(--ct-radius);
+        padding: 32px 32px 24px 32px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+        max-width: 900px; /* Increased from 700px */
+        width: 98%;
+        min-width: 320px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .ct-close-modal {
+        position: absolute;
+        top: 18px;
+        right: 24px;
+        font-size: 1.7rem;
+        color: var(--ct-muted);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .ct-close-modal:hover {
+        color: var(--ct-danger);
+    }
+
+    .ct-modal-content h3 {
+        margin-top: 0;
+        margin-bottom: 18px;
+        font-size: 1.45em;
+        font-weight: 700;
+        color: #2563eb;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1.5px solid var(--ct-border-strong);
+        padding-bottom: 8px;
+    }
+
+/* --- Modal Table Styling --- */
+.ct-modal-content .ct-table {
+    width: 100%;
+    min-width: 800px; /* Ensures table is wider and scrollable if needed */
+    border-collapse: collapse;
+    font-size: 1rem;
+    margin-top: 8px;
+    background: #f9fafb;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+
+/* Add a scrollable wrapper for the table */
+.ct-modal-content #modal-members-list {
+    overflow-x: auto;
+    width: 100%;
+}
+
+    .ct-modal-content .ct-table th,
+    .ct-modal-content .ct-table td {
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--ct-table-border);
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+    }
+
+    .ct-modal-content .ct-table th {
+        background: #eef2ff;
+        color: #233a63;
+        font-weight: 600;
+        font-size: 1.05em;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--ct-primary-light);
+    }
+
+    .ct-modal-content .ct-table tbody tr:nth-child(even) {
+        background: #f3f4f6;
+    }
+
+    .ct-modal-content .ct-table tbody tr:hover {
+        background: #e0e7ff;
+    }
+
+    .ct-modal-content .ct-no-data {
+        text-align: center;
+        color: var(--ct-muted);
+        font-size: 1.05em;
+        padding: 24px 0;
+    }
+
+    /* --- Responsive Modal --- */
+    @media (max-width: 600px) {
+        .ct-modal-content {
+            padding: 16px 8px 12px 8px;
+            max-width: 98vw;
+        }
+        .ct-modal-content .ct-table th,
+        .ct-modal-content .ct-table td {
+            padding: 8px 6px;
+            max-width: 90px;
+            font-size: 0.92em;
+        }
+        .ct-modal-content h3 {
+            font-size: 1.1em;
+            padding-bottom: 4px;
+        }
+    }
+
+    /* ====== Responsive ====== */
+    @media (max-width: 768px) {
+        .ct-card-header, .ct-card-body {
+            padding: 16px;
+        }
+        .ct-search-box {
+            width: 100%;
+        }
+        .ct-pagination {
+            justify-content: center;
+        }
+    }
