@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const exportBtn = document.getElementById("export-teams-btn");
         let allTeams = [];
         teamsTableBody.querySelectorAll("tr").forEach(row => {
-            const name = row.children[0].textContent.trim().toLowerCase();
+            const name = row.children[1].textContent.trim().toLowerCase();
             allTeams.push({ row: row.cloneNode(true), name: name });
         });
 
