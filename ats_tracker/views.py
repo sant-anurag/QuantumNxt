@@ -2626,3 +2626,48 @@ def generate_status_report(request):
         db.close()
         return JsonResponse({"report": report, "message": "Report generated."})
     return JsonResponse({"report": [], "message": "Invalid request."})
+
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+import openpyxl
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+
+@csrf_exempt
+def export_teams_excel(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        teams = data.get("teams", [])
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Teams"
+        headers = ["Team Id", "Team Name", "Total Strength", "Created On"]
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="1F497D")
+            cell.alignment = Alignment(horizontal="center")
+        for team in teams:
+            ws.append([
+                team.get("team_id", ""),
+                team.get("team_name", ""),
+                team.get("strength", ""),
+                team.get("created_at", "")
+            ])
+        # Auto-width columns
+        for col in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = max_length + 2
+        # Save to response
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = "attachment; filename=teams_export.xlsx"
+        wb.save(response)
+        return response
+    return JsonResponse({"error": "Invalid request"}, status=400)

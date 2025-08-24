@@ -89,4 +89,5 @@ urlpatterns = [
     path('access_permissions/change_role/', views.change_role, name='change_role'),
     path('status_report/', views.status_report_page, name='status_report'),
     path('status_report/generate/', views.generate_status_report, name='generate_status_report'),
+    path("teams/export/", views.export_teams_excel, name="export_teams_excel"),
 ]

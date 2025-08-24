@@ -6,17 +6,20 @@
 <div class="ct-main">
     <div class="ct-section">
         <div class="ct-flex-header">
-            <!-- Styled header same as add_member -->
             <div class="form-header page-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 12px;">
                 <i class="fas fa-users" style="font-size: 2em; color: #5661d2;"></i>
                 <h2 style="margin: 0;">View &amp; Edit Teams</h2>
             </div>
-            <div class="ct-search-box">
-                <input type="text" id="team-search" placeholder="Search teams...">
-                <i class="fas fa-search"></i>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="ct-search-box">
+                    <input type="text" id="team-search" placeholder="Search teams...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <button id="export-teams-btn" class="ct-btn-export" type="button">
+                    <i class="fas fa-file-export"></i> Export
+                </button>
             </div>
         </div>
-
         <div class="ct-table-container">
             <table class="ct-table" id="teams-table">
                 <thead>
@@ -46,7 +49,6 @@
         <div class="ct-pagination" id="teams-pagination"></div>
     </div>
 </div>
-
 <!-- Modal for editing team members -->
 <div class="ct-modal-overlay" id="edit-team-modal" style="display:none;">
     <div class="ct-modal-content" style="max-width:600px;">
