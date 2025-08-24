@@ -1,104 +1,190 @@
-document.addEventListener('DOMContentLoaded', function () {
-    // Fetch filter options (team members, customers)
-    fetch('/api/team_report_filters/')
-        .then(res => res.json())
-        .then(data => {
-            const memberSelect = document.querySelector('select[name="team_member"]');
-            data.members.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = m.name;
-                memberSelect.appendChild(opt);
-            });
-            const customerSelect = document.querySelector('select[name="customer"]');
-            data.customers.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name;
-                customerSelect.appendChild(opt);
-            });
-        });
+document.addEventListener("DOMContentLoaded", function() {
+let allTeams = [];
+const teamSearchInput = document.getElementById("teamSearchInput");
+const teamDropdownList = document.getElementById("teamDropdownList");
+const teamSearchHidden = document.getElementById("teamSearchHidden");
+const teamReportFilter = document.getElementById("teamReportFilter");
 
-    // Fetch and render report data
-    function loadReports(params = {}) {
-        let url = '/api/team_reports/?' + new URLSearchParams(params).toString();
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                // Team Overview
-                fillTable('teamOverviewTable', data.team_overview, ['team_name', 'team_lead', 'members']);
-                // Recruitment Metrics
-                fillTable('recruitmentMetricsTable', [data.recruitment_metrics], ['total_jds', 'in_progress', 'closed', 'avg_closure_time']);
-                // Candidate Pipeline
-                fillTable('candidatePipelineTable', [data.candidate_pipeline], ['sourced', 'l1', 'l2', 'l3', 'offered', 'accepted', 'rejected']);
-                // Member Contribution
-                fillTable('memberContributionTable', data.member_contribution, ['member', 'jds_handled', 'candidates_processed', 'offers_made', 'top_performer']);
-                // Customer Distribution
-                fillTable('customerDistributionTable', data.customer_distribution, ['customer', 'jds_handled', 'candidates_placed']);
-                // Charts
-                renderChart('conversionRateChart', 'Conversion Rate', data.performance_analytics.conversion_rate);
-                renderChart('successRateChart', 'Success Rate', data.performance_analytics.success_rate);
-                renderBarChart('monthlyTrendsChart', 'Monthly Trends', data.performance_analytics.monthly_trends);
-            });
-    }
-
-    function fillTable(tableId, rows, keys) {
-        const tbody = document.getElementById(tableId).querySelector('tbody');
-        tbody.innerHTML = '';
-        rows.forEach(row => {
-            const tr = document.createElement('tr');
-            keys.forEach(k => {
-                const td = document.createElement('td');
-                td.textContent = row[k];
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-    }
-
-    function renderChart(canvasId, label, value) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: [label, 'Other'],
-                datasets: [{
-                    data: [value, 100 - value],
-                    backgroundColor: ['#5661d2', '#e3eafc'],
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-    }
-
-    function renderBarChart(canvasId, label, data) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: label,
-                    data: data.values,
-                    backgroundColor: '#5661d2'
-                }]
-            },
-            options: { responsive: true }
-        });
-    }
-
-    // Filter form
-    document.getElementById('teamReportFilter').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const params = Object.fromEntries(new FormData(this).entries());
-        loadReports(params);
+// Fetch all teams for dropdown filter
+fetch("/api/teams/list/")
+    .then(resp => resp.json())
+    .then(data => {
+        allTeams = data.teams || [];
     });
 
-    // Export button
-    document.getElementById('exportBtn').addEventListener('click', function () {
-        window.open('/api/team_reports/export/?' + new URLSearchParams(Object.fromEntries(new FormData(document.getElementById('teamReportFilter')).entries())).toString());
+// Dropdown filter logic
+teamSearchInput.addEventListener("input", function() {
+    const term = teamSearchInput.value.trim().toLowerCase();
+    if (term.length < 3) {
+        teamDropdownList.style.display = "none";
+        return;
+    }
+    const filtered = allTeams.filter(t => t.name.toLowerCase().includes(term));
+    teamDropdownList.innerHTML = "";
+    if (filtered.length === 0) {
+        teamDropdownList.innerHTML = `<div class="no-results">No teams found.</div>`;
+    } else {
+        filtered.forEach(t => {
+            const div = document.createElement("div");
+            div.className = "dropdown-item";
+            div.textContent = t.name;
+            div.onclick = function() {
+                teamSearchInput.value = t.name;
+                teamSearchHidden.value = t.name;
+                teamDropdownList.style.display = "none";
+            };
+            teamDropdownList.appendChild(div);
+        });
+    }
+    teamDropdownList.style.display = "block";
+});
+
+teamSearchInput.addEventListener("blur", function() {
+    setTimeout(() => { teamDropdownList.style.display = "none"; }, 200);
+});
+
+teamSearchInput.addEventListener("focus", function() {
+    if (teamSearchInput.value.length >= 3) {
+        teamDropdownList.style.display = "block";
+    }
+});
+
+// Set hidden input on manual change
+teamSearchInput.addEventListener("change", function() {
+    teamSearchHidden.value = teamSearchInput.value;
+});
+
+// Populate other filters (members, customers)
+fetch("/api/teams/filters/")
+    .then(resp => resp.json())
+    .then(data => {
+        const memberSelect = teamReportFilter.querySelector('[name="team_member"]');
+        memberSelect.innerHTML = `<option value="">All Members</option>`;
+        data.members.forEach(m => {
+            memberSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+        });
+        const customerSelect = teamReportFilter.querySelector('[name="customer"]');
+        customerSelect.innerHTML = `<option value="">All Customers</option>`;
+        data.customers.forEach(c => {
+            customerSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
     });
 
-    // Initial load
-    loadReports();
+// Handle filter submit
+teamReportFilter.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const formData = new FormData(teamReportFilter);
+    const params = {};
+    for (let [key, value] of formData.entries()) {
+        params[key] = value;
+    }
+    fetch("/api/teams/report/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+        body: JSON.stringify(params)
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        renderReportTables(data);
+    });
+});
+
+// Render report tables
+function renderReportTables(data) {
+    // Team Overview
+    const teamOverviewTable = document.getElementById("teamOverviewTable").querySelector("tbody");
+    teamOverviewTable.innerHTML = "";
+    if (data.team_overview && data.team_overview.length) {
+        data.team_overview.forEach(row => {
+            teamOverviewTable.innerHTML += `<tr>
+                <td>${row.team_name}</td>
+                <td>${row.team_lead}</td>
+                <td>${row.members.join(", ")}</td>
+            </tr>`;
+        });
+    } else {
+        teamOverviewTable.innerHTML = `<tr><td colspan="3" class="ct-no-data">No data found.</td></tr>`;
+    }
+    // Recruitment Metrics
+    const recruitmentMetricsTable = document.getElementById("recruitmentMetricsTable").querySelector("tbody");
+    recruitmentMetricsTable.innerHTML = "";
+    if (data.recruitment_metrics && data.recruitment_metrics.length) {
+        data.recruitment_metrics.forEach(row => {
+            recruitmentMetricsTable.innerHTML += `<tr>
+                <td>${row.total_jds}</td>
+                <td>${row.in_progress}</td>
+                <td>${row.closed}</td>
+                <td>${row.avg_closure_time}</td>
+            </tr>`;
+        });
+    } else {
+        recruitmentMetricsTable.innerHTML = `<tr><td colspan="4" class="ct-no-data">No data found.</td></tr>`;
+    }
+    // Candidate Pipeline
+    const candidatePipelineTable = document.getElementById("candidatePipelineTable").querySelector("tbody");
+    candidatePipelineTable.innerHTML = "";
+    if (data.candidate_pipeline && data.candidate_pipeline.length) {
+        data.candidate_pipeline.forEach(row => {
+            candidatePipelineTable.innerHTML += `<tr>
+                <td>${row.sourced}</td>
+                <td>${row.l1}</td>
+                <td>${row.l2}</td>
+                <td>${row.l3}</td>
+                <td>${row.offered}</td>
+                <td>${row.accepted}</td>
+                <td>${row.rejected}</td>
+            </tr>`;
+        });
+    } else {
+        candidatePipelineTable.innerHTML = `<tr><td colspan="7" class="ct-no-data">No data found.</td></tr>`;
+    }
+    // Member Contribution
+    const memberContributionTable = document.getElementById("memberContributionTable").querySelector("tbody");
+    memberContributionTable.innerHTML = "";
+    if (data.member_contribution && data.member_contribution.length) {
+        data.member_contribution.forEach(row => {
+            memberContributionTable.innerHTML += `<tr>
+                <td>${row.member}</td>
+                <td>${row.jds_handled}</td>
+                <td>${row.candidates_processed}</td>
+                <td>${row.offers_made}</td>
+                <td>${row.top_performer ? "Yes" : "No"}</td>
+            </tr>`;
+        });
+    } else {
+        memberContributionTable.innerHTML = `<tr><td colspan="5" class="ct-no-data">No data found.</td></tr>`;
+    }
+    // Customer Distribution
+    const customerDistributionTable = document.getElementById("customerDistributionTable").querySelector("tbody");
+    customerDistributionTable.innerHTML = "";
+    if (data.customer_distribution && data.customer_distribution.length) {
+        data.customer_distribution.forEach(row => {
+            customerDistributionTable.innerHTML += `<tr>
+                <td>${row.customer}</td>
+                <td>${row.jds_handled}</td>
+                <td>${row.candidates_placed}</td>
+            </tr>`;
+        });
+    } else {
+        customerDistributionTable.innerHTML = `<tr><td colspan="3" class="ct-no-data">No data found.</td></tr>`;
+    }
+    // Charts (Performance Analytics)
+    // You can update chart.js code here as needed using data.performance_analytics
+}
+
+// CSRF helper for Django
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === "csrftoken=") {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 });

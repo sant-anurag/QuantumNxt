@@ -1,0 +1,45 @@
+.team-search-dropdown {
+    position: relative;
+    width: 240px;
+    display: inline-block;
+    margin-right: 12px;
+}
+
+.team-search-dropdown .filter-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.13);
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+}
+
+.dropdown-list .dropdown-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 0.97rem;
+    color: #233a63;
+    transition: background 0.15s;
+}
+
+.dropdown-list .dropdown-item:hover {
+    background: #eef2ff;
+    color: #2563eb;
+}
+
+.dropdown-list .no-results {
+    padding: 10px 16px;
+    color: #dc2626;
+    font-size: 0.95rem;
+}

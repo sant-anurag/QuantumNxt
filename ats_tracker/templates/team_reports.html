@@ -3,10 +3,15 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/team_reports.css' %}">
+<link rel="stylesheet" href="{% static 'css/team_reports_dropdown.css' %}">
 <div class="team-reports-container glass-card">
     <h1 class="team-reports-title">Team-wise Reports</h1>
-    <form id="teamReportFilter" class="team-report-filter">
-        <input type="text" name="team_search" placeholder="Search Team..." class="filter-input">
+    <form id="teamReportFilter" class="team-report-filter" autocomplete="off">
+        <div class="team-search-dropdown">
+            <input type="text" id="teamSearchInput" placeholder="Search Team..." class="filter-input" autocomplete="off">
+            <div id="teamDropdownList" class="dropdown-list"></div>
+        </div>
+        <input type="hidden" name="team_search" id="teamSearchHidden">
         <select name="team_member" class="filter-select">
             <option value="">All Members</option>
         </select>

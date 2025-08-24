@@ -1784,6 +1784,29 @@ import mysql.connector
 import csv
 from datetime import datetime, timedelta
 
+def teams_list(request):
+    print("teams_list -> Request method:", request.method)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = [{"id": row['team_id'], "name": row['team_name']} for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    print("teams_list -> Teams fetched:", teams)
+    return JsonResponse({"teams": teams})
+
+def teams_filters(request):
+    print("teams_filters -> Request method:", request.method)
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+    members = [{"id": row['emp_id'], "name": f"{row['first_name']} {row['last_name']}"} for row in cursor.fetchall()]
+    cursor.execute("SELECT company_id, company_name FROM customers")
+    # Python
+    customers = [{"id": row["company_id"], "name": row["company_name"]} for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return JsonResponse({"members": members, "customers": customers})
 
 def team_reports_page(request):
     name = request.session.get('name', 'Guest')
@@ -1800,157 +1823,144 @@ def team_report_filters(request):
     conn.close()
     return JsonResponse({'members': members, 'customers': customers})
 
-def team_reports_api(request):
-    team_search = request.GET.get('team_search', '')
-    team_member = request.GET.get('team_member')
-    jd_status = request.GET.get('jd_status')
-    customer = request.GET.get('customer')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-
-    conn = get_db_conn()
-    cursor = conn.cursor(dictionary=True)
-
-    # Team Overview
-    cursor.execute("SELECT * FROM teams WHERE team_name LIKE %s", (f"%{team_search}%",))
-    teams = cursor.fetchall()
-    team_ids = [t['team_id'] for t in teams]
+@csrf_exempt
+def team_report(request):
+    print("team_reports_api -> Request method:", request.method)
+    if request.method != "POST":
+        return JsonResponse({}, status=400)
+    params = json.loads(request.body)
+    db = ATSDatabaseInitializer()
+    db.cursor.execute("USE ats")
+    # --- Team Overview ---
+    team_name = params.get("team_search", "")
+    overview_sql = """
+        SELECT t.team_name, m.first_name, m.last_name,
+            GROUP_CONCAT(tm2.first_name, ' ', tm2.last_name)
+        FROM teams t
+        LEFT JOIN hr_team_members m ON t.lead_emp_id = m.emp_id
+        LEFT JOIN team_members tm ON t.team_id = tm.team_id
+        LEFT JOIN hr_team_members tm2 ON tm.emp_id = tm2.emp_id
+        WHERE (%s = '' OR t.team_name = %s)
+        GROUP BY t.team_id
+    """
+    db.cursor.execute(overview_sql, (team_name, team_name))
     team_overview = []
-    for t in teams:
-        cursor.execute("SELECT first_name, last_name FROM hr_team_members WHERE emp_id IN (SELECT emp_id FROM team_members WHERE team_id=%s AND role LIKE 'lead%%')", (t['team_id'],))
-        lead = cursor.fetchone()
-        cursor.execute("SELECT COUNT(*) as cnt FROM team_members WHERE team_id=%s", (t['team_id'],))
-        members = cursor.fetchone()['cnt']
+    for row in db.cursor.fetchall():
         team_overview.append({
-            'team_name': t['team_name'],
-            'team_lead': f"{lead['first_name']} {lead['last_name']}" if lead else '',
-            'members': members
+            "team_name": row[0],
+            "team_lead": f"{row[1]} {row[2]}" if row[1] else "",
+            "members": row[3].split(",") if row[3] else []
         })
-
-    # Recruitment Metrics
-    jd_query = "SELECT * FROM recruitment_jds WHERE team_id IN (%s)" % (",".join(str(tid) for tid in team_ids) if team_ids else "0")
-    jd_params = []
-    if jd_status:
-        jd_query += " AND jd_status=%s"
-        jd_params.append(jd_status)
-    if customer:
-        jd_query += " AND company_id=%s"
-        jd_params.append(customer)
-    if start_date:
-        jd_query += " AND created_at >= %s"
-        jd_params.append(start_date)
-    if end_date:
-        jd_query += " AND created_at <= %s"
-        jd_params.append(end_date)
-    cursor.execute(jd_query, jd_params)
-    jds = cursor.fetchall()
-    total_jds = len(jds)
-    in_progress = sum(1 for jd in jds if jd['jd_status'] == 'active')
-    closed = sum(1 for jd in jds if jd['jd_status'] == 'closed')
-    closure_times = []
-    for jd in jds:
-        if jd['jd_status'] == 'closed' and jd['closure_date'] and jd['created_at']:
-            closure_times.append((jd['closure_date'] - jd['created_at'].date()).days)
-    avg_closure_time = round(sum(closure_times) / len(closure_times), 2) if closure_times else 0
-
-    # Candidate Pipeline
-    cand_query = "SELECT * FROM candidates WHERE team_id IN (%s)" % (",".join(str(tid) for tid in team_ids) if team_ids else "0")
-    cand_params = []
-    if team_member:
-        cand_query += " AND hr_member_id=%s"
-        cand_params.append(team_member)
-    cursor.execute(cand_query, cand_params)
-    candidates = cursor.fetchall()
-    sourced = len(candidates)
-    l1 = sum(1 for c in candidates if c['l1_result'] == 'selected')
-    l2 = sum(1 for c in candidates if c['l2_result'] == 'selected')
-    l3 = sum(1 for c in candidates if c['l3_result'] == 'selected')
-    offered = sum(1 for c in candidates if c['screen_status'] == 'selected')
-    accepted = sum(1 for c in candidates if c['screen_status'] == 'selected' and c['l3_result'] == 'selected')
-    rejected = sum(1 for c in candidates if c['screen_status'] == 'rejected')
-
+    # --- Recruitment Metrics ---
+    jd_status = params.get("jd_status", "")
+    metrics_sql = """
+        SELECT COUNT(jd_id), 
+            SUM(jd_status='active'), 
+            SUM(jd_status='closed'), 
+            AVG(DATEDIFF(closure_date, created_at))
+        FROM recruitment_jds
+        WHERE (%s = '' OR jd_status = %s)
+        AND (%s = '' OR team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
+    """
+    db.cursor.execute(metrics_sql, (jd_status, jd_status, team_name, team_name))
+    row = db.cursor.fetchone()
+    recruitment_metrics = [{
+        "total_jds": row[0] or 0,
+        "in_progress": row[1] or 0,
+        "closed": row[2] or 0,
+        "avg_closure_time": float(row[3]) if row[3] else 0
+    }]
+    # --- Candidate Pipeline ---
+    pipeline_sql = """
+        SELECT 
+            SUM(screen_status='toBeScreened'), 
+            SUM(l1_result='selected'), 
+            SUM(l2_result='selected'), 
+            SUM(l3_result='selected'), 
+            SUM(offer_status='released'), 
+            SUM(offer_status='accepted'), 
+            SUM(screen_status='rejected')
+        FROM candidates
+        WHERE (%s = '' OR team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
+    """
+    db.cursor.execute(pipeline_sql, (team_name, team_name))
+    row = db.cursor.fetchone()
+    candidate_pipeline = [{
+        "sourced": row[0] or 0,
+        "l1": row[1] or 0,
+        "l2": row[2] or 0,
+        "l3": row[3] or 0,
+        "offered": row[4] or 0,
+        "accepted": row[5] or 0,
+        "rejected": row[6] or 0
+    }]
     # Performance Analytics
+    offered = int(row[4] or 0)
+    accepted = int(row[5] or 0)
+    sourced = int(row[0] or 0)
     conversion_rate = round((offered / sourced) * 100, 2) if sourced else 0
     success_rate = round((accepted / offered) * 100, 2) if offered else 0
     monthly_trends = {'labels': [], 'values': []}
     for i in range(6, 0, -1):
         month_start = (datetime.now().replace(day=1) - timedelta(days=30 * i))
         month_end = (datetime.now().replace(day=1) - timedelta(days=30 * (i - 1)))
-        cursor.execute("SELECT COUNT(*) as cnt FROM recruitment_jds WHERE jd_status='closed' AND closure_date >= %s AND closure_date < %s", (month_start.date(), month_end.date()))
-        count = cursor.fetchone()['cnt']
+        db.cursor.execute("SELECT COUNT(*) as cnt FROM recruitment_jds WHERE jd_status='closed' AND closure_date >= %s AND closure_date < %s", (month_start.date(), month_end.date()))
+        count = int(db.cursor.fetchone()[0])
         monthly_trends['labels'].append(month_start.strftime('%b %Y'))
         monthly_trends['values'].append(count)
 
-    # Member Contribution
+    # --- Member Contribution ---
+    member_sql = """
+        SELECT m.first_name, m.last_name,
+            COUNT(DISTINCT j.jd_id), COUNT(c.candidate_id),
+            SUM(offer_status='released')
+        FROM hr_team_members m
+        LEFT JOIN team_members tm ON m.emp_id = tm.emp_id
+        LEFT JOIN teams t ON tm.team_id = t.team_id
+        LEFT JOIN recruitment_jds j ON t.team_id = j.team_id
+        LEFT JOIN candidates c ON j.jd_id = c.jd_id AND c.hr_member_id = m.emp_id
+        WHERE (%s = '' OR t.team_name = %s)
+        GROUP BY m.emp_id
+    """
+    db.cursor.execute(member_sql, (team_name, team_name))
     member_contribution = []
-    cursor.execute("SELECT * FROM hr_team_members WHERE emp_id IN (SELECT emp_id FROM team_members WHERE team_id IN (%s))" % (",".join(str(tid) for tid in team_ids) if team_ids else "0"))
-    members = cursor.fetchall()
-    for m in members:
-        # Python
-        team_ids_str = ",".join(str(tid) for tid in team_ids) if team_ids else "0"
-        cursor.execute(
-            f"SELECT COUNT(*) as cnt FROM recruitment_jds WHERE team_id IN ({team_ids_str}) AND created_by=%s",
-            (m['emp_id'],)
-        )
-        jds_handled = cursor.fetchone()['cnt']
-        cursor.execute("SELECT COUNT(*) as cnt FROM candidates WHERE hr_member_id=%s", (m['emp_id'],))
-        candidates_processed = cursor.fetchone()['cnt']
-        cursor.execute("SELECT COUNT(*) as cnt FROM candidates WHERE hr_member_id=%s AND screen_status='selected'", (m['emp_id'],))
-        offers_made = cursor.fetchone()['cnt']
-        top_performer = 'Yes' if offers_made > 5 else ''
+    for row in db.cursor.fetchall():
         member_contribution.append({
-            'name': f"{m['first_name']} {m['last_name']}",
-            'jds_handled': jds_handled,
-            'candidates_processed': candidates_processed,
-            'offers_made': offers_made,
-            'top_performer': top_performer
+            "member": f"{row[0]} {row[1]}",
+            "jds_handled": row[2] or 0,
+            "candidates_processed": row[3] or 0,
+            "offers_made": row[4] or 0,
+            "top_performer": False  # Add logic if needed
         })
-
-    # Customer Distribution
-    cursor.execute("SELECT * FROM customers")
-    customers = cursor.fetchall()
+    # --- Customer Distribution ---
+    customer_sql = """
+        SELECT c.company_name, COUNT(j.jd_id), SUM(cand.screen_status='selected')
+        FROM customers c
+        LEFT JOIN recruitment_jds j ON c.company_id = j.company_id
+        LEFT JOIN candidates cand ON j.jd_id = cand.jd_id
+        WHERE (%s = '' OR j.team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
+        GROUP BY c.company_id
+    """
+    db.cursor.execute(customer_sql, (team_name, team_name))
     customer_distribution = []
-    for c in customers:
-        # Python
-        team_ids_str = ",".join(str(tid) for tid in team_ids) if team_ids else "0"
-        cursor.execute(
-            f"SELECT COUNT(*) as cnt FROM recruitment_jds WHERE company_id={c['company_id']} AND team_id IN ({team_ids_str})"
-        )
-        jds_handled = cursor.fetchone()['cnt']
-        cursor.execute("SELECT COUNT(*) as cnt FROM candidates WHERE jd_id IN (SELECT jd_id FROM recruitment_jds WHERE company_id=%s) AND screen_status='selected'", (c['company_id'],))
-        candidates_placed = cursor.fetchone()['cnt']
+    for row in db.cursor.fetchall():
         customer_distribution.append({
-            'customer': c['company_name'],
-            'jds_handled': jds_handled,
-            'candidates_placed': candidates_placed
+            "customer": row[0],
+            "jds_handled": row[1] or 0,
+            "candidates_placed": row[2] or 0
         })
-
-    cursor.close()
-    conn.close()
+    db.close()
     return JsonResponse({
-        'team_overview': team_overview,
-        'recruitment_metrics': {
-            'total_jds': total_jds,
-            'in_progress': in_progress,
-            'closed': closed,
-            'avg_closure_time': avg_closure_time
-        },
-        'candidate_pipeline': {
-            'sourced': sourced,
-            'l1': l1,
-            'l2': l2,
-            'l3': l3,
-            'offered': offered,
-            'accepted': accepted,
-            'rejected': rejected
-        },
+        "team_overview": team_overview,
+        "recruitment_metrics": recruitment_metrics,
+        "candidate_pipeline": candidate_pipeline,
+        "member_contribution": member_contribution,
+        "customer_distribution": customer_distribution,
         'performance_analytics': {
             'conversion_rate': conversion_rate,
             'success_rate': success_rate,
             'monthly_trends': monthly_trends
-        },
-        'member_contribution': member_contribution,
-        'customer_distribution': customer_distribution
+        },# Add chart data if needed
     })
 
 def team_reports_export(request):
