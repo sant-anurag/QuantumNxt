@@ -21,6 +21,7 @@
             <table class="ct-table" id="teams-table">
                 <thead>
                     <tr>
+                        <th>Team Id</th>
                         <th>Team Name</th>
                         <th>Total Strength</th>
                         <th>Created On</th>
@@ -30,6 +31,7 @@
                 <tbody id="teams-table-body">
                     {% for team in teams %}
                     <tr data-team-id="{{ team.team_id }}">
+                        <td>{{ team.team_id }}</td>
                         <td>{{ team.team_name }}</td>
                         <td>{{ team.strength }}</td>
                         <td>{{ team.created_at|date:"Y-m-d" }}</td>

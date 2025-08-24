@@ -86,17 +86,27 @@
 
 /* ===== Links ===== */
 .ct-link {
-    color: #3b82f6;
-    text-decoration: underline;
+    color: #2563eb;
+    background: #eef2ff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 0.97rem;
+    text-decoration: none;
     cursor: pointer;
-    font-weight: 500;
-    transition: color 0.15s ease;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.07);
+    display: inline-block;
 }
 
 .ct-link:hover,
 .ct-link:focus {
-    color: #0ea5e9;
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.13);
     text-decoration: none;
+    outline: none;
 }
 
 /* ===== Modal Overlay ===== */
@@ -120,9 +130,10 @@
     box-shadow: 0 6px 24px rgba(0,0,0,0.12);
     padding: 28px 24px;
     width: 100%;
-    max-width: 560px;
+    min-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: auto;
     position: relative;
 }
 

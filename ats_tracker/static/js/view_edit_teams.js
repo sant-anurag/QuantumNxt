@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         allTeams.push({ row: row.cloneNode(true), name: name });
     });
 
-    function renderTeams(filteredTeams, page = 1, perPage = 5) {
+    function renderTeams(filteredTeams, page = 1, perPage = 10) {
         teamsTableBody.innerHTML = "";
         if (filteredTeams.length === 0) {
             teamsTableBody.innerHTML = `<tr><td colspan="4" class="ct-no-data">No teams found.</td></tr>`;
@@ -44,11 +44,11 @@ document.addEventListener("DOMContentLoaded", function() {
         if (term) {
             filtered = allTeams.filter(t => t.name.includes(term));
         }
-        renderTeams(filtered, 1, 5);
+        renderTeams(filtered, 1, 10);
     }
 
     // Initial render
-    renderTeams(allTeams, 1, 5);
+    renderTeams(allTeams, 1, 10);
     teamSearchInput.addEventListener("input", filterTeams);
 
     // --- Modal logic for editing team members ---
