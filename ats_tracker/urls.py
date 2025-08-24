@@ -93,4 +93,5 @@ urlpatterns = [
     path('api/teams/list/', views.teams_list),
     path('api/teams/filters/', views.teams_filters),
     path('api/teams/report/', views.team_report),
+    path('export_team_reports_excel/', views.export_team_reports_excel),
 ]

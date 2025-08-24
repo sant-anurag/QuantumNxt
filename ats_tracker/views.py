@@ -2681,3 +2681,73 @@ def export_teams_excel(request):
         wb.save(response)
         return response
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+import json
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+
+@csrf_exempt
+def export_team_reports_excel(request):
+    print("Received request for exporting team reports to Excel.")
+    if request.method == "POST":
+        data = json.loads(request.body)
+        print("Data received for export:", data)
+        wb = openpyxl.Workbook()
+        thin = Side(border_style="thin", color="000000")
+
+        # Sheet mapping: key -> sheet name
+        sheet_map = {
+            "teamOverviewData": "Team Overview",
+            "recruitmentMetricsData": "Recruitment Metrics",
+            "candidatePipelineData": "Candidate Pipeline",
+            "memberContributionData": "Member Contribution",
+            "customerDistributionData": "Customer Distribution"
+        }
+
+        # Remove default sheet if not used
+        default_sheet = wb.active
+        default_sheet.title = "DeleteMe"
+        used = False
+
+        for key, sheet_name in sheet_map.items():
+            rows = data.get(key, [])
+            if not rows:
+                continue
+            if not used:
+                ws = default_sheet
+                ws.title = sheet_name
+                used = True
+            else:
+                ws = wb.create_sheet(title=sheet_name)
+            for i, row in enumerate(rows):
+                ws.append(row)
+                for j, cell in enumerate(ws[i+1]):
+                    cell.font = Font(bold=(i==0), color="1F497D" if i==0 else "000000")
+                    cell.alignment = Alignment(horizontal="center")
+                    cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+                    if i == 0:
+                        cell.fill = PatternFill("solid", fgColor="D9E1F2")
+            # Auto-width columns
+            for col in ws.columns:
+                max_length = 0
+                col_letter = get_column_letter(col[0].column)
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                ws.column_dimensions[col_letter].width = max_length + 2
+
+        # Remove default sheet if unused
+        if not used:
+            wb.remove(default_sheet)
+
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = "attachment; filename=team_reports.xlsx"
+        wb.save(response)
+        return response
+    return HttpResponse(status=405)

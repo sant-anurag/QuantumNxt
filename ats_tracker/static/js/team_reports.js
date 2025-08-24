@@ -88,7 +88,71 @@ teamReportFilter.addEventListener("submit", function(e) {
         renderReportTables(data);
     });
 });
+document.getElementById('exportBtn').addEventListener('click', function() {
+    // Helper to extract table data by table id
+    function getTableData(tableId) {
+        const table = document.getElementById(tableId);
+        const rows = [];
+        for (let tr of table.querySelectorAll('tr')) {
+            const row = [];
+            for (let td of tr.querySelectorAll('th,td')) {
+                row.push(td.innerText.trim());
+            }
+            rows.push(row);
+        }
+        return rows;
+    }
+    // Collect data from all report tables
+    const teamOverviewData = getTableData('teamOverviewTable');
+    const recruitmentMetricsData = getTableData('recruitmentMetricsTable');
+    const candidatePipelineData = getTableData('candidatePipelineTable');
+    const memberContributionData = getTableData('memberContributionTable');
+    const customerDistributionData = getTableData('customerDistributionTable');
 
+    // Send all data to Django view
+    fetch('/export_team_reports_excel/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            teamOverviewData: teamOverviewData,
+            recruitmentMetricsData: recruitmentMetricsData,
+            candidatePipelineData: candidatePipelineData,
+            memberContributionData: memberContributionData,
+            customerDistributionData: customerDistributionData
+        })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        // Download the Excel file
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'team_reports.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    });
+});
+
+// Helper to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 // Render report tables
 function renderReportTables(data) {
     // Team Overview
