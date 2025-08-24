@@ -198,7 +198,6 @@ def add_member(request):
         'error': error
     })
 
-
 def create_team(request):
     message = error = None
     members = []
@@ -208,6 +207,8 @@ def create_team(request):
         team_name = request.POST.get("team_name", "").strip()
         selected_members = request.POST.getlist("members")
         team_lead = request.POST.get("team_lead", "").strip()
+        # Deduplicate member IDs
+        selected_members = list(set(selected_members))
         print("create_team -> Team Name:", team_name, "Selected Members:", selected_members, "Team Lead:", team_lead)
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
@@ -215,17 +216,21 @@ def create_team(request):
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
-                team_id = cursor.lastrowid
-                for emp_id in selected_members:
-                    cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
-                conn.commit()
-                message = f"Team '{team_name}' created successfully."
-            except Exception as e:
-                if "Duplicate entry" in str(e):
+                # Check for duplicate team name
+                cursor.execute("SELECT COUNT(*) FROM teams WHERE team_name=%s", [team_name])
+                if cursor.fetchone()[0] > 0:
                     error = "A team with this name already exists."
                 else:
-                    error = f"Failed to create team: {str(e)}"
+                    print("create_team -> Inserting team into database")
+                    cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
+                    team_id = cursor.lastrowid
+                    print("create_team -> New Team ID:", team_id)
+                    for emp_id in selected_members:
+                        cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
+                    conn.commit()
+                    message = f"Team '{team_name}' created successfully."
+            except Exception as e:
+                error = f"Failed to create team: {str(e)}"
             finally:
                 if 'cursor' in locals():
                     cursor.close()

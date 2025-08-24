@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const modal = document.getElementById("team-members-modal");
         const closeModalBtn = document.getElementById("close-modal");
         document.addEventListener("click", function(e) {
-            // Delegate for dynamic table pagination and modal links
             if (e.target.classList.contains("ct-link") && e.target.hasAttribute("data-team-id")) {
                 e.preventDefault();
                 const teamId = e.target.getAttribute("data-team-id");
@@ -71,6 +70,21 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
+        // --- Selection tracking ---
+        let selectedMembers = new Set();
+        let selectedTeamLead = null;
+
+        function syncCheckboxesAndRadios() {
+            // Sync checkboxes
+            document.querySelectorAll('input[name="members"]').forEach(cb => {
+                cb.checked = selectedMembers.has(cb.value);
+            });
+            // Sync radios
+            document.querySelectorAll('input[name="team_lead"]').forEach(rb => {
+                rb.checked = (rb.value === selectedTeamLead);
+            });
+        }
+
         function renderMembers(filteredMembers, page = 1, perPage = 5) {
             membersTableBody.innerHTML = "";
             if (filteredMembers.length === 0) {
@@ -84,7 +98,6 @@ document.addEventListener("DOMContentLoaded", function() {
             filteredMembers.slice(start, end).forEach(m => {
                 membersTableBody.appendChild(m.row.cloneNode(true));
             });
-            // Pagination controls
             let pagHtml = "";
             if (totalPages > 1) {
                 for (let i = 1; i <= totalPages; i++) {
@@ -92,12 +105,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
             paginationDiv.innerHTML = pagHtml;
-            // Add event listeners
             paginationDiv.querySelectorAll("button").forEach(btn => {
                 btn.onclick = function() {
                     renderMembers(filteredMembers, parseInt(this.getAttribute("data-page")), perPage);
+                    syncCheckboxesAndRadios();
                 };
             });
+            // After rendering, sync checked states
+            syncCheckboxesAndRadios();
         }
 
         function filterMembers() {
@@ -114,33 +129,63 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Search event
         searchInput.addEventListener("input", filterMembers);
-        // Also re-render on form reset (if needed)
         if (searchInput.form) {
             searchInput.form.addEventListener("reset", () => setTimeout(filterMembers, 10));
         }
 
-        // Keep checkboxes in sync with form (for checked state)
+        // Track selection changes
         membersTableBody.addEventListener("change", function(e) {
-            if (e.target.type === "checkbox") {
-                const value = e.target.value;
-                document.querySelectorAll(`input[name="members"][value="${value}"]`).forEach(cb => {
+            if (e.target.type === "checkbox" && e.target.name === "members") {
+                if (e.target.checked) {
+                    selectedMembers.add(e.target.value);
+                } else {
+                    selectedMembers.delete(e.target.value);
+                }
+                // Sync all checkboxes for this value
+                document.querySelectorAll(`input[name="members"][value="${e.target.value}"]`).forEach(cb => {
                     cb.checked = e.target.checked;
                 });
             }
-            // Sync radio button for team lead selection
             if (e.target.type === "radio" && e.target.name === "team_lead") {
-                const value = e.target.value;
+                selectedTeamLead = e.target.value;
                 document.querySelectorAll(`input[name="team_lead"]`).forEach(rb => {
-                    rb.checked = (rb.value === value);
+                    rb.checked = (rb.value === selectedTeamLead);
                 });
-
             }
         });
 
-        // Disable button on submit
+        // Also sync on pagination re-render
+        membersTableBody.addEventListener("click", function(e) {
+            if (e.target.tagName === "BUTTON" && e.target.hasAttribute("data-page")) {
+                setTimeout(syncCheckboxesAndRadios, 10);
+            }
+        });
+
+        // --- Inject hidden inputs before submit ---
         const form = document.getElementById("create-team-form");
         if (form) {
-            form.addEventListener("submit", function() {
+            form.addEventListener("submit", function(e) {
+                // Remove previous hidden inputs
+                form.querySelectorAll(".js-hidden-member, .js-hidden-lead").forEach(el => el.remove());
+                // Add selected members
+                selectedMembers.forEach(id => {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "members";
+                    input.value = id;
+                    input.classList.add("js-hidden-member");
+                    form.appendChild(input);
+                });
+                // Add team lead
+                if (selectedTeamLead) {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "team_lead";
+                    input.value = selectedTeamLead;
+                    input.classList.add("js-hidden-lead");
+                    form.appendChild(input);
+                }
+                // Disable button
                 const btn = form.querySelector("button[type='submit']");
                 if (btn) {
                     btn.disabled = true;
@@ -177,7 +222,6 @@ document.addEventListener("DOMContentLoaded", function() {
             filteredTeams.slice(start, end).forEach(t => {
                 teamsTableBody.appendChild(t.row.cloneNode(true));
             });
-            // Pagination controls
             let pagHtml = "";
             if (totalPages > 1) {
                 for (let i = 1; i <= totalPages; i++) {
@@ -185,7 +229,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
             teamsPaginationDiv.innerHTML = pagHtml;
-            // Add event listeners
             teamsPaginationDiv.querySelectorAll("button").forEach(btn => {
                 btn.onclick = function() {
                     renderTeams(filteredTeams, parseInt(this.getAttribute("data-page")), perPage);
