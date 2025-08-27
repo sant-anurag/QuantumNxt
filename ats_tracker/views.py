@@ -28,7 +28,8 @@ from email.mime.multipart import MIMEMultipart
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 def login_view(request):
     initializer = ATSDatabaseInitializer()
@@ -2053,9 +2054,29 @@ def team_reports_api(request):
     cursor.execute(jd_query, params)
     jd_progress = cursor.fetchall()
 
-    # Profile Status Breakdown (Pie)
+    # Profile Status Breakdown (Pie) - filtered
     status_counts = {"toBeScreened": 0, "selected": 0, "rejected": 0, "onHold": 0}
-    cursor.execute("SELECT screen_status, COUNT(*) as cnt FROM candidates GROUP BY screen_status")
+    status_query = """
+        SELECT c.screen_status, COUNT(*) as cnt
+        FROM candidates c
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        WHERE 1=1
+    """
+    status_params = []
+    if team_id:
+        status_query += " AND jd.team_id = %s"
+        status_params.append(team_id)
+    if jd_status:
+        status_query += " AND jd.jd_status = %s"
+        status_params.append(jd_status)
+    if from_date:
+        status_query += " AND jd.created_at >= %s"
+        status_params.append(from_date)
+    if to_date:
+        status_query += " AND jd.created_at <= %s"
+        status_params.append(to_date)
+    status_query += " GROUP BY c.screen_status"
+    cursor.execute(status_query, status_params)
     for row in cursor.fetchall():
         status_counts[row["screen_status"]] = row["cnt"]
     profile_status_chart = {
@@ -2641,12 +2662,6 @@ def generate_status_report(request):
         return JsonResponse({"report": report, "message": "Report generated."})
     return JsonResponse({"report": [], "message": "Invalid request."})
 
-from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-import openpyxl
-from openpyxl.styles import Font, Alignment
-from openpyxl.utils import get_column_letter
 
 @csrf_exempt
 def export_teams_excel(request):
@@ -2749,12 +2764,6 @@ def export_team_reports_excel(request):
         return response
     return HttpResponse(status=405)
 
-# python
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-
 def get_user_id_by_username(username):
     conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
     cursor = conn.cursor()
@@ -2779,8 +2788,10 @@ def notification_settings(request):
     print(f"User {username} notifications enabled: {notifications_enabled}")
     cursor.close()
     conn.close()
+    name = request.session.get('name', 'Guest')
     return render(request, "settings_notification.html", {
-        "notifications_enabled": notifications_enabled
+        "notifications_enabled": notifications_enabled,
+        "name": name
     })
 
 @csrf_exempt
