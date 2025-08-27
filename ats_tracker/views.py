@@ -4,26 +4,30 @@ from datetime import datetime
 import mysql.connector
 import textract
 from .parser import ResumeParser
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth import logout
 from django.db import connection
 from django.http import (
-    JsonResponse, HttpResponseBadRequest, FileResponse, Http404
+    JsonResponse, HttpResponseBadRequest, FileResponse, Http404, HttpResponse
 )
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import render_to_string
 
 from .db_initializer import ATSDatabaseInitializer
 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import logout
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 
 def login_view(request):
@@ -2682,13 +2686,6 @@ def export_teams_excel(request):
         return response
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
-import json
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter
-
 @csrf_exempt
 def export_team_reports_excel(request):
     print("Received request for exporting team reports to Excel.")
@@ -2751,3 +2748,61 @@ def export_team_reports_excel(request):
         wb.save(response)
         return response
     return HttpResponse(status=405)
+
+# python
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+def get_user_id_by_username(username):
+    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users WHERE username=%s", (username,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row[0] if row else None
+
+def notification_settings(request):
+    print("Accessing notification settings page.")
+    #fetch user id for username
+    username = request.session.get("username")
+    user_id = get_user_id_by_username(username)
+    print("Current user ID:", username, "for:", user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+   # python
+    cursor.execute("SELECT notifications_enabled FROM user_settings WHERE user_id=%s", [user_id])
+    row = cursor.fetchone()
+    notifications_enabled = row["notifications_enabled"] if row else True
+    print(f"User {username} notifications enabled: {notifications_enabled}")
+    cursor.close()
+    conn.close()
+    return render(request, "settings_notification.html", {
+        "notifications_enabled": notifications_enabled
+    })
+
+@csrf_exempt
+def toggle_notification(request):
+    if request.method == "POST":
+        # fetch username from session or request
+        username = request.session.get("username")
+        user_id = get_user_id_by_username(username)
+        print("Toggling notification for user ID:", username)
+        data = json.loads(request.body)
+        enabled = data.get("enabled", True)
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM user_settings WHERE user_id=%s", [user_id])
+        if cursor.fetchone():
+            cursor.execute("UPDATE user_settings SET notifications_enabled=%s WHERE user_id=%s", [enabled, user_id])
+        else:
+            cursor.execute("INSERT INTO user_settings (user_id, notifications_enabled) VALUES (%s, %s)", [user_id, enabled])
+        status_text = "Notifications are ON" if enabled else "Notifications are OFF"
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({"status_text": status_text})
+    return JsonResponse({"error": "Invalid request"}, status=400)

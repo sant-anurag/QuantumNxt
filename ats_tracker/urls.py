@@ -94,4 +94,6 @@ urlpatterns = [
     path('api/teams/filters/', views.teams_filters),
     path('api/teams/report/', views.team_report),
     path('export_team_reports_excel/', views.export_team_reports_excel),
+    path("settings/notification/", views.notification_settings, name="notification_settings"),
+    path("settings/notification/toggle/", views.toggle_notification, name="toggle_notification"),
 ]

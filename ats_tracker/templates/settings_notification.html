@@ -1,0 +1,19 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block content %}
+<div class="settings-container">
+    <h2>Notification Settings</h2>
+    <div class="notification-toggle">
+        <label class="switch">
+            <input type="checkbox" id="notificationSwitch" {% if notifications_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+        </label>
+        <span id="notifStatusText">
+            {% if notifications_enabled %}Notifications are ON{% else %}Notifications are OFF{% endif %}
+        </span>
+    </div>
+</div>
+<link rel="stylesheet" href="{% static 'css/settings_notification.css' %}">
+<script src="{% static 'js/settings_notification.js' %}"></script>
+{% endblock %}

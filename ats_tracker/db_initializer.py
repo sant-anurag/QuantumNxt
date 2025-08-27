@@ -35,6 +35,15 @@ class ATSDatabaseInitializer:
         """)
 
         self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                notifications_enabled BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                UNIQUE(user_id)
+            );
+        """)
+        self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS hr_team_members (
                 emp_id INT AUTO_INCREMENT PRIMARY KEY,
                 first_name VARCHAR(50) NOT NULL,
