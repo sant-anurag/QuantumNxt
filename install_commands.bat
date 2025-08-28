@@ -11,6 +11,5 @@ pip install textract
 python.exe -m pip install --upgrade pip
 pip install python-docx
 pip install pdfplumber==0.10.2
+pip install channels channels_redis
 echo # YOUR ENVIRONMENT VARIABLES > .env
-
-
