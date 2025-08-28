@@ -31,12 +31,15 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
+    'ats_tracker',
 ]
 
 MIDDLEWARE = [
@@ -68,6 +71,18 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ats.wsgi.application'
+ASGI_APPLICATION = 'ats.asgi.application'
+
+
+# Channels Redis Channel Layer
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)], # Or your Redis host/port
+        },
+    },
+}
 
 
 # Database

@@ -1,0 +1,27 @@
+create a extended page from base html and create a button for which onclick we are triggering notification
+{% extends 'home.html' %}
+
+{% block content %}
+    <h2>Notification List</h2>
+    <button id="trigger-notification">Trigger Notification</button>
+
+    <script>
+        document.getElementById("trigger-notification").onclick = function() {
+            fetch("{% url 'dummy_notification' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Add the new notification to the list
+                    const li = document.createElement("li");
+                    li.textContent = "New notification triggered!";
+                    document.getElementById("notification-list").appendChild(li);
+                }
+            });
+        };
+    </script>
+{% endblock %} -->

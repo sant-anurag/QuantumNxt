@@ -96,4 +96,12 @@ urlpatterns = [
     path('export_team_reports_excel/', views.export_team_reports_excel),
     path("settings/notification/", views.notification_settings, name="notification_settings"),
     path("settings/notification/toggle/", views.toggle_notification, name="toggle_notification"),
+
+    path("settings/notification/", views.notification_settings, name="notification_settings"),
+    path("settings/notification/toggle/", views.toggle_notification, name="toggle_notification"),
+
+    # create a url for dummy notification and notification list
+    # These urls will be removed after testing
+    path("settings/notification/list/", views.notifications_list, name="notification_list"),
+    path("settings/notification/dummy/", views.dummy_send_notification, name="dummy_notification"),
 ]

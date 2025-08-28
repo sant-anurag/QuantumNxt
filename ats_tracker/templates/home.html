@@ -3,9 +3,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ATS Home</title>
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notification_popup.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.4/dist/tailwind.min.css">
+
 </head>
 <body>
 <div class="sidebar">
@@ -185,6 +189,29 @@
         {% endblock %}
     </div>
 </div>
+
+<!-- Notifications -->
+ <div class="notifications-panel" id="notifications-panel">
+    <h2>Notifications</h2>
+    <ul id="notification-list" class="notifications-list">
+        <!-- Notifications will be dynamically populated here -->
+        <li class="notification-item" id="notification-1">
+            <div class="notification-sender">System</div>
+            <div class="notification-meta">
+                <div class="notification-date">2023-10-01</div>
+                <div class="notification-time">10:30 AM</div>
+            </div>
+            <div class="notification-content">
+                <div class="notification-type">New Candidate Application</div>
+                <div class="notification-text">This will be the notification text</div>
+            </div>
+            <button class="notification-cancel" id="cancel-notification-2"><i class="fas fa-times"></i></button>
+        </li>
+    </ul>
+ </div>
+
+
+<script src="{% static 'js/notifications.js' %}"></script>
 <script src="{% static 'js/home.js' %}"></script>
 </body>
 </html>

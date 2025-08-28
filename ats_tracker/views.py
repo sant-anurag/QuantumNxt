@@ -31,6 +31,8 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from .utils import get_db_connection, send_notification
+
 def login_view(request):
     initializer = ATSDatabaseInitializer()
     initializer.initialize()
@@ -127,14 +129,7 @@ def home(request):
     return render(request, 'home.html', {'name': name})
 
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='root',
-        database='ats',
-        charset='utf8mb4'
-    )
+
 
 
 def add_member(request):
@@ -385,16 +380,9 @@ def remove_member_api(request, team_id):
             conn.close()
     return team_members_api(request, team_id)
 
-# python
-
-
-def get_db():
-    return mysql.connector.connect(
-        host="localhost", user="root", password="root", database="ats"
-    )
 
 def generate_jd_id():
-    conn = get_db()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT jd_id FROM recruitment_jds ORDER BY created_at DESC LIMIT 1")
     last = cursor.fetchone()
@@ -797,17 +785,9 @@ def employee_view_report(request):
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
 
 
-def get_db_conn():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="ats"
-    )
-
 def upload_resume_page(request):
     # Get all JDs for dropdown
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT jd.jd_id, jd.jd_summary, c.company_name
@@ -834,7 +814,7 @@ def upload_resume(request):
                 return JsonResponse({'success': False, 'error': 'Resume file is required.'}, status=400)
 
             # Check if JD exists
-            conn = get_db_conn()
+            conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
             jd_row = cursor.fetchone()
@@ -887,7 +867,7 @@ def upload_resume(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 def recent_resumes(request):
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on,
@@ -918,7 +898,7 @@ def recent_resumes(request):
 
 def download_resume(request, resume_id):
     # Connect to DB and fetch file path and name
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT file_path, file_name FROM resumes WHERE resume_id=%s", (resume_id,))
     row = cursor.fetchone()
@@ -943,7 +923,7 @@ def view_parse_resumes(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
     resumes = cursor.fetchall()
@@ -992,7 +972,7 @@ def update_resume_status(request):
         status = request.POST.get('status')
         if not resume_id or status not in ['selected', 'rejected']:
             return JsonResponse({'success': False, 'error': 'Invalid input'}, status=400)
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE resumes SET status=%s WHERE resume_id=%s", (status, resume_id))
         conn.commit()
@@ -1010,7 +990,7 @@ def export_resumes_excel(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return HttpResponse("JD ID required", status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT r.file_name, r.status, r.uploaded_on, jd.jd_summary, c.company_name
@@ -1050,7 +1030,7 @@ def parse_resumes(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
     resumes = cursor.fetchall()
@@ -1091,7 +1071,7 @@ def parse_resumes(request):
 def save_candidate_details(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor()
         try:
             # Always fetch after SELECT
@@ -1138,7 +1118,7 @@ def update_candidate_screen_status(request):
     if request.method == 'POST':
         resume_id = request.POST.get('resume_id')
         status = request.POST.get('status')
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE candidates SET screen_status=%s WHERE resume_id=%s
@@ -1153,7 +1133,7 @@ def get_jd_team_members(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
     jd_row = cursor.fetchone()
@@ -1186,7 +1166,7 @@ def get_candidate_details(request):
     resume_id = request.GET.get('resume_id')
     if not resume_id:
         return JsonResponse({'success': False, 'error': 'resume_id required'}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE resume_id=%s ORDER BY candidate_id DESC LIMIT 1", (resume_id,))
     candidate = cursor.fetchone()
@@ -1205,7 +1185,7 @@ def get_candidates_for_jd(request):
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
 
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         # First check if there are any candidates at all for this JD
@@ -1266,7 +1246,7 @@ def schedule_interview(request):
             return JsonResponse({'success': False, 'error': 'All fields are required'}, status=400)
 
         # Get candidate info for calendar invite
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT c.candidate_id, c.name, c.email, c.jd_id, r.jd_summary
@@ -1354,7 +1334,7 @@ def record_interview_result_page(request):
     level = request.GET.get('level')
     token = request.GET.get('token')
     # Optionally validate token here
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
     candidate = cursor.fetchone()
@@ -1381,7 +1361,7 @@ def submit_interview_result(request):
     # Optionally validate token here
     if not all([candidate_id, level, result]):
         return JsonResponse({'success': False, 'error': 'Missing fields'}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(f"""
         UPDATE candidates
@@ -1404,7 +1384,7 @@ def manage_candidate_status_data(request):
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     query = """
         SELECT c.*, jd.jd_summary
@@ -1442,7 +1422,7 @@ def update_candidate_status(request):
     l3_result = data.get("l3_result")
     if not candidate_id:
         return JsonResponse({"success": False, "error": "Candidate ID required"}, status=400)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
@@ -1468,7 +1448,7 @@ def view_finalized_candidates(request):
     return render(request, 'view_finalized_candidates.html', {'name': name})
 
 def api_jds(request):
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
     jds = cursor.fetchall()
@@ -1478,7 +1458,7 @@ def api_jds(request):
 
 def api_finalized_candidates(request):
     jd_id = request.GET.get('jd_id')
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT candidate_id, name, email, phone, experience
@@ -1493,7 +1473,7 @@ def api_finalized_candidates(request):
 
 def api_candidate_details(request):
     candidate_id = request.GET.get('candidate_id')
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
     candidate = cursor.fetchone()
@@ -1504,7 +1484,7 @@ def api_candidate_details(request):
 def logout_page(request):
     session_id = request.session.get('session_id')
     if session_id:
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
         conn.commit()
@@ -1525,7 +1505,7 @@ def get_candidate_details_profile(request):
         search_query = request.GET.get('query', '').strip()
         print("get_candidate_details -> Search query:", search_query)
         if search_query:
-            conn = get_db_conn()
+            conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
@@ -1565,7 +1545,7 @@ def save_candidate_details_profile(request):
         l3_comments = request.POST.get('l3_comments', '')
         status = request.POST.get('status', '')
 
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             UPDATE candidates
@@ -1582,7 +1562,7 @@ def candidate_suggestions(request):
         query = request.GET.get('q', '').strip()
         if len(query) < 3:
             return JsonResponse({'results': []})
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT candidate_id, name, email
@@ -1602,12 +1582,7 @@ from datetime import datetime, timedelta
 def dashboard_data(request):
     email = request.session['email'] if 'email' in request.session else None
     print("dashboard_data -> User email:", email)
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="ats"
-    )
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # Get emp_id for logged-in HR member
@@ -1750,7 +1725,7 @@ def generate_offer_letter(request):
         total_ctc = sum([basic, hra, special_allowance, pf, gratuity, bonus, other])
 
         # Save to DB
-        conn = get_db_conn()
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO offer_letters (candidate_id, basic, hra, special_allowance, pf, gratuity, bonus, other, total_ctc)
@@ -1791,7 +1766,7 @@ from datetime import datetime, timedelta
 
 def teams_list(request):
     print("teams_list -> Request method:", request.method)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = [{"id": row['team_id'], "name": row['team_name']} for row in cursor.fetchall()]
@@ -1802,7 +1777,7 @@ def teams_list(request):
 
 def teams_filters(request):
     print("teams_filters -> Request method:", request.method)
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
     members = [{"id": row['emp_id'], "name": f"{row['first_name']} {row['last_name']}"} for row in cursor.fetchall()]
@@ -1818,7 +1793,7 @@ def team_reports_page(request):
     return render(request, 'team_reports.html', {'name': name})
 
 def team_report_filters(request):
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
     members = [{'id': m['emp_id'], 'name': f"{m['first_name']} {m['last_name']}"} for m in cursor.fetchall()]
@@ -1970,7 +1945,7 @@ def team_report(request):
 
 def team_reports_export(request):
     team_search = request.GET.get('team_search', '')
-    conn = get_db_conn()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM teams WHERE team_name LIKE %s", (f"%{team_search}%",))
     teams = cursor.fetchall()
@@ -2013,7 +1988,7 @@ def task_progress_reports_page(request):
     return render(request, "task_progress_reports.html", {"name": name})
 
 def team_report_filters(request):
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = cursor.fetchall()
@@ -2026,7 +2001,7 @@ def team_reports_api(request):
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # JD Progress Overview
@@ -2147,7 +2122,7 @@ def team_reports_api(request):
     })
 
 def api_jd_detail(request, jd_id):
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT c.candidate_id, c.name, c.email, c.phone, c.screen_status as status,
@@ -2167,7 +2142,7 @@ def team_reports_export(request):
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor()
     query = """
         SELECT jd.jd_id, jd.jd_summary, t.team_name, jd.jd_status, jd.total_profiles,
@@ -2215,7 +2190,7 @@ def candidate_conversion_rates_page(request):
     return render(request, "candidate_conversion_rates.html",{'name': name})
 
 def ccr_filters(request):
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds")
     jds = cursor.fetchall()
@@ -2230,7 +2205,7 @@ def ccr_reports_api(request):
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # Overall Funnel
@@ -2419,7 +2394,7 @@ def ccr_reports_export(request):
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor()
     query = """
         SELECT jd.jd_summary, t.team_name,
@@ -2484,7 +2459,6 @@ def user_profile(request):
             LIMIT 1
         """, (email,))
         userDetails = cursor.fetchone() or {}
-        print("Fetched user data:", userDetails)
         cursor.close()
         conn.close()
     except mysql.connector.Error as err:
@@ -2765,7 +2739,7 @@ def export_team_reports_excel(request):
     return HttpResponse(status=405)
 
 def get_user_id_by_username(username):
-    conn = mysql.connector.connect(host="localhost", user="root", password="root", database="ats")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT user_id FROM users WHERE username=%s", (username,))
     row = cursor.fetchone()
@@ -2794,6 +2768,24 @@ def notification_settings(request):
         "name": name
     })
 
+def notification_count(request):
+    if request.method == "GET":
+        username = request.session.get("username")
+        user_id = get_user_id_by_username(username)
+        print("Fetching notification count for user ID:", username)
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id=%s AND is_read=false", [user_id])
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        count = row["count"] if row else 0
+        return JsonResponse({"notification_count": count})
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
 @csrf_exempt
 def toggle_notification(request):
     if request.method == "POST":
@@ -2817,3 +2809,24 @@ def toggle_notification(request):
         conn.close()
         return JsonResponse({"status_text": status_text})
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def notifications_list(request):
+    return render(request, 'notifications_list.html', {})
+
+# this view will be deleted later
+def dummy_send_notification(request):
+    print(" request.session: ", request.session)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    # get all users from hr_team_members
+    cursor.execute("SELECT * FROM users")
+    team_members = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    message = "This is a dummy notification {user_id}"
+    for member in team_members:
+        user_id = member["user_id"]
+        # send notification to each team member
+        send_notification(user_id, message.format(user_id=user_id))
+    return render(request, 'notifications_list.html', {})
