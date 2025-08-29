@@ -91,14 +91,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         renderNotifications();
 
-        // Show notification panel and auto-hide after 10 seconds
+        // Show notification panel with pop-up effect and auto-hide after 10 seconds with fade-out
         if (notificationPanel) {
-            notificationPanel.style.display = 'flex';
+            notificationPanel.classList.add('visible');
             if (hidePanelTimeout) {
                 clearTimeout(hidePanelTimeout);
             }
             hidePanelTimeout = setTimeout(function() {
-                notificationPanel.style.display = 'none';
+                notificationPanel.classList.remove('visible');
             }, 10000);
         }
     };
@@ -112,6 +112,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Hide panel by default
     if (notificationPanel) {
-        notificationPanel.style.display = 'none';
+        notificationPanel.classList.remove('visible');
     }
 });

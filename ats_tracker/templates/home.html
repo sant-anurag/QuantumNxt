@@ -191,10 +191,42 @@
 </div>
 
 <!-- Notifications -->
- <div class="notifications-panel" id="notifications-panel">
+<div class="notifications-panel" id="notifications-panel">
+    <button id="notification-panel-close" style="position:absolute;top:12px;right:16px;background:transparent;border:none;color:#64748b;font-size:1.3em;cursor:pointer;z-index:10001;">
+        <i class="fas fa-times"></i>
+    </button>
+    <h2 style="padding-right:32px;">Notifications</h2>
+    <ul id="notification-list" class="notifications-list">
+        <!-- Notifications will be dynamically populated here -->
+        <li class="notification-item" id="notification-1">
+        <div class="notification-sender">System</div>
+        <div class="notification-meta">
+            <div class="notification-date">2023-10-01</div>
+            <div class="notification-time">10:30 AM</div>
+        </div>
+        <div class="notification-content">
+            <div class="notification-type">New Candidate Application</div>
+            <div class="notification-text">This will be the notification text</div>
+        </div>
+        <button class="notification-cancel" id="cancel-notification-2"><i class="fas fa-times"></i></button>
+        </li>
+    </ul>
+</div>
+
+<!-- Floating Notification Bell Icon -->
+<div id="notification-bell-container" style="position: fixed; bottom: 32px; right: 32px; z-index: 10000;">
+    <button id="notification-bell" style="background: #2563eb; border: none; border-radius: 50%; width: 56px; height: 56px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
+        <i class="fas fa-bell" style="color: #fff; font-size: 1.7em;"></i>
+        <span id="notification-badge" style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: #fff; border-radius: 50%; padding: 2px 7px; font-size: 0.95em; font-weight: 600; display: none; min-width: 22px; text-align: center;"></span>
+    </button>
+</div>
+
+<!-- Notifications Popup Panel -->
+<div class="notifications-panel">
     <h2>Notifications</h2>
     <ul id="notification-list" class="notifications-list">
         <!-- Notifications will be dynamically populated here -->
+        <!--
         <li class="notification-item" id="notification-1">
             <div class="notification-sender">System</div>
             <div class="notification-meta">
@@ -207,11 +239,91 @@
             </div>
             <button class="notification-cancel" id="cancel-notification-2"><i class="fas fa-times"></i></button>
         </li>
+        -->
     </ul>
- </div>
+</div>
 
 
 <script src="{% static 'js/notifications.js' %}"></script>
 <script src="{% static 'js/home.js' %}"></script>
+<script>
+// Floating bell and notification panel logic with dissolve/pop-in animation
+document.addEventListener('DOMContentLoaded', function() {
+    const bell = document.getElementById('notification-bell');
+    const panel = document.querySelector('.notifications-panel');
+    let hideTimeout = null;
+    let mouseOverPanel = false;
+
+    // Show panel on bell click with dissolve and pop-in
+    if (bell && panel) {
+        bell.addEventListener('click', function() {
+            // Dissolve bell
+            bell.classList.add('dissolving');
+            setTimeout(() => {
+                bell.style.display = 'none';
+                // Pop-in panel
+                panel.classList.add('popin');
+                panel.classList.add('visible');
+                setTimeout(() => {
+                    panel.classList.remove('popin');
+                }, 500);
+            }, 500);
+            if (hideTimeout) clearTimeout(hideTimeout);
+            if (!mouseOverPanel) {
+                hideTimeout = setTimeout(() => {
+                    if (!mouseOverPanel) {
+                        panel.classList.remove('visible');
+                        // Show bell again
+                        bell.classList.remove('dissolving');
+                        bell.style.display = '';
+                    }
+                }, 10000);
+            }
+        });
+    }
+
+    // Manual close button for notification panel
+    const closeBtn = document.getElementById('notification-panel-close');
+    if (closeBtn && panel) {
+        closeBtn.addEventListener('click', function() {
+            panel.classList.remove('visible');
+            if (bell) {
+                bell.classList.remove('dissolving');
+                bell.style.display = '';
+            }
+        });
+    }
+
+    // Keep panel open if mouse is over it
+    if (panel) {
+        panel.addEventListener('mouseenter', function() {
+            mouseOverPanel = true;
+            if (hideTimeout) clearTimeout(hideTimeout);
+        });
+        panel.addEventListener('mouseleave', function() {
+            mouseOverPanel = false;
+            hideTimeout = setTimeout(() => {
+                if (!mouseOverPanel) {
+                    panel.classList.remove('visible');
+                    // Show bell again
+                    if (bell) {
+                        bell.classList.remove('dissolving');
+                        bell.style.display = '';
+                    }
+                }
+            }, 10000);
+        });
+        // Also, when panel is hidden by any means, show bell
+        panel.addEventListener('transitionend', function(e) {
+            if (!panel.classList.contains('visible')) {
+                if (bell) {
+                    bell.classList.remove('dissolving');
+                    bell.style.display = '';
+                }
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>

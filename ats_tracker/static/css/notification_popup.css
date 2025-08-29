@@ -1,43 +1,162 @@
+/* Notification panel close (cross) button */
+#notification-panel-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: #e2e8f0;
+    border: none;
+    color: #334155;
+    font-size: 1.3em;
+    cursor: pointer;
+    z-index: 10001;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    transition: background 0.15s, color 0.15s;
+}
+#notification-panel-close:hover {
+    background: #f87171;
+    color: #fff;
+}
+@keyframes bell-dissolve {
+    0% { opacity: 1; transform: scale(1); }
+    80% { opacity: 0.2; transform: scale(1.2); }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+
+@keyframes panel-popin {
+    0% { opacity: 0; transform: translateY(40px) scale(0.98); }
+    80% { opacity: 1; transform: translateY(-8px) scale(1.04); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#notification-bell.dissolving {
+    animation: bell-dissolve 0.5s forwards;
+}
+
+.notifications-panel.popin {
+    animation: panel-popin 0.5s;
+}
 /* notification_popup.css */
 
 /* Notification Popup Styles */
 .notifications-panel {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 24px;
+    right: 24px;
     z-index: 9999;
-    height: 400px;
-    width: 350px;
+    height: 420px;
+    width: 370px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 10px;
-    background-color: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    border: none;
+    border-radius: 14px;
+    padding: 0 0 10px 0;
+    background: #f8fafc;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    transition: opacity 0.5s, transform 0.5s, box-shadow 0.2s;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(40px) scale(0.98);
+}
+
+.notifications-panel.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
 }
 
 .notifications-panel h2 {
-    margin-top: 0;
-    font-size: 1.5em;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    margin: 0;
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #2d3748;
+    background: #e2e8f0;
+    border-radius: 14px 14px 0 0;
+    padding: 16px 20px 12px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    letter-spacing: 0.5px;
 }
 
 .notifications-list {
     list-style: none;
-    padding: 0;
+    padding: 0 0 0 0;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+    max-height: 350px;
+    overflow-y: auto;
 }
 
 .notification-item {
-    padding: 8px 12px;
-    border-bottom: 1px solid #eee;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 14px 16px 14px 16px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 4px solid #2563eb;
+    position: relative;
+    transition: box-shadow 0.2s;
+}
+
+.notification-sender {
+    font-size: 0.95em;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.notification-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.85em;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+.notification-date, .notification-time {
+    font-weight: 400;
+}
+
+.notification-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.notification-type {
+    font-size: 1em;
+    font-weight: 600;
+    color: #2563eb;
+    margin-bottom: 2px;
+}
+.notification-text {
+    font-size: 0.98em;
+    color: #334155;
+    font-weight: 400;
+}
+
+.notification-cancel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+}
+.notification-cancel:hover {
+    background: #e2e8f0;
+    color: #ef4444;
 }
