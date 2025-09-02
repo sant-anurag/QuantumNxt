@@ -1,0 +1,62 @@
+
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/email_configs.css' %}">
+<script src="{% static 'js/email_config.js' %}"></script>
+
+<h2>Email Configuration</h2>
+<form method="POST" action="{% url 'save_email_config' %}">
+        {% csrf_token %}
+    <!-- add prefilled and non editable field of self email id. -->
+     <div>
+        <label for="email_address">Email Address:</label>
+        <input type="email" id="email_address" name="email_address" readonly value="{{ user.email }}">
+     </div>
+    <div class="my-4 flex items-center gap-5">
+        <label for="is_gmail" class="font-medium">Gmail?</label>
+        <label class="switch">
+            <input type="checkbox" id="is_gmail" name="is_gmail" {% if is_gmail %}checked{% endif %}>
+            <span class="slider"></span>
+        </label>
+        <span id="gmailToggleText" class="text-slate-500 text-base">Toggle ON if you are using a Gmail account</span>
+    </div>
+    <div>
+        <label for="email_host_password">Email Host Password:</label>
+        <input type="password" id="email_host_password" name="email_host_password" required>
+    </div>
+   
+    <div class="flex items-center gap-5 mt-5">
+        {% if error %}
+            <p class="text-red-600 mr-4">{{ error }}</p>
+        {% endif %}
+        <button type="submit">Save</button>
+        <button type="button" class="instructions-btn" onclick="showInstructionsModal()">Instructions</button>
+    </div>
+</form>
+
+<!-- Modal for instructions (hidden by default) -->
+<div id="instructionsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeInstructionsModal()">&times;</span>
+        <h3 class="text-blue-600">Instructions for Email Passwords</h3>
+        <ul class="mb-4">
+            <li><b>Gmail Users:</b> You <u>must</u> use an <b>App Password</b> instead of your regular Google account password. Regular passwords will not work due to Google's security policies.</li>
+            <li><b>Other Email Providers (e.g., Outlook, Yahoo, Zoho):</b> Use your normal email account password unless your provider specifically requires an app password.</li>
+        </ul>
+        <h4 class="text-blue-600 mt-5">How to Get a Gmail App Password</h4>
+        <ol class="mb-2">
+            <li>Go to your <a href="https://myaccount.google.com/security" target="_blank">Google Account Security</a> page.</li>
+            <li>Ensure <b>2-Step Verification</b> is enabled. If not, set it up first.</li>
+            <li>After enabling 2-Step Verification, scroll down to the <b>App passwords</b> section and click it.</li>
+            <li>Sign in again if prompted.</li>
+            <li>Under <b>Select app</b>, choose <b>Mail</b>. Under <b>Select device</b>, choose <b>Other</b> and enter a name (e.g., "QuantumNxt Email").</li>
+            <li>Click <b>Generate</b>. Google will show you a 16-character app password.</li>
+            <li>Copy this password and use it as your <b>Email Host Password</b> in the form above.</li>
+            <li><b>Note:</b> Keep your app password secure. You can revoke it anytime from your Google Account.</li>
+        </ol>
+        <p class="text-slate-500 text-base mt-4">If you have trouble, see <a href="https://support.google.com/accounts/answer/185833" target="_blank">Google's official guide on App Passwords</a>.</p>
+    </div>
+</div>
+{% endblock %}

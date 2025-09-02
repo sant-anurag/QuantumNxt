@@ -14,6 +14,27 @@
         </span>
     </div>
 </div>
+
+
+<!-- list will be displayed only when notifications are present and notification are enabled -->
+<!-- Notification List -->
+    {% if notifications and notifications_enabled %}
+        <div class="notification-list-container">
+            <h3>Your Notifications</h3>
+            <button class="clear-all_notifications">Clear All</button>
+            <div class="list-box">
+                <ul id="notifList">
+                {% for notif in notifications %}
+                    <li id="notif_{{ notif.notification_id }}">
+                        <span class="notif-message">{{ notif.message }}</span>
+                        <button class="mark-read-btn" data-notif-id="{{ notif.notification_id }}">Mark as Read</button>
+                    </li>
+                {% endfor %}
+            </ul>
+            </div>
+        </div>
+    {% endif %}
+
 <link rel="stylesheet" href="{% static 'css/settings_notification.css' %}">
 <script src="{% static 'js/settings_notification.js' %}"></script>
 {% endblock %}

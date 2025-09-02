@@ -34,6 +34,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .utils import get_db_connection, send_notification
 
 def login_view(request):
+    """
+    Login view for user authentication.
+
+    """
     initializer = ATSDatabaseInitializer()
     initializer.initialize()
     initializer.close()
@@ -101,6 +105,10 @@ def login_view(request):
 
 # function to validate username and password with users table
 def validate_user(username, password):
+    """
+    Validate user credentials against the database.
+
+    """
     print("validate_user -> Username:", username)
     print("validate_user -> Password:", password)
     conn = get_db_connection()
@@ -125,6 +133,7 @@ def validate_user(username, password):
     return None, None, None,None
 
 def home(request):
+    """Home view for authenticated users."""
     name = request.session.get('name', 'Guest')
     return render(request, 'home.html', {'name': name})
 
@@ -133,6 +142,10 @@ def home(request):
 
 
 def add_member(request):
+    """
+    View to add a new HR team member.
+
+    """
     print("add_member -> Request method:", request.method)
     message = ''
     error = ''
@@ -199,6 +212,10 @@ def add_member(request):
     })
 
 def create_team(request):
+    """
+    View to create a new team.
+
+    """
     message = error = None
     members = []
     teams = []
@@ -266,6 +283,9 @@ def create_team(request):
     })
 
 def team_members(request, team_id):
+    """
+    View to get members of a specific team.
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -284,6 +304,9 @@ def team_members(request, team_id):
     return JsonResponse({"members": members})
 
 def view_edit_teams(request):
+    """
+    View to edit existing teams.
+    """
     teams = []
     try:
         conn = get_db_connection()
@@ -306,6 +329,9 @@ def view_edit_teams(request):
                                                     'name': name})
 
 def team_members_api(request, team_id):
+    """
+    API endpoint to get members of a specific team.
+    """
     members = []
     available_members = []
     try:
@@ -337,6 +363,9 @@ def team_members_api(request, team_id):
 
 @csrf_exempt
 def add_member_api(request, team_id):
+    """
+    API endpoint to add a member to a specific team.
+    """
     try:
         data = json.loads(request.body)
         emp_id = data.get('emp_id')
@@ -360,6 +389,9 @@ def add_member_api(request, team_id):
 
 @csrf_exempt
 def remove_member_api(request, team_id):
+    """
+    API endpoint to remove a member from a specific team.
+    """
     try:
         data = json.loads(request.body)
         emp_id = data.get('emp_id')
@@ -382,6 +414,9 @@ def remove_member_api(request, team_id):
 
 
 def generate_jd_id():
+    """
+    Generate a new job description ID.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT jd_id FROM recruitment_jds ORDER BY created_at DESC LIMIT 1")
@@ -393,6 +428,9 @@ def generate_jd_id():
     return f"JD{num:02d}"
 
 def jd_list(request):
+    """
+    View to list all job descriptions.
+    """
     print("jd_list -> Request method:", request.method)
     search = request.GET.get("search", "")
     page = int(request.GET.get("page", 1))
@@ -436,6 +474,9 @@ def jd_list(request):
 
 @csrf_exempt
 def create_jd(request):
+    """
+    View to create a new job description.
+    """
     print("create_jd -> Request method:", request.method)
     message = error = None
     if request.method == "POST":
@@ -489,6 +530,9 @@ def create_jd(request):
 
 @csrf_exempt
 def jd_detail(request, jd_id):
+    """
+    View to get details of a specific job description.
+    """
     print("jd_detail -> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -526,6 +570,9 @@ def jd_detail(request, jd_id):
 
 
 def create_customer(request):
+    """
+    View to create a new customer.
+    """
     message = error = None
     if request.method == "POST":
         company_name = request.POST.get("company_name", "").strip()
@@ -569,6 +616,11 @@ def create_customer(request):
 
 
 def view_edit_jds(request):
+    """
+    View to edit existing job descriptions.
+
+    """
+
     print("view_edit_jds -> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -603,6 +655,10 @@ def view_edit_jds(request):
     })
 
 def get_jd(request, jd_id):
+    """
+    View to get details of a specific job description.
+    """
+
     print("get_jd details-> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -630,6 +686,10 @@ def get_jd(request, jd_id):
 
 @csrf_exempt
 def update_jd(request, jd_id):
+    """
+    View to update an existing job description.
+    """
+
     print("update_jd -> Request method:", request.method)
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -671,6 +731,9 @@ def update_jd(request, jd_id):
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 def assign_jd_data(request):
+    """
+    View to get data for assigning job descriptions.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -686,6 +749,9 @@ def assign_jd_data(request):
 
 @csrf_exempt
 def assign_jd(request):
+    """
+    View to assign a job description to a team.
+    """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
     data = json.loads(request.body)
@@ -717,14 +783,24 @@ def assign_jd(request):
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
 
 def assign_jd_page(request):
+    """
+    View to render the job description assignment page.
+    """
+
     name = request.session.get('name', 'Guest')
     return render(request, "assign_jd.html",{'name': name})
 
 def employee_view_page(request):
+    """
+    View to render the employee details page.
+    """
     name = request.session.get('name', 'Guest')
     return render(request, "employee_view.html",{'name': name})
 
 def employee_view_data(request):
+    """
+    API endpoint to get data for a specific employee.
+    """
     print("employee_view_data -> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -739,6 +815,9 @@ def employee_view_data(request):
     return JsonResponse({"members": members})
 
 def employee_view_report(request):
+    """
+    API endpoint to get report data for a specific employee.
+    """
     print("employee_view_report -> Request method:", request.method)
     emp_id = request.GET.get("emp_id")
     if not emp_id:
@@ -786,6 +865,9 @@ def employee_view_report(request):
 
 
 def upload_resume_page(request):
+    """
+    View to render the resume upload page.
+    """
     # Get all JDs for dropdown
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -803,6 +885,9 @@ def upload_resume_page(request):
 
 @csrf_exempt
 def upload_resume(request):
+    """
+    API endpoint to upload a resume.
+    """
     if request.method == 'POST':
         try:
             # Validate JD ID and file
@@ -867,6 +952,9 @@ def upload_resume(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 def recent_resumes(request):
+    """
+    View to list recent resumes.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -897,6 +985,9 @@ def recent_resumes(request):
     return JsonResponse({'resumes': resumes})
 
 def download_resume(request, resume_id):
+    """
+    View to download a specific resume.
+    """
     # Connect to DB and fetch file path and name
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -915,11 +1006,17 @@ def download_resume(request, resume_id):
 
 
 def view_parse_resumes_page(request):
+    """
+    View to render the resume parsing page.
+    """
     name = request.session.get('name', 'Guest')
     return render(request, 'view_parse_resumes.html', {'name': name})
 
 @csrf_exempt
 def view_parse_resumes(request):
+    """
+    API endpoint to parse resumes for a specific job description.
+    """
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
@@ -966,6 +1063,9 @@ def view_parse_resumes(request):
 
 @csrf_exempt
 def update_resume_status(request):
+    """
+    API endpoint to update the status of a resume.
+    """
     print("update_resume_status -> Request method:", request.method)
     if request.method == 'POST':
         resume_id = request.POST.get('resume_id')
@@ -986,6 +1086,9 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 
 def export_resumes_excel(request):
+    """
+    API endpoint to export resumes to an Excel file.
+    """
     print("export_resumes_excel -> Request method:", request.method)
     jd_id = request.GET.get('jd_id')
     if not jd_id:
@@ -1027,6 +1130,9 @@ def export_resumes_excel(request):
 
 @csrf_exempt
 def parse_resumes(request):
+    """
+    API endpoint to parse resumes for a specific job description.
+    """
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
@@ -1069,6 +1175,9 @@ def parse_resumes(request):
 
 @csrf_exempt
 def save_candidate_details(request):
+    """
+    API endpoint to save candidate details.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         conn = get_db_connection()
@@ -1115,6 +1224,9 @@ def save_candidate_details(request):
 
 @csrf_exempt
 def update_candidate_screen_status(request):
+    """
+    API endpoint to update the screening status of a candidate.
+    """
     if request.method == 'POST':
         resume_id = request.POST.get('resume_id')
         status = request.POST.get('status')
@@ -1130,6 +1242,9 @@ def update_candidate_screen_status(request):
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 def get_jd_team_members(request):
+    """
+    API endpoint to get team members for a specific job description.
+    """
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
@@ -1162,6 +1277,9 @@ from django.http import JsonResponse
 
 @csrf_exempt
 def get_candidate_details(request):
+    """
+    API endpoint to get details of a specific candidate.
+    """
     print("get_candidate_details -> Request method:", request.method)
     resume_id = request.GET.get('resume_id')
     if not resume_id:
@@ -1177,9 +1295,15 @@ def get_candidate_details(request):
 # views.py
 
 def schedule_interviews_page(request):
+    """
+    View to render the schedule interviews page.
+    """
     return render(request, 'schedule_interviews.html')
 
 def get_candidates_for_jd(request):
+    """
+    API endpoint to get candidates for a specific job description.
+    """
     print("get_candidates_for_jd -> Request method:", request.method)
     jd_id = request.GET.get('jd_id')
     if not jd_id:
@@ -1229,6 +1353,9 @@ def get_candidates_for_jd(request):
 
 @csrf_exempt
 def schedule_interview(request):
+    """
+    API endpoint to schedule an interview.
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
@@ -1298,6 +1425,9 @@ def schedule_interview(request):
             conn.close()
 
 def send_interview_result_email(hr_email, interviewer_email, candidate_id,interviewer_name, candidate, level, token):
+    """
+    Send email to interviewer with candidate details and interview result link.
+    """
     print("send_interview_result_email -> Sending email to interviewer:", interviewer_email)
     print("send_interview_result_email -> Candidate details:", candidate, "candidiate id:", candidate_id)
     print("HR email:", hr_email)
@@ -1311,25 +1441,39 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id,interv
         'result_url': result_url,
         'hr_email': hr_email,
     })
-    msg = MIMEMultipart()
-    msg['From'] = hr_email
-    msg['To'] = interviewer_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(html_content, 'html'))
 
-    # Use your SMTP config here
-    gmail_user = 'sant.vihangam@gmail.com'
-    gmail_app_password = 'pdsexaeusfdgvqsu'  # Use app password, not your Gmail password
+    # Fetch email config for hr_email
+    from .utils import get_db_connection, decrypt_password, send_email
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT email, email_host_password FROM email_config WHERE email=%s", (hr_email,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row:
+        print(f"send_interview_result_email -> No email config found for {hr_email}")
+        return False
+    app_password = decrypt_password(row['email_host_password'])
+    from_email = row['email']
 
-    # Send email via Gmail SMTP
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login(gmail_user, gmail_app_password)
-    server.sendmail(gmail_user, interviewer_email, msg.as_string())
-    print("send_interview_result_email -> Email sent successfully")
-    server.quit()
+    # Use send_email utility
+    result = send_email(
+        from_email=from_email,
+        app_password=app_password,
+        to_email=interviewer_email,
+        subject=subject,
+        html_body=html_content
+    )
+    if result:
+        print("send_interview_result_email -> Email sent successfully")
+    else:
+        print("send_interview_result_email -> Failed to send email")
+    return result
 
 def record_interview_result_page(request):
+    """
+    View to render the record interview result page.
+    """
     candidate_id = request.GET.get('candidate_id')
     level = request.GET.get('level')
     token = request.GET.get('token')
@@ -1350,6 +1494,9 @@ def record_interview_result_page(request):
 
 @csrf_exempt
 def submit_interview_result(request):
+    """
+    API endpoint to submit interview results.
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
     data = json.loads(request.body)
@@ -1377,9 +1524,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
 def manage_candidate_status_page(request):
+    """
+    View to render the manage candidate status page.
+    """
     return render(request, "manage_candidate_status.html")
 
 def manage_candidate_status_data(request):
+    """
+    API endpoint to get candidate status data.
+    """
     search = request.GET.get("search", "")
     page = int(request.GET.get("page", 1))
     limit = 10
@@ -1413,6 +1566,9 @@ def manage_candidate_status_data(request):
 
 @csrf_exempt
 def update_candidate_status(request):
+    """
+    API endpoint to update the status of a candidate.
+    """
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
     data = json.loads(request.body)
@@ -1443,11 +1599,17 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 def view_finalized_candidates(request):
+    """
+    View to render the finalized candidates page.
+    """
     print("view_finalized_candidates -> Request method:", request.method)
     name = request.session.get('name', 'Guest')
     return render(request, 'view_finalized_candidates.html', {'name': name})
 
 def api_jds(request):
+    """
+    API endpoint to get job descriptions.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
@@ -1457,6 +1619,9 @@ def api_jds(request):
     return JsonResponse({'jds': jds})
 
 def api_finalized_candidates(request):
+    """
+    API endpoint to get finalized candidates for a specific job description.
+    """
     jd_id = request.GET.get('jd_id')
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1472,6 +1637,9 @@ def api_finalized_candidates(request):
     return JsonResponse({'candidates': candidates})
 
 def api_candidate_details(request):
+    """
+    API endpoint to get details of a specific candidate.
+    """
     candidate_id = request.GET.get('candidate_id')
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1482,6 +1650,9 @@ def api_candidate_details(request):
     return JsonResponse({'details': candidate})
 
 def logout_page(request):
+    """
+    View to render the logout page.
+    """
     session_id = request.session.get('session_id')
     if session_id:
         conn = get_db_connection()
@@ -1494,6 +1665,9 @@ def logout_page(request):
     return render(request, 'logout.html')
 
 def candidate_profile(request):
+    """
+    View to render the candidate profile page.
+    """
     name = request.session.get('name', 'Guest')
     """Render the Candidate Profile page."""
     return render(request, 'candidate_profile.html', {'name': name})
@@ -1558,6 +1732,9 @@ def save_candidate_details_profile(request):
 
 @csrf_exempt
 def candidate_suggestions(request):
+    """
+    API endpoint to get candidate suggestions based on a search query.
+    """
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
         if len(query) < 3:
@@ -1580,6 +1757,9 @@ import mysql.connector
 from datetime import datetime, timedelta
 
 def dashboard_data(request):
+    """
+    API endpoint to get dashboard data for the logged-in user.
+    """
     email = request.session['email'] if 'email' in request.session else None
     print("dashboard_data -> User email:", email)
     conn = get_db_connection()
@@ -1705,6 +1885,9 @@ from django.http import JsonResponse
 import json
 
 def offer_letter_page(request):
+    """
+    View to render the offer letter page.
+    """
     name = request.session.get('name', 'Guest')
     return render(request, 'offer_letter.html', {'name': name})
 
@@ -1712,6 +1895,9 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def generate_offer_letter(request):
+    """
+    API endpoint to generate an offer letter.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         candidate_id = data.get('candidate_id')
@@ -1765,6 +1951,9 @@ import csv
 from datetime import datetime, timedelta
 
 def teams_list(request):
+    """
+    API endpoint to get the list of teams.
+    """
     print("teams_list -> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1776,6 +1965,9 @@ def teams_list(request):
     return JsonResponse({"teams": teams})
 
 def teams_filters(request):
+    """
+    API endpoint to get filters for teams.
+    """
     print("teams_filters -> Request method:", request.method)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1789,10 +1981,16 @@ def teams_filters(request):
     return JsonResponse({"members": members, "customers": customers})
 
 def team_reports_page(request):
+    """
+    View to render the team reports page.
+    """
     name = request.session.get('name', 'Guest')
     return render(request, 'team_reports.html', {'name': name})
 
 def team_report_filters(request):
+    """
+    API endpoint to get filters for team reports.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
@@ -1805,6 +2003,9 @@ def team_report_filters(request):
 
 @csrf_exempt
 def team_report(request):
+    """
+    API endpoint to get team report data.
+    """
     print("team_reports_api -> Request method:", request.method)
     if request.method != "POST":
         return JsonResponse({}, status=400)
@@ -1944,6 +2145,9 @@ def team_report(request):
     })
 
 def team_reports_export(request):
+    """
+    API endpoint to export team reports.
+    """
     team_search = request.GET.get('team_search', '')
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1984,10 +2188,16 @@ from django.shortcuts import render
 import csv
 
 def task_progress_reports_page(request):
+    """
+    View to render the task progress reports page.
+    """
     name = request.session.get('name', 'Guest')
     return render(request, "task_progress_reports.html", {"name": name})
 
 def team_report_filters(request):
+    """
+    API endpoint to get filters for team reports.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id, team_name FROM teams")
@@ -1997,6 +2207,9 @@ def team_report_filters(request):
     return JsonResponse({"teams": teams})
 
 def team_reports_api(request):
+    """
+    API endpoint to get team reports.
+    """
     team_id = request.GET.get("team_id")
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
@@ -2122,6 +2335,9 @@ def team_reports_api(request):
     })
 
 def api_jd_detail(request, jd_id):
+    """
+    API endpoint to get details of a specific job description.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -2138,6 +2354,9 @@ def api_jd_detail(request, jd_id):
     return JsonResponse({"candidates": candidates})
 
 def team_reports_export(request):
+    """
+    API endpoint to export team reports as CSV.
+    """
     team_id = request.GET.get("team_id")
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
@@ -2190,6 +2409,9 @@ def candidate_conversion_rates_page(request):
     return render(request, "candidate_conversion_rates.html",{'name': name})
 
 def ccr_filters(request):
+    """
+    API endpoint to get filters for candidate conversion rates.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds")
@@ -2201,6 +2423,9 @@ def ccr_filters(request):
     return JsonResponse({"jds": jds, "teams": teams})
 
 def ccr_reports_api(request):
+    """
+    API endpoint to get candidate conversion reports.
+    """
     jd_id = request.GET.get("jd_id")
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
@@ -2390,6 +2615,9 @@ def ccr_reports_api(request):
     })
 
 def ccr_reports_export(request):
+    """
+    API endpoint to export candidate conversion reports.
+    """
     jd_id = request.GET.get("jd_id")
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
@@ -2438,6 +2666,9 @@ def ccr_reports_export(request):
     return response
 
 def user_profile(request):
+    """
+    View to render the user profile page.
+    """
     try:
         email = request.session.get('email')
         conn = get_db_connection()
@@ -2466,6 +2697,9 @@ def user_profile(request):
     return render(request, "user_profile.html", {"user": userDetails})
 
 def manage_sessions_view(request):
+    """
+    View to manage user sessions.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -2492,6 +2726,9 @@ def manage_sessions_view(request):
 
 @csrf_exempt
 def logout_session_api(request):
+    """
+    API endpoint to log out a user session.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         session_id = data.get('session_id')
@@ -2513,6 +2750,9 @@ import json
 
 
 def access_permissions(request):
+    """
+    View to manage access permissions.
+    """
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT user_id, username, email, role, is_active, created_at FROM users")
@@ -2524,6 +2764,9 @@ def access_permissions(request):
 
 @csrf_exempt
 def change_password(request):
+    """
+    API endpoint to change user password.
+    """
     if request.method == "POST":
         data = json.loads(request.body)
         old_password = data.get("old_password")
@@ -2547,6 +2790,9 @@ def change_password(request):
 
 @csrf_exempt
 def change_role(request):
+    """
+    API endpoint to change user role.
+    """
     if request.method == "POST":
         data = json.loads(request.body)
         user_id = data.get("user_id")
@@ -2566,6 +2812,9 @@ from django.views.decorators.csrf import csrf_exempt
 from .db_initializer import ATSDatabaseInitializer
 
 def status_report_page(request):
+    """
+    View to render the status report page.
+    """
     db = ATSDatabaseInitializer()
     db.cursor.execute("USE ats")
     db.cursor.execute("SELECT team_id, team_name FROM teams")
@@ -2577,6 +2826,9 @@ def status_report_page(request):
 
 @csrf_exempt
 def generate_status_report(request):
+    """
+    API endpoint to generate status reports.
+    """
     if request.method == "POST":
         db = ATSDatabaseInitializer()
         db.cursor.execute("USE ats")
@@ -2639,6 +2891,9 @@ def generate_status_report(request):
 
 @csrf_exempt
 def export_teams_excel(request):
+    """
+    API endpoint to export team data as Excel.
+    """
     if request.method == "POST":
         data = json.loads(request.body)
         teams = data.get("teams", [])
@@ -2677,6 +2932,9 @@ def export_teams_excel(request):
 
 @csrf_exempt
 def export_team_reports_excel(request):
+    """
+    API endpoint to export team reports as Excel.
+    """
     print("Received request for exporting team reports to Excel.")
     if request.method == "POST":
         data = json.loads(request.body)
@@ -2739,6 +2997,9 @@ def export_team_reports_excel(request):
     return HttpResponse(status=405)
 
 def get_user_id_by_username(username):
+    """
+    Fetch user ID from the database using username.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT user_id FROM users WHERE username=%s", (username,))
@@ -2748,6 +3009,9 @@ def get_user_id_by_username(username):
     return row[0] if row else None
 
 def notification_settings(request):
+    """
+    View to manage notification settings.
+    """
     print("Accessing notification settings page.")
     #fetch user id for username
     username = request.session.get("username")
@@ -2760,15 +3024,62 @@ def notification_settings(request):
     row = cursor.fetchone()
     notifications_enabled = row["notifications_enabled"] if row else True
     print(f"User {username} notifications enabled: {notifications_enabled}")
+
+    # get all notifications for user
+    cursor.execute("SELECT * FROM notifications WHERE user_id=%s and is_read=%s", [user_id, False])
+    notifications = cursor.fetchall()
+    print(f"User {username} notifications: {notifications}")
+
     cursor.close()
     conn.close()
     name = request.session.get('name', 'Guest')
+    print(f"User {username} notifications: {notifications}")
     return render(request, "settings_notification.html", {
         "notifications_enabled": notifications_enabled,
-        "name": name
+        "name": name,
+        "notifications": notifications
     })
 
+def mark_as_read_notification(request, notification_id):
+    """
+    API endpoint to mark a notification as read.
+    """
+    print("Accessing mark as read notification API.")
+    if request.method == "POST":
+        username = request.session.get("username")
+        user_id = get_user_id_by_username(username)
+        print("Marking notification as read for user ID:", username)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE notifications SET is_read=true WHERE user_id=%s AND notification_id=%s", [user_id, notification_id])
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({"status": "success"})
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+def clear_all_notifications(request):
+    user_name = request.session.get("username")
+    try:
+        user_id = get_user_id_by_username(user_name)
+        print("Clearing all notifications for user ID:", user_name)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM notifications WHERE user_id=%s", [user_id])
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return JsonResponse({"status": "success"})
+    except Exception as e:
+        print("Error clearing notifications for user ID:", user_name, "Error:", e)
+        return JsonResponse({"status": "error", "message": str(e)})
+
 def notification_count(request):
+    """
+    API endpoint to get the count of unread notifications.
+    """
     if request.method == "GET":
         username = request.session.get("username")
         user_id = get_user_id_by_username(username)
@@ -2788,6 +3099,9 @@ def notification_count(request):
 
 @csrf_exempt
 def toggle_notification(request):
+    """
+    API endpoint to toggle notification settings.
+    """
     if request.method == "POST":
         # fetch username from session or request
         username = request.session.get("username")
@@ -2811,11 +3125,78 @@ def toggle_notification(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
+
+
+def settings_email_config(request):
+    # get user from session
+    user = {'email': request.session.get('username')}
+    return render(request, "email_config.html", {"user": user})
+
+def save_email_config(request):
+   
+    useremail = request.session.get('username')
+    if request.method == "POST":
+        print("save_email_config -> Saving email config for user:", request.session.get('username'))
+        email = request.POST.get("email_address")
+        email_host_password = request.POST.get("email_host_password")
+        # Checkbox: present as 'on' if checked, None if not
+        is_gmail = request.POST.get('is_gmail') == 'on'
+
+        # Validate email_host and email_host_password
+        if not email:
+            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Email is required."})
+        if not email_host_password:
+            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Email host password is required."})
+
+        # Get user_id from users table
+        user_id = get_user_id_by_username(useremail)
+
+        if not user_id:
+            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "User not found."})
+        print("Saving email config for user ID:", useremail, "->", user_id)
+        # Check email credentials by sending a test mail
+        from .utils import encrypt_password, send_email
+        test_subject = "[QuantumNxt] Email Configuration Test"
+        test_body = "<p>Your email configuration was tested and is working! If you did not request this, please ignore.</p>"
+        test_result = send_email(
+            from_email=email,
+            app_password=email_host_password,
+            to_email=email,  # send to self
+            subject=test_subject,
+            html_body=test_body
+        )
+        if not test_result:
+            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Could not send test email. Please check your email address and password.", "is_gmail": is_gmail})
+
+        # Encrypt the password before saving
+        encrypted_password = encrypt_password(email_host_password)
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        # Upsert into email_config table (user_id, email, email_host_password)
+        cursor.execute("""
+            INSERT INTO email_config (user_id, email, email_host_password)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE email=%s, email_host_password=%s
+        """, (user_id, email, encrypted_password, email, encrypted_password))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return render(request, "email_config.html", {"user": {"email": useremail}, "success": True, "is_gmail": is_gmail})
+    return render(request, "email_config.html", {"user": {"email": useremail}, "is_gmail": False})
+
 def notifications_list(request):
+    """
+    View to render the notifications list page.
+    """
     return render(request, 'notifications_list.html', {})
 
 # this view will be deleted later
 def dummy_send_notification(request):
+    """
+    View to send a dummy notification.
+    """
     print(" request.session: ", request.session)
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -2830,3 +3211,12 @@ def dummy_send_notification(request):
         # send notification to each team member
         send_notification(user_id, message.format(user_id=user_id))
     return render(request, 'notifications_list.html', {})
+
+def get_email_configs(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM email_config WHERE user_id=%s", [user_id])
+    email_configs = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return email_configs

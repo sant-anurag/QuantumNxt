@@ -2,6 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const notificationPanel = document.querySelector('.notifications-panel');
+    const notificationBell = document.getElementById('notification-bell');
     let hidePanelTimeout = null;
     const notificationBadge = document.getElementById('notification-badge');
     const notificationList = document.getElementById('notification-list');
@@ -91,14 +92,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         renderNotifications();
 
-        // Show notification panel with pop-up effect and auto-hide after 10 seconds with fade-out
+        // Show notification panel and hide bell
         if (notificationPanel) {
             notificationPanel.classList.add('visible');
+            if (notificationBell) {
+                notificationBell.style.display = 'none';
+            }
             if (hidePanelTimeout) {
                 clearTimeout(hidePanelTimeout);
             }
             hidePanelTimeout = setTimeout(function() {
                 notificationPanel.classList.remove('visible');
+                if (notificationBell) {
+                    notificationBell.style.display = '';
+                }
             }, 10000);
         }
     };
@@ -113,5 +120,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hide panel by default
     if (notificationPanel) {
         notificationPanel.classList.remove('visible');
+        if (notificationBell) {
+            notificationBell.style.display = '';
+        }
     }
 });

@@ -34,6 +34,7 @@ class ATSDatabaseInitializer:
         )
         """)
 
+
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -43,6 +44,17 @@ class ATSDatabaseInitializer:
                 UNIQUE(user_id)
             );
         """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_config (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                email_host_password VARCHAR(255) NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        """)
+
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS hr_team_members (
                 emp_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,6 +89,18 @@ class ATSDatabaseInitializer:
             );
         """)
 
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                notification_id INT AUTO_INCREMENT PRIMARY KEY,
+                notification_type ENUM('Candidate', 'Job', 'Team', 'General', 'system') NOT NULL,
+                sender VARCHAR(100) NOT NULL DEFAULT 'system',
+                user_id INT NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        """)
        # Add this before recruitment_jds table creation
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS customers (
@@ -192,6 +216,7 @@ class ATSDatabaseInitializer:
     def close(self):
         self.cursor.close()
         self.conn.close()
+
 
 # Usage
 # initializer = ATSDatabaseInitializer()

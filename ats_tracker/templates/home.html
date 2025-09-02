@@ -73,7 +73,8 @@
             <a href="#"><i class="fas fa-cog"></i> Settings</a>
             <ul class="submenu">
                 <li><a href="{% url 'user_profile' %}"><i class="fas fa-user"></i> User Profile</a></li>
-               <li><a href="{% url 'notification_settings' %}"><i class="fas fa-bell"></i> Notification</a></li>
+                <li><a href="{% url 'notification_settings' %}"><i class="fas fa-bell"></i> Notification</a></li>
+                <li><a href="{% url 'settings_email_config' %}"><i class="fas fa-envelope"></i> Email Config</a></li>
                 <li><a href="{% url 'access_permissions' %}"><i class="fas fa-shield-alt"></i> Access & Permissions</a></li>
                 <li><a href="{% url 'manage_sessions' %}"><i class="fas fa-user-lock"></i> Manage Sessions</a></li>
                 <li><a href="{% url 'create_customer' %}"><i class="fas fa-building"></i> Create Customer</a></li>
@@ -198,26 +199,15 @@
     <h2 style="padding-right:32px;">Notifications</h2>
     <ul id="notification-list" class="notifications-list">
         <!-- Notifications will be dynamically populated here -->
-        <li class="notification-item" id="notification-1">
-        <div class="notification-sender">System</div>
-        <div class="notification-meta">
-            <div class="notification-date">2023-10-01</div>
-            <div class="notification-time">10:30 AM</div>
-        </div>
-        <div class="notification-content">
-            <div class="notification-type">New Candidate Application</div>
-            <div class="notification-text">This will be the notification text</div>
-        </div>
-        <button class="notification-cancel" id="cancel-notification-2"><i class="fas fa-times"></i></button>
-        </li>
+        
     </ul>
 </div>
 
 <!-- Floating Notification Bell Icon -->
-<div id="notification-bell-container" style="position: fixed; bottom: 32px; right: 32px; z-index: 10000;">
-    <button id="notification-bell" style="background: #2563eb; border: none; border-radius: 50%; width: 56px; height: 56px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
-        <i class="fas fa-bell" style="color: #fff; font-size: 1.7em;"></i>
-        <span id="notification-badge" style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: #fff; border-radius: 50%; padding: 2px 7px; font-size: 0.95em; font-weight: 600; display: none; min-width: 22px; text-align: center;"></span>
+<div id="notification-bell-container" class="fixed bottom-8 right-8 z-[10000]">
+    <button id="notification-bell" class="bg-blue-600 border-none rounded-full w-14 h-14 shadow-lg flex items-center justify-center cursor-pointer relative">
+        <i class="fas fa-bell text-white text-2xl"></i>
+        <span id="notification-badge" class="absolute top-2 right-2 bg-red-500 text-white rounded-full px-2 py-0.5 text-sm font-semibold min-w-[22px] text-center hidden"></span>
     </button>
 </div>
 
