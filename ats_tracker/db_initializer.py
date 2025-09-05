@@ -49,7 +49,9 @@ class ATSDatabaseInitializer:
             CREATE TABLE IF NOT EXISTS email_config (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
-                email VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                email_smtp_host VARCHAR(255) NOT NULL,
+                email_smtp_port INT DEFAULT 587,
                 email_host_password VARCHAR(255) NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
@@ -92,9 +94,10 @@ class ATSDatabaseInitializer:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS notifications (
                 notification_id INT AUTO_INCREMENT PRIMARY KEY,
-                notification_type ENUM('Candidate', 'Job', 'Team', 'General', 'system') NOT NULL,
-                sender VARCHAR(100) NOT NULL DEFAULT 'system',
+                notification_type ENUM('Candidate', 'Job', 'Team', 'General', 'system', 'Interview Result') NOT NULL,
+                created_by VARCHAR(100) NOT NULL DEFAULT 'system',
                 user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
                 message TEXT NOT NULL,
                 is_read BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

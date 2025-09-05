@@ -2,7 +2,7 @@
 from django.contrib.auth.models import AnonymousUser
 from channels.db import database_sync_to_async
 from django.contrib.sessions.models import Session
-from .utils import get_db_connection
+from .utils import DataOperations
 
 class User:
     def __init__(self, user_id, username, email, role):
@@ -26,7 +26,7 @@ def get_user_from_session(session_key):
         user_id = session_data.get('user_id')
         
         if user_id:
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
 
             cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
@@ -64,3 +64,5 @@ class CustomAuthMiddleware:
 
 def CustomAuthMiddlewareStack(inner):
     return CustomAuthMiddleware(inner)
+
+

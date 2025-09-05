@@ -104,11 +104,7 @@ urlpatterns = [
     path("settings/notification/mark_read/<int:notification_id>/", views.mark_as_read_notification, name="mark_notification_read"),
 
     # email config paths
-    path("settings/email/", views.settings_email_config, name="settings_email_config"),
-    path("settings/email/save/", views.save_email_config, name="save_email_config"),
+    # path("settings/email/", views.settings_email_config, name="settings_email_config"),
+    path("settings/email/", views.save_email_config, name="save_email_config"),
 
-    # create a url for dummy notification and notification list
-    # These urls will be removed after testing
-    path("settings/notification/list/", views.notifications_list, name="notification_list"),
-    path("settings/notification/dummy/", views.dummy_send_notification, name="dummy_notification"),
 ]

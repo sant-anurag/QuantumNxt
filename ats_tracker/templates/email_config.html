@@ -26,11 +26,17 @@
         <label for="email_host_password">Email Host Password:</label>
         <input type="password" id="email_host_password" name="email_host_password" required>
     </div>
-   
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    <p class="{% if 'error' in message.tags %}text-red-600{% elif 'success' in message.tags %}text-green-600{% endif %} mb-4">{{ message }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
     <div class="flex items-center gap-5 mt-5">
-        {% if error %}
-            <p class="text-red-600 mr-4">{{ error }}</p>
-        {% endif %}
+       
         <button type="submit">Save</button>
         <button type="button" class="instructions-btn" onclick="showInstructionsModal()">Instructions</button>
     </div>
@@ -56,7 +62,7 @@
             <li>Copy this password and use it as your <b>Email Host Password</b> in the form above.</li>
             <li><b>Note:</b> Keep your app password secure. You can revoke it anytime from your Google Account.</li>
         </ol>
-        <p class="text-slate-500 text-base mt-4">If you have trouble, see <a href="https://support.google.com/accounts/answer/185833" target="_blank">Google's official guide on App Passwords</a>.</p>
+        <p class="text-slate-500 text-base mt-4">If you have trouble, see <a class="text-blue-600" href="https://support.google.com/accounts/answer/185833" target="_blank">Google's official guide on App Passwords</a>.</p>
     </div>
 </div>
 {% endblock %}

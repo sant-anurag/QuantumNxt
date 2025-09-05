@@ -31,7 +31,7 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .utils import get_db_connection, send_notification
+from .utils import DataOperations, MessageProviders
 
 def login_view(request):
     """
@@ -56,7 +56,7 @@ def login_view(request):
             user_id, db_username, role, status = valid_user
 
             # Check for existing active session
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute(
                 "SELECT session_id, expires_at FROM user_sessions WHERE user_id=%s AND expires_at > %s",
@@ -111,7 +111,7 @@ def validate_user(username, password):
     """
     print("validate_user -> Username:", username)
     print("validate_user -> Password:", password)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT user_id, username, email, password_hash, role, is_active
@@ -172,7 +172,7 @@ def add_member(request):
         else:
             try:
                 # Add HR team member
-                connection = get_db_connection()
+                connection = DataOperations.get_db_connection()
                 cursor = connection.cursor()
                 cursor.execute("""
                     INSERT INTO hr_team_members
@@ -226,36 +226,41 @@ def create_team(request):
         team_lead = request.POST.get("team_lead", "").strip()
         # Deduplicate member IDs
         selected_members = list(set(selected_members))
-        print("create_team -> Team Name:", team_name, "Selected Members:", selected_members, "Team Lead:", team_lead)
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
         else:
-            try:
-                conn = get_db_connection()
-                cursor = conn.cursor()
+            # try:
+                conn = DataOperations.get_db_connection()
+                cursor = conn.cursor(dictionary=True)
                 # Check for duplicate team name
-                cursor.execute("SELECT COUNT(*) FROM teams WHERE team_name=%s", [team_name])
-                if cursor.fetchone()[0] > 0:
+                cursor.execute("SELECT COUNT(*) as count FROM teams WHERE team_name=%s", [team_name])
+                t = cursor.fetchone()
+                print("create_team -> Duplicate check result:", t, type(t), t['count'] if t else 'N/A', type(t['count']) if t else 'N/A')
+                if t['count'] > 0:
                     error = "A team with this name already exists."
                 else:
-                    print("create_team -> Inserting team into database")
                     cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
                     team_id = cursor.lastrowid
-                    print("create_team -> New Team ID:", team_id)
                     for emp_id in selected_members:
                         cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
+
                     conn.commit()
-                    message = f"Team '{team_name}' created successfully."
-            except Exception as e:
-                error = f"Failed to create team: {str(e)}"
-            finally:
+
+                    for emp_id in selected_members:
+                        user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+                        if user_id:
+                            MessageProviders.send_notification(user_id, f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
+                    # message = f"Team '{team_name}' created successfully."
+            # except Exception as e:
+            #     error = f"Failed to create team: {str(e)}"
+            # finally:
                 if 'cursor' in locals():
                     cursor.close()
                 if 'conn' in locals():
                     conn.close()
     # Fetch available members
     try:
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT emp_id, first_name, last_name, email, phone FROM hr_team_members WHERE status='active'")
         members = cursor.fetchall()
@@ -287,7 +292,7 @@ def team_members(request, team_id):
     View to get members of a specific team.
     """
     try:
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT m.emp_id, m.first_name, m.last_name, m.email, m.phone, m.role, m.date_joined, m.status
@@ -309,7 +314,7 @@ def view_edit_teams(request):
     """
     teams = []
     try:
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
@@ -335,7 +340,7 @@ def team_members_api(request, team_id):
     members = []
     available_members = []
     try:
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         # Get team members
         cursor.execute("""
@@ -366,18 +371,30 @@ def add_member_api(request, team_id):
     """
     API endpoint to add a member to a specific team.
     """
+    success = False
     try:
         data = json.loads(request.body)
         emp_id = data.get('emp_id')
         if not emp_id:
             return HttpResponseBadRequest("emp_id required")
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         # Insert into team_members, ignore if already exists
         cursor.execute("""
             INSERT IGNORE INTO team_members (team_id, emp_id) VALUES (%s, %s)
         """, [team_id, emp_id])
+
+        # Get user id of the member (from users table, by matching email from hr_team_members)
+        user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+
+        # Get team name
+        cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", [team_id])
+        team_row = cursor.fetchone()
+        team_name = team_row[0] if team_row else None
+
         conn.commit()
+        if user_id:
+            MessageProviders.send_notification(user_id, f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
     except Exception as e:
         return HttpResponseBadRequest(str(e))
     finally:
@@ -385,6 +402,7 @@ def add_member_api(request, team_id):
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
     return team_members_api(request, team_id)
 
 @csrf_exempt
@@ -397,12 +415,21 @@ def remove_member_api(request, team_id):
         emp_id = data.get('emp_id')
         if not emp_id:
             return HttpResponseBadRequest("emp_id required")
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             DELETE FROM team_members WHERE team_id = %s AND emp_id = %s
         """, [team_id, emp_id])
+
+        # Get user id of the member (from users table, by matching email from hr_team_members)
+        user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+
+        # Get team name
+        cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", [team_id])
+        team_row = cursor.fetchone()
+        team_name = team_row[0] if team_row else None
         conn.commit()
+        MessageProviders.send_notification(user_id, f"You have been removed from the team '{team_name}'", created_by="system", notification_type="Team")
     except Exception as e:
         return HttpResponseBadRequest(str(e))
     finally:
@@ -417,7 +444,7 @@ def generate_jd_id():
     """
     Generate a new job description ID.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT jd_id FROM recruitment_jds ORDER BY created_at DESC LIMIT 1")
     last = cursor.fetchone()
@@ -436,7 +463,7 @@ def jd_list(request):
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Join with customers to get company name
     query = """
@@ -490,7 +517,7 @@ def create_jd(request):
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
         try:
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO recruitment_jds
@@ -512,7 +539,7 @@ def create_jd(request):
         # Fetch companies for dropdown
         companies = []
         try:
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
             companies = cursor.fetchall()
@@ -534,7 +561,7 @@ def jd_detail(request, jd_id):
     View to get details of a specific job description.
     """
     print("jd_detail -> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     if request.method == "GET":
         cursor.execute("""
@@ -590,7 +617,7 @@ def create_customer(request):
             error = "Phone number too long."
         else:
             try:
-                conn = get_db_connection()
+                conn = DataOperations.get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO customers (company_name, contact_person_name, contact_email, contact_phone)
@@ -622,7 +649,7 @@ def view_edit_jds(request):
     """
 
     print("view_edit_jds -> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
@@ -660,7 +687,7 @@ def get_jd(request, jd_id):
     """
 
     print("get_jd details-> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills,
@@ -693,7 +720,7 @@ def update_jd(request, jd_id):
     print("update_jd -> Request method:", request.method)
     if request.method == 'POST':
         data = json.loads(request.body)
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         print("update_jd -> Data received:", data)
 
@@ -725,6 +752,9 @@ def update_jd(request, jd_id):
             jd_id
         ])
         conn.commit()
+
+        # TO DO: Send notification to the members of team if jd is allocated to a team.
+
         cursor.close()
         conn.close()
         return JsonResponse({'success': True})
@@ -734,7 +764,7 @@ def assign_jd_data(request):
     """
     View to get data for assigning job descriptions.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
@@ -759,7 +789,7 @@ def assign_jd(request):
     team_id = data.get("team_id")
     if not jd_id or not team_id:
         return JsonResponse({"error": "JD and Team required"}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)  # <-- Use dictionary=True
     cursor.execute("UPDATE recruitment_jds SET team_id=%s WHERE jd_id=%s", [team_id, jd_id])
     conn.commit()
@@ -779,6 +809,13 @@ def assign_jd(request):
         WHERE tm.team_id=%s
     """, [team_id])
     members = cursor.fetchall()
+
+    # Send notifications to all team members about the JD assignment
+    for member in members:
+        user_id = DataOperations.get_user_id_from_emp_id(member['emp_id'])
+        if user_id:
+            MessageProviders.send_notification(user_id, f"A new JD has been assigned to your team: {jd['jd_summary']}", created_by="system", notification_type="JD Assignment")
+
     conn.close()
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
 
@@ -802,7 +839,7 @@ def employee_view_data(request):
     API endpoint to get data for a specific employee.
     """
     print("employee_view_data -> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT emp_id, first_name, last_name, email, role, status
@@ -822,7 +859,7 @@ def employee_view_report(request):
     emp_id = request.GET.get("emp_id")
     if not emp_id:
         return JsonResponse({"error": "emp_id required"}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Member details
     cursor.execute("""
@@ -869,7 +906,7 @@ def upload_resume_page(request):
     View to render the resume upload page.
     """
     # Get all JDs for dropdown
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT jd.jd_id, jd.jd_summary, c.company_name
@@ -899,7 +936,7 @@ def upload_resume(request):
                 return JsonResponse({'success': False, 'error': 'Resume file is required.'}, status=400)
 
             # Check if JD exists
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
             jd_row = cursor.fetchone()
@@ -955,7 +992,7 @@ def recent_resumes(request):
     """
     View to list recent resumes.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on,
@@ -989,7 +1026,7 @@ def download_resume(request, resume_id):
     View to download a specific resume.
     """
     # Connect to DB and fetch file path and name
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT file_path, file_name FROM resumes WHERE resume_id=%s", (resume_id,))
     row = cursor.fetchone()
@@ -1020,7 +1057,7 @@ def view_parse_resumes(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
     resumes = cursor.fetchall()
@@ -1072,7 +1109,7 @@ def update_resume_status(request):
         status = request.POST.get('status')
         if not resume_id or status not in ['selected', 'rejected']:
             return JsonResponse({'success': False, 'error': 'Invalid input'}, status=400)
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE resumes SET status=%s WHERE resume_id=%s", (status, resume_id))
         conn.commit()
@@ -1093,7 +1130,7 @@ def export_resumes_excel(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return HttpResponse("JD ID required", status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT r.file_name, r.status, r.uploaded_on, jd.jd_summary, c.company_name
@@ -1136,7 +1173,7 @@ def parse_resumes(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
     resumes = cursor.fetchall()
@@ -1180,7 +1217,7 @@ def save_candidate_details(request):
     """
     if request.method == 'POST':
         data = json.loads(request.body)
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         try:
             # Always fetch after SELECT
@@ -1230,7 +1267,7 @@ def update_candidate_screen_status(request):
     if request.method == 'POST':
         resume_id = request.POST.get('resume_id')
         status = request.POST.get('status')
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE candidates SET screen_status=%s WHERE resume_id=%s
@@ -1248,7 +1285,7 @@ def get_jd_team_members(request):
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
     jd_row = cursor.fetchone()
@@ -1284,7 +1321,7 @@ def get_candidate_details(request):
     resume_id = request.GET.get('resume_id')
     if not resume_id:
         return JsonResponse({'success': False, 'error': 'resume_id required'}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE resume_id=%s ORDER BY candidate_id DESC LIMIT 1", (resume_id,))
     candidate = cursor.fetchone()
@@ -1309,7 +1346,7 @@ def get_candidates_for_jd(request):
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
 
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         # First check if there are any candidates at all for this JD
@@ -1358,6 +1395,13 @@ def schedule_interview(request):
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+        
+    session = request.session
+    # get user_id and email from session
+    user_email = session.get('email')
+
+    if not user_email:
+        return redirect('login')
 
     try:
         data = json.loads(request.body)
@@ -1373,7 +1417,7 @@ def schedule_interview(request):
             return JsonResponse({'success': False, 'error': 'All fields are required'}, status=400)
 
         # Get candidate info for calendar invite
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT c.candidate_id, c.name, c.email, c.jd_id, r.jd_summary
@@ -1399,22 +1443,26 @@ def schedule_interview(request):
         """, (date, interviewer_name, interviewer_email, candidate_id))
 
         conn.commit()
-
+        user = request.user
         token = f"{candidate_id}-{level}-{int(datetime.now().timestamp())}"  # Simple token
-        send_interview_result_email(
-            hr_email=request.user.email if request.user.is_authenticated else 'hr@yourdomain.com',
+        if send_interview_result_email(
+            hr_email=user_email, # if request.user.is_authenticated else 'hr@yourdomain.com',
             interviewer_email=interviewer_email,
             candidate_id = candidate_id,
             interviewer_name=interviewer_name,
             candidate=candidate,
             level=level,
             token=token
-        )
+        ):
+            
+            # TO DO: If necessary, need to send notification to team leads.
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Interview scheduled successfully'
-        })
+            return JsonResponse({
+                'success': True,
+                'message': 'Interview scheduled successfully'
+            })
+        else:
+            return JsonResponse({'success': False, 'error': 'Failed to send interview result email'}, status=500)
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -1424,14 +1472,14 @@ def schedule_interview(request):
         if 'conn' in locals():
             conn.close()
 
-def send_interview_result_email(hr_email, interviewer_email, candidate_id,interviewer_name, candidate, level, token):
+def send_interview_result_email(hr_email, interviewer_email, candidate_id, interviewer_name, candidate, level, token):
     """
     Send email to interviewer with candidate details and interview result link.
     """
     print("send_interview_result_email -> Sending email to interviewer:", interviewer_email)
     print("send_interview_result_email -> Candidate details:", candidate, "candidiate id:", candidate_id)
     print("HR email:", hr_email)
-    base_url = "http://127.0.0.1:8000/"
+    base_url = "http://127.0.0.1:8000"
     subject = f"Action Required: Record Interview Result for {candidate['name']} ({level.upper()})"
     result_url = f"{base_url}/record_interview_result/?candidate_id={candidate['candidate_id']}&level={level}&token={token}"
     html_content = render_to_string('interview_result_request.html', {
@@ -1443,8 +1491,8 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id,interv
     })
 
     # Fetch email config for hr_email
-    from .utils import get_db_connection, decrypt_password, send_email
-    conn = get_db_connection()
+    from .utils import decrypt_password
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT email, email_host_password FROM email_config WHERE email=%s", (hr_email,))
     row = cursor.fetchone()
@@ -1457,13 +1505,14 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id,interv
     from_email = row['email']
 
     # Use send_email utility
-    result = send_email(
+    result = MessageProviders.send_email(
         from_email=from_email,
         app_password=app_password,
         to_email=interviewer_email,
         subject=subject,
         html_body=html_content
     )
+
     if result:
         print("send_interview_result_email -> Email sent successfully")
     else:
@@ -1478,7 +1527,7 @@ def record_interview_result_page(request):
     level = request.GET.get('level')
     token = request.GET.get('token')
     # Optionally validate token here
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
     candidate = cursor.fetchone()
@@ -1508,7 +1557,7 @@ def submit_interview_result(request):
     # Optionally validate token here
     if not all([candidate_id, level, result]):
         return JsonResponse({'success': False, 'error': 'Missing fields'}, status=400)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(f"""
         UPDATE candidates
@@ -1518,6 +1567,9 @@ def submit_interview_result(request):
     conn.commit()
     cursor.close()
     conn.close()
+
+    # TO DO: If necessary, need to send notification to team leads.
+
     return JsonResponse({'success': True})
 
 from django.views.decorators.csrf import csrf_exempt
@@ -1537,7 +1589,7 @@ def manage_candidate_status_data(request):
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     query = """
         SELECT c.*, jd.jd_summary
@@ -1569,6 +1621,7 @@ def update_candidate_status(request):
     """
     API endpoint to update the status of a candidate.
     """
+    print("update_candidate_status -> Request method:", request.method)
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Invalid method"}, status=405)
     data = json.loads(request.body)
@@ -1578,8 +1631,8 @@ def update_candidate_status(request):
     l3_result = data.get("l3_result")
     if not candidate_id:
         return JsonResponse({"success": False, "error": "Candidate ID required"}, status=400)
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("""
             UPDATE candidates
@@ -1587,6 +1640,30 @@ def update_candidate_status(request):
             WHERE candidate_id=%s
         """, [l1_result, l2_result, l3_result, candidate_id])
         conn.commit()
+
+        # TO DO: Send notification to team lead if any candidate is finallized.(means, selected for all levels)
+        cursor.execute("SELECT name, team_id, hr_member_id FROM candidates WHERE candidate_id=%s", [candidate_id])
+        candidate_data = cursor.fetchone()
+        print("Candidate data for notification:", candidate_data)
+        if candidate_data:
+            team_id = candidate_data['team_id']
+            hr_member_id = candidate_data['hr_member_id']
+            hr_user_id = DataOperations.get_user_id_from_emp_id(hr_member_id)
+            if hr_user_id:
+                MessageProviders.send_notification(
+                    user_id=hr_user_id,
+                    message=f"Candidate {candidate_data['name']}'s status has been updated."
+                )
+            cursor.execute("SELECT lead_emp_id FROM teams WHERE team_id=%s", [team_id])
+            team_row = cursor.fetchone()
+            if team_row:
+                lead_emp_id = team_row['lead_emp_id']
+                lead_user_id = DataOperations.get_user_id_from_emp_id(lead_emp_id)
+                if lead_user_id:
+                    MessageProviders.send_notification(
+                        user_id=lead_user_id,
+                        message=f"Candidate {candidate_data['name']}'s status has been updated."
+                    )
         return JsonResponse({"success": True})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
@@ -1610,7 +1687,7 @@ def api_jds(request):
     """
     API endpoint to get job descriptions.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
     jds = cursor.fetchall()
@@ -1623,7 +1700,7 @@ def api_finalized_candidates(request):
     API endpoint to get finalized candidates for a specific job description.
     """
     jd_id = request.GET.get('jd_id')
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT candidate_id, name, email, phone, experience
@@ -1641,7 +1718,7 @@ def api_candidate_details(request):
     API endpoint to get details of a specific candidate.
     """
     candidate_id = request.GET.get('candidate_id')
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
     candidate = cursor.fetchone()
@@ -1655,7 +1732,7 @@ def logout_page(request):
     """
     session_id = request.session.get('session_id')
     if session_id:
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
         conn.commit()
@@ -1679,7 +1756,7 @@ def get_candidate_details_profile(request):
         search_query = request.GET.get('query', '').strip()
         print("get_candidate_details -> Search query:", search_query)
         if search_query:
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
@@ -1719,7 +1796,7 @@ def save_candidate_details_profile(request):
         l3_comments = request.POST.get('l3_comments', '')
         status = request.POST.get('status', '')
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             UPDATE candidates
@@ -1739,7 +1816,7 @@ def candidate_suggestions(request):
         query = request.GET.get('q', '').strip()
         if len(query) < 3:
             return JsonResponse({'results': []})
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT candidate_id, name, email
@@ -1762,7 +1839,7 @@ def dashboard_data(request):
     """
     email = request.session['email'] if 'email' in request.session else None
     print("dashboard_data -> User email:", email)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # Get emp_id for logged-in HR member
@@ -1911,7 +1988,7 @@ def generate_offer_letter(request):
         total_ctc = sum([basic, hra, special_allowance, pf, gratuity, bonus, other])
 
         # Save to DB
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO offer_letters (candidate_id, basic, hra, special_allowance, pf, gratuity, bonus, other, total_ctc)
@@ -1940,6 +2017,8 @@ def generate_offer_letter(request):
             <p>Congratulations! Please find your salary stack above.</p>
         </div>
         """
+        
+        # TO DO: send notification  to team lead about offere letter generated to candidate and Customer
         return JsonResponse({'success': True, 'offer_html': offer_html})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
@@ -1955,7 +2034,7 @@ def teams_list(request):
     API endpoint to get the list of teams.
     """
     print("teams_list -> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = [{"id": row['team_id'], "name": row['team_name']} for row in cursor.fetchall()]
@@ -1969,7 +2048,7 @@ def teams_filters(request):
     API endpoint to get filters for teams.
     """
     print("teams_filters -> Request method:", request.method)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
     members = [{"id": row['emp_id'], "name": f"{row['first_name']} {row['last_name']}"} for row in cursor.fetchall()]
@@ -1991,7 +2070,7 @@ def team_report_filters(request):
     """
     API endpoint to get filters for team reports.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
     members = [{'id': m['emp_id'], 'name': f"{m['first_name']} {m['last_name']}"} for m in cursor.fetchall()]
@@ -2149,7 +2228,7 @@ def team_reports_export(request):
     API endpoint to export team reports.
     """
     team_search = request.GET.get('team_search', '')
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM teams WHERE team_name LIKE %s", (f"%{team_search}%",))
     teams = cursor.fetchall()
@@ -2198,7 +2277,7 @@ def team_report_filters(request):
     """
     API endpoint to get filters for team reports.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT team_id, team_name FROM teams")
     teams = cursor.fetchall()
@@ -2214,7 +2293,7 @@ def team_reports_api(request):
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # JD Progress Overview
@@ -2338,7 +2417,7 @@ def api_jd_detail(request, jd_id):
     """
     API endpoint to get details of a specific job description.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT c.candidate_id, c.name, c.email, c.phone, c.screen_status as status,
@@ -2361,7 +2440,7 @@ def team_reports_export(request):
     jd_status = request.GET.get("jd_status")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     query = """
         SELECT jd.jd_id, jd.jd_summary, t.team_name, jd.jd_status, jd.total_profiles,
@@ -2412,7 +2491,7 @@ def ccr_filters(request):
     """
     API endpoint to get filters for candidate conversion rates.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds")
     jds = cursor.fetchall()
@@ -2430,7 +2509,7 @@ def ccr_reports_api(request):
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # Overall Funnel
@@ -2622,7 +2701,7 @@ def ccr_reports_export(request):
     team_id = request.GET.get("team_id")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     query = """
         SELECT jd.jd_summary, t.team_name,
@@ -2671,7 +2750,7 @@ def user_profile(request):
     """
     try:
         email = request.session.get('email')
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT
@@ -2700,7 +2779,7 @@ def manage_sessions_view(request):
     """
     View to manage user sessions.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
         SELECT us.session_id, us.user_id, us.expires_at, u.username, u.role
@@ -2733,7 +2812,7 @@ def logout_session_api(request):
         data = json.loads(request.body)
         session_id = data.get('session_id')
         if session_id:
-            conn = get_db_connection()
+            conn = DataOperations.get_db_connection()
             cursor = conn.cursor()
             cursor.execute("DELETE FROM user_sessions WHERE session_id=%s", (session_id,))
             conn.commit()
@@ -2753,7 +2832,7 @@ def access_permissions(request):
     """
     View to manage access permissions.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT user_id, username, email, role, is_active, created_at FROM users")
     users = cursor.fetchall()
@@ -2772,7 +2851,7 @@ def change_password(request):
         old_password = data.get("old_password")
         new_password = data.get("new_password")
         user_id = request.session.get("user_id")
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT password_hash FROM users WHERE user_id=%s", (user_id,))
         row = cursor.fetchone()
@@ -2797,12 +2876,13 @@ def change_role(request):
         data = json.loads(request.body)
         user_id = data.get("user_id")
         role = data.get("role")
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET role=%s WHERE user_id=%s", (role, user_id))
         conn.commit()
         cursor.close()
         conn.close()
+        MessageProviders.send_notification(user_id, f"Your role has been changed to {role}")
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 
@@ -3000,7 +3080,7 @@ def get_user_id_by_username(username):
     """
     Fetch user ID from the database using username.
     """
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT user_id FROM users WHERE username=%s", (username,))
     row = cursor.fetchone()
@@ -3017,7 +3097,7 @@ def notification_settings(request):
     username = request.session.get("username")
     user_id = get_user_id_by_username(username)
     print("Current user ID:", username, "for:", user_id)
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
    # python
     cursor.execute("SELECT notifications_enabled FROM user_settings WHERE user_id=%s", [user_id])
@@ -3050,7 +3130,7 @@ def mark_as_read_notification(request, notification_id):
         user_id = get_user_id_by_username(username)
         print("Marking notification as read for user ID:", username)
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE notifications SET is_read=true WHERE user_id=%s AND notification_id=%s", [user_id, notification_id])
         conn.commit()
@@ -3065,7 +3145,7 @@ def clear_all_notifications(request):
         user_id = get_user_id_by_username(user_name)
         print("Clearing all notifications for user ID:", user_name)
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM notifications WHERE user_id=%s", [user_id])
         conn.commit()
@@ -3085,7 +3165,7 @@ def notification_count(request):
         user_id = get_user_id_by_username(username)
         print("Fetching notification count for user ID:", username)
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id=%s AND is_read=false", [user_id])
         row = cursor.fetchone()
@@ -3110,7 +3190,7 @@ def toggle_notification(request):
         data = json.loads(request.body)
         enabled = data.get("enabled", True)
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id FROM user_settings WHERE user_id=%s", [user_id])
         if cursor.fetchone():
@@ -3135,6 +3215,10 @@ def settings_email_config(request):
 def save_email_config(request):
    
     useremail = request.session.get('username')
+
+    if not useremail:
+        return redirect('login')
+    
     if request.method == "POST":
         print("save_email_config -> Saving email config for user:", request.session.get('username'))
         email = request.POST.get("email_address")
@@ -3155,10 +3239,10 @@ def save_email_config(request):
             return render(request, "email_config.html", {"user": {"email": useremail}, "error": "User not found."})
         print("Saving email config for user ID:", useremail, "->", user_id)
         # Check email credentials by sending a test mail
-        from .utils import encrypt_password, send_email
+        from .utils import encrypt_password
         test_subject = "[QuantumNxt] Email Configuration Test"
         test_body = "<p>Your email configuration was tested and is working! If you did not request this, please ignore.</p>"
-        test_result = send_email(
+        test_result = MessageProviders.send_email(
             from_email=email,
             app_password=email_host_password,
             to_email=email,  # send to self
@@ -3166,12 +3250,13 @@ def save_email_config(request):
             html_body=test_body
         )
         if not test_result:
-            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Could not send test email. Please check your email address and password.", "is_gmail": is_gmail})
+            messages.error(request, "Could not send test email. Please check your email address and password.")
+            return redirect('save_email_config')
 
         # Encrypt the password before saving
         encrypted_password = encrypt_password(email_host_password)
 
-        conn = get_db_connection()
+        conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         # Upsert into email_config table (user_id, email, email_host_password)
         cursor.execute("""
@@ -3183,7 +3268,8 @@ def save_email_config(request):
         cursor.close()
         conn.close()
 
-        return render(request, "email_config.html", {"user": {"email": useremail}, "success": True, "is_gmail": is_gmail})
+        messages.success(request, "Email configuration successful!")
+        return redirect('save_email_config')
     return render(request, "email_config.html", {"user": {"email": useremail}, "is_gmail": False})
 
 def notifications_list(request):
@@ -3192,28 +3278,8 @@ def notifications_list(request):
     """
     return render(request, 'notifications_list.html', {})
 
-# this view will be deleted later
-def dummy_send_notification(request):
-    """
-    View to send a dummy notification.
-    """
-    print(" request.session: ", request.session)
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    # get all users from hr_team_members
-    cursor.execute("SELECT * FROM users")
-    team_members = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    message = "This is a dummy notification {user_id}"
-    for member in team_members:
-        user_id = member["user_id"]
-        # send notification to each team member
-        send_notification(user_id, message.format(user_id=user_id))
-    return render(request, 'notifications_list.html', {})
-
 def get_email_configs(user_id):
-    conn = get_db_connection()
+    conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM email_config WHERE user_id=%s", [user_id])
     email_configs = cursor.fetchone()
