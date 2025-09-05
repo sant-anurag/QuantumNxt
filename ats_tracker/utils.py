@@ -52,7 +52,7 @@ class DataOperations:
 class MessageProviders:
 
     @staticmethod
-    def send_notification(user_id, message, **kwargs):
+    def send_notification(user_id, title, message, **kwargs):
         """
         Sends a real-time notification to a specific user via a WebSocket group
         and saves the notification record to the database.
@@ -80,6 +80,7 @@ class MessageProviders:
         group_name = f'user_notifications_{user_id}'
         now = datetime.datetime.now()
         notification_data = {
+            'title': title,
             'message': message,
             'created-by': kwargs.get('created_by', 'system'),
             'notification_type': kwargs.get('notification_type', 'General'),
@@ -94,9 +95,9 @@ class MessageProviders:
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO notifications (user_id, message, created_by, notification_type, created_at, is_read)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_id, message, notification_data['created-by'], notification_data['notification_type'], now, False))
+            INSERT INTO notifications (user_id, title, message, created_by, notification_type, created_at, is_read)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (user_id, title, message, notification_data['created-by'], notification_data['notification_type'], now, False))
 
         print(f"send_notification -> Preparing to send notification to user_id={user_id}")
 
