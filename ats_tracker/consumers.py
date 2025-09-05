@@ -38,6 +38,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         # Send all event data as notification
         notification_data = {
             'message': event.get('message'),
+            'title': event.get('title'),
             'notification_type': event.get('notification_type'),
             'notification_id': event.get('notification_id'),
             'is_read': event.get('is_read'),

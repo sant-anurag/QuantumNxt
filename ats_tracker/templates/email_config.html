@@ -14,14 +14,13 @@
         <label for="email_address">Email Address:</label>
         <input type="email" id="email_address" name="email_address" readonly value="{{ user.email }}">
      </div>
-    <div class="my-4 flex items-center gap-5">
-        <label for="is_gmail" class="font-medium">Gmail?</label>
-        <label class="switch">
-            <input type="checkbox" id="is_gmail" name="is_gmail" {% if is_gmail %}checked{% endif %}>
-            <span class="slider"></span>
-        </label>
-        <span id="gmailToggleText" class="text-slate-500 text-base">Toggle ON if you are using a Gmail account</span>
-    </div>
+    <div>
+        <label for="email_provider">Email Provider:</label>
+        <select id="email_provider" name="email_provider" required>
+            {% for provider in email_providers.keys %}
+                <option value="{{ provider }}">{{ provider }}</option>
+            {% endfor %}
+        </select>
     <div>
         <label for="email_host_password">Email Host Password:</label>
         <input type="password" id="email_host_password" name="email_host_password" required>

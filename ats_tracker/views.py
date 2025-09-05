@@ -1494,7 +1494,7 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id, inter
     from .utils import decrypt_password
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT email, email_host_password FROM email_config WHERE email=%s", (hr_email,))
+    cursor.execute("SELECT email, email_smtp_host, email_smtp_port, email_host_password FROM email_config WHERE email=%s", (hr_email,))
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -1503,6 +1503,8 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id, inter
         return False
     app_password = decrypt_password(row['email_host_password'])
     from_email = row['email']
+    smtp_host = row['email_smtp_host']
+    smtp_port = row['email_smtp_port']
 
     # Use send_email utility
     result = MessageProviders.send_email(
@@ -1510,7 +1512,9 @@ def send_interview_result_email(hr_email, interviewer_email, candidate_id, inter
         app_password=app_password,
         to_email=interviewer_email,
         subject=subject,
-        html_body=html_content
+        html_body=html_content,
+        smtp_host=smtp_host,
+        smtp_port=smtp_port
     )
 
     if result:
@@ -3210,31 +3214,32 @@ def toggle_notification(request):
 
 
 
-def settings_email_config(request):
-    # get user from session
-    user = {'email': request.session.get('username')}
-    return render(request, "email_config.html", {"user": user})
+
 
 def save_email_config(request):
    
     useremail = request.session.get('username')
-
     if not useremail:
         return redirect('login')
     
+    mail_providers = MessageProviders.MAIL_SERVICE_PROVIDERS
+
     if request.method == "POST":
         print("save_email_config -> Saving email config for user:", request.session.get('username'))
         email = request.POST.get("email_address")
         email_host_password = request.POST.get("email_host_password")
         # Checkbox: present as 'on' if checked, None if not
-        is_gmail = request.POST.get('is_gmail') == 'on'
-
+        email_provider = request.POST.get("email_provider", "gmail")
+        smtp_host = mail_providers.get(email_provider, {}).get("smtp_host", "smtp.gmail.com")
+        smtp_port = mail_providers.get(email_provider, {}).get("smtp_port", 587)
         # Validate email_host and email_host_password
         if not email:
-            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Email is required."})
+            messages.error(request, "Email should not be blank.")
+            return redirect('save_email_config')
         if not email_host_password:
-            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "Email host password is required."})
-
+            messages.error(request, "Host Password should not be blank.")
+            return redirect('save_email_config')
+        
         # Get user_id from users table
         user_id = get_user_id_by_username(useremail)
 
@@ -3250,7 +3255,9 @@ def save_email_config(request):
             app_password=email_host_password,
             to_email=email,  # send to self
             subject=test_subject,
-            html_body=test_body
+            html_body=test_body,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port
         )
         if not test_result:
             messages.error(request, "Could not send test email. Please check your email address and password.")
@@ -3263,17 +3270,17 @@ def save_email_config(request):
         cursor = conn.cursor(dictionary=True)
         # Upsert into email_config table (user_id, email, email_host_password)
         cursor.execute("""
-            INSERT INTO email_config (user_id, email, email_host_password)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE email=%s, email_host_password=%s
-        """, (user_id, email, encrypted_password, email, encrypted_password))
+            INSERT INTO email_config (user_id, email, email_smtp_host, email_smtp_port, email_host_password)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE email=%s, email_smtp_host=%s, email_smtp_port=%s, email_host_password=%s
+        """, (user_id, email, smtp_host, smtp_port, encrypted_password, email, smtp_host, smtp_port, encrypted_password))
         conn.commit()
         cursor.close()
         conn.close()
 
         messages.success(request, "Email configuration successful!")
         return redirect('save_email_config')
-    return render(request, "email_config.html", {"user": {"email": useremail}, "is_gmail": False})
+    return render(request, "email_config.html", {"user": {"email": useremail}, "email_providers": mail_providers, "is_gmail": False})
 
 def notifications_list(request):
     """

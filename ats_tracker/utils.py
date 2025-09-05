@@ -51,6 +51,25 @@ class DataOperations:
 
 class MessageProviders:
 
+    MAIL_SERVICE_PROVIDERS = {
+        'Gmail': {
+            'smtp_host': 'smtp.gmail.com',
+            'smtp_port': 587
+        },
+        'Outlook': {
+            'smtp_host': 'smtp.office365.com',
+            'smtp_port': 587
+        },
+        'Yahoo': {
+            'smtp_host': 'smtp.mail.yahoo.com',
+            'smtp_port': 587
+        },
+        'Zoho': {
+            'smtp_host': 'smtp.zoho.com',
+            'smtp_port': 587
+        }
+    }
+
     @staticmethod
     def send_notification(user_id, title, message, **kwargs):
         """
@@ -216,3 +235,4 @@ def decrypt_password(token):
     return f.decrypt(token.encode()).decode()
 
 
+# tdbksrwtmgqzbyid
