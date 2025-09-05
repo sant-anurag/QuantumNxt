@@ -721,7 +721,7 @@ def update_jd(request, jd_id):
     if request.method == 'POST':
         data = json.loads(request.body)
         conn = DataOperations.get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         print("update_jd -> Data received:", data)
 
         team_id = data['team_id'] if data['team_id'] not in ('', None) else None
@@ -754,6 +754,18 @@ def update_jd(request, jd_id):
         conn.commit()
 
         # TO DO: Send notification to the members of team if jd is allocated to a team.
+        cursor.execute("""
+            SELECT user_id from users 
+                WHERE email IN (
+                       SELECT email FROM hr_team_members 
+                       WHERE emp_id IN ( 
+                       SELECT emp_id FROM team_members WHERE team_id=%s
+                       )
+                    );
+        """, [team_id])
+        users = cursor.fetchall()
+        for user in users:
+            MessageProviders.send_notification(user['user_id'], "JD Update", f"JD '{jd_id}' has been updated.", created_by="system", notification_type="Job")
 
         cursor.close()
         conn.close()
@@ -1456,6 +1468,9 @@ def schedule_interview(request):
         ):
             
             # TO DO: If necessary, need to send notification to team leads.
+            team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(candidate['team_id'])
+            if team_lead_user_id:
+                MessageProviders.send_notification(team_lead_user_id, "Interview Scheduled", f"Interview for {candidate['name']} ({level.upper()}) has been scheduled.", created_by=user_email, notification_type="Candidate")
 
             return JsonResponse({
                 'success': True,
@@ -1562,17 +1577,26 @@ def submit_interview_result(request):
     if not all([candidate_id, level, result]):
         return JsonResponse({'success': False, 'error': 'Missing fields'}, status=400)
     conn = DataOperations.get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     cursor.execute(f"""
         UPDATE candidates
         SET {level}_result = %s, {level}_comments = %s, updated_at = NOW()
         WHERE candidate_id = %s
     """, (result, comments, candidate_id))
     conn.commit()
-    cursor.close()
-    conn.close()
+
 
     # TO DO: If necessary, need to send notification to team leads.
+    cursor.execute("SELECT team_id FROM candidates WHERE candidate_id=%s", (candidate_id,))
+    team_row = cursor.fetchone()
+    if team_row:
+        team_id = team_row['team_id']
+        team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(team_id)
+        if team_lead_user_id:
+            MessageProviders.send_notification(team_lead_user_id, "Interview Result Submitted", f"Interview result for candidate ID {candidate_id} ({level.upper()}) has been submitted.", notification_type="Candidate")
+    cursor.close()
+    conn.close()
+    DataOperations.get_team_lead_user_id_from_team_id()
 
     return JsonResponse({'success': True})
 
@@ -1664,7 +1688,7 @@ def update_candidate_status(request):
             if team_row:
                 lead_emp_id = team_row['lead_emp_id']
                 lead_user_id = DataOperations.get_user_id_from_emp_id(lead_emp_id)
-                if lead_user_id:
+                if lead_user_id and lead_user_id != hr_user_id:
                     MessageProviders.send_notification(
                         user_id=lead_user_id,
                         title="Candidate Status Updated",

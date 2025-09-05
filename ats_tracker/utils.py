@@ -46,7 +46,19 @@ class DataOperations:
         cursor.close()
         conn.close()
         return result[0] if result else None
-
+    
+    @staticmethod
+    def get_team_lead_user_id_from_team_id(team_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT lead_emp_id FROM teams WHERE team_id=%s", (team_id,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if result:
+            lead_emp_id = result['lead_emp_id']
+            return DataOperations.get_user_id_from_emp_id(lead_emp_id)
+        return None
 
 
 class MessageProviders:
