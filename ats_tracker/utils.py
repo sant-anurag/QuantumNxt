@@ -59,6 +59,16 @@ class DataOperations:
             lead_emp_id = result['lead_emp_id']
             return DataOperations.get_user_id_from_emp_id(lead_emp_id)
         return None
+    
+    @staticmethod
+    def get_user_settings(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM user_settings WHERE user_id=%s", (user_id,))
+        settings = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return settings if settings else {}
 
 
 class MessageProviders:
