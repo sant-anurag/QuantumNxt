@@ -32,6 +32,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .utils import DataOperations, MessageProviders
+from .authentication import login_required, role_required
 
 def login_view(request):
     """
@@ -127,13 +128,15 @@ def validate_user(username, password):
         user_id, db_username, db_email, db_hash, role, is_active = row
         if check_password(password, db_hash) and is_active:
             status = True
-            return user_id, db_username, role,status
+            return user_id, db_username, role, status
     cursor.close()
     conn.close()
-    return None, None, None,None
+    return None, None, None, None
 
 def home(request):
     """Home view for authenticated users."""
+    session = request.session
+    print(session)
     name = request.session.get('name', 'Guest')
     return render(request, 'home.html', {'name': name})
 
@@ -3243,10 +3246,10 @@ def toggle_notification(request):
 
 
 
-
+@login_required
 def save_email_config(request):
-   
-    useremail = request.session.get('username')
+    session = request.session
+    useremail = session.get('username')
     if not useremail:
         return redirect('login')
     
