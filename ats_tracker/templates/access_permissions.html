@@ -1,68 +1,75 @@
 {% extends "home.html" %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/access_permissions.css' %}">
-<div class="glass-card access-permissions-container">
-    <h2 class="ap-title"><i class="fas fa-shield-alt"></i> Access & Permissions</h2>
-    <div class="ap-section">
-        <h3>Change Password</h3>
-        <form id="changePasswordForm" class="ap-form">
-            <input type="password" name="old_password" placeholder="Current Password" required>
-            <input type="password" name="new_password" placeholder="New Password" required>
-            <input type="password" name="confirm_password" placeholder="Confirm New Password" required>
-            <button type="submit" class="btn-primary">Change Password</button>
-            <span id="changePasswordMsg" class="ap-msg"></span>
-        </form>
+    <link rel="stylesheet" href="{% static 'css/access_permissions.css' %}">
+    <div class="glass-card access-permissions-container">
+        <h2 class="ap-title"><i class="fas fa-shield-alt"></i> Access & Permissions</h2>
+        <div class="ap-section">
+            <h3>Change Password</h3>
+            <form id="changePasswordForm" class="ap-form">
+                <input type="password" name="old_password" placeholder="Current Password" required>
+                <input type="password" name="new_password" placeholder="New Password" required>
+                <input type="password" name="confirm_password" placeholder="Confirm New Password" required>
+                <button type="submit" class="btn-primary">Change Password</button>
+                <span id="changePasswordMsg" class="ap-msg"></span>
+            </form>
+        </div>
+
+        {% if is_admin %}
+            <div class="ap-section">
+                <h3>Change User Role</h3>
+                <form id="changeRoleForm" class="ap-form">
+                    <select name="user_id" required>
+                        <option value="">Select User</option>
+                        {% for user in users %}
+                        <option value="{{ user.user_id }}">{{ user.username }} ({{ user.role }})</option>
+                        {% endfor %}
+                    </select>
+                    <select name="role" required>
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <button type="submit" class="btn-primary">Change Role</button>
+                    <span id="changeRoleMsg" class="ap-msg"></span>
+                </form>
+            </div>
+
+            <div class="ap-section">
+                <h3>View User Permissions</h3>
+                <table class="ap-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <!-- Table rows rendered by JS -->
+                    </tbody>
+                </table>
+                <div id="userTablePagination"></div>
+            </div>
+        {% endif %}
     </div>
-    <div class="ap-section">
-        <h3>Change User Role</h3>
-        <form id="changeRoleForm" class="ap-form">
-            <select name="user_id" required>
-                <option value="">Select User</option>
-                {% for user in users %}
-                <option value="{{ user.user_id }}">{{ user.username }} ({{ user.role }})</option>
-                {% endfor %}
-            </select>
-            <select name="role" required>
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-            </select>
-            <button type="submit" class="btn-primary">Change Role</button>
-            <span id="changeRoleMsg" class="ap-msg"></span>
-        </form>
-    </div>
-    <div class="ap-section">
-        <h3>View User Permissions</h3>
-        <table class="ap-table">
-            <thead>
-                <tr>
-                    <th>User ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Created At</th>
-                </tr>
-            </thead>
-            <tbody id="userTableBody">
-                <!-- Table rows rendered by JS -->
-            </tbody>
-        </table>
-        <div id="userTablePagination"></div>
-    </div>
-</div>
-<script>
-    window.usersData = [];
-    {% for user in users %}
-    window.usersData.push({
-        user_id: {{ user.user_id }},
-        username: "{{ user.username|escapejs }}",
-        email: "{{ user.email|escapejs }}",
-        role: "{{ user.role|escapejs }}",
-        is_active: {{ user.is_active|yesno:"true,false" }},
-        created_at: "{{ user.created_at|escapejs }}"
-    });
-    {% endfor %}
-</script>
-<script src="{% static 'js/access_permissions.js' %}"></script>
+    <script>
+        window.usersData = [];
+        {% for user in users %}
+        window.usersData.push({
+            user_id: {{ user.user_id }},
+            username: "{{ user.username|escapejs }}",
+            email: "{{ user.email|escapejs }}",
+            role: "{{ user.role|escapejs }}",
+            is_active: {{ user.is_active|yesno:"true,false" }},
+            created_at: "{{ user.created_at|escapejs }}"
+        });
+        {% endfor %}
+    </script>
+    {% if is_admin %}
+        <script src="{% static 'js/access_permissions.js' %}"></script>
+    {% endif %}
+    <script src="{% static 'js/change_password.js' %}"></script>
 {% endblock %}

@@ -1763,6 +1763,8 @@ def api_candidate_details(request):
     conn.close()
     return JsonResponse({'details': candidate})
 
+
+@login_required
 def logout_page(request):
     """
     View to render the logout page.
@@ -1777,6 +1779,7 @@ def logout_page(request):
         conn.close()
     logout(request)  # This logs out the user
     return render(request, 'logout.html')
+
 
 def candidate_profile(request):
     """
@@ -2864,21 +2867,24 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-
+@login_required
 def access_permissions(request):
     """
     View to manage access permissions.
     """
+
+    is_admin = request.session.get('role') == "Admin"
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT user_id, username, email, role, is_active, created_at FROM users")
     users = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render(request, "access_permissions.html", {"users": users})
+    return render(request, "access_permissions.html", {"users": users, "is_admin": is_admin})
 
 
 @csrf_exempt
+@login_required
 def change_password(request):
     """
     API endpoint to change user password.
@@ -2905,6 +2911,7 @@ def change_password(request):
     return JsonResponse({"success": False, "message": "Invalid request."})
 
 @csrf_exempt
+@role_required('Admin', is_api=True)
 def change_role(request):
     """
     API endpoint to change user role.
@@ -2919,8 +2926,11 @@ def change_role(request):
         conn.commit()
         cursor.close()
         conn.close()
+
+        # change session of role changed user
+        
         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
-            MessageProviders.send_notification(user_id, "Role Update", f"Your role has been changed to {role}")
+            MessageProviders.send_notification(user_id, "Role Update", f"Your role has been changed to {role}, please re-login to see the changes.")
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 

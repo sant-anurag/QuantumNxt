@@ -1,4 +1,5 @@
 from functools import wraps
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.conf import settings
 
@@ -15,12 +16,12 @@ def login_required(view_func):
             return view_func(request, *args, **kwargs)
         
         # Redirect to the login page if not authenticated.
-        return redirect(settings.LOGIN_URL)
+        return redirect('login')
         
     return _wrapped_view
 
 # This decorator checks if the user has a specific role.
-def role_required(role_names):
+def role_required(role_names, is_api=False):
     """
     Decorator to check if the user has one of the specified roles.
     
@@ -42,8 +43,10 @@ def role_required(role_names):
             if user_role and user_role in role_names:
                 return view_func(request, *args, **kwargs)
             else:
-                # If role is not matched, return a 403 Forbidden error.
-                return render(request, 'access_denied.html', status=403)
+                if is_api:
+                    return JsonResponse({'error': 'You do not have the required permissions.'}, status=403)
+                else:
+                    return render(request, 'access_denied.html', status=403)
                 
         return _wrapped_view
     return decorator
