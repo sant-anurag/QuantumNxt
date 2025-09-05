@@ -248,7 +248,7 @@ def create_team(request):
 
                     for emp_id in selected_members:
                         user_id = DataOperations.get_user_id_from_emp_id(emp_id)
-                        if user_id:
+                        if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
                             MessageProviders.send_notification(user_id, "Team Update", f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
                     # message = f"Team '{team_name}' created successfully."
             # except Exception as e:
@@ -393,7 +393,7 @@ def add_member_api(request, team_id):
         team_name = team_row[0] if team_row else None
 
         conn.commit()
-        if user_id:
+        if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(user_id, "Team Update", f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
     except Exception as e:
         return HttpResponseBadRequest(str(e))
@@ -423,13 +423,15 @@ def remove_member_api(request, team_id):
 
         # Get user id of the member (from users table, by matching email from hr_team_members)
         user_id = DataOperations.get_user_id_from_emp_id(emp_id)
-
+        if not user_id:
+            return HttpResponseBadRequest("User not found for the given emp_id")
         # Get team name
         cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", [team_id])
         team_row = cursor.fetchone()
         team_name = team_row[0] if team_row else None
         conn.commit()
-        MessageProviders.send_notification(user_id, "Team Update", f"You have been removed from the team '{team_name}'", created_by="system", notification_type="Team")
+        if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
+            MessageProviders.send_notification(user_id, "Team Update", f"You have been removed from the team '{team_name}'", created_by="system", notification_type="Team")
     except Exception as e:
         return HttpResponseBadRequest(str(e))
     finally:
@@ -765,7 +767,8 @@ def update_jd(request, jd_id):
         """, [team_id])
         users = cursor.fetchall()
         for user in users:
-            MessageProviders.send_notification(user['user_id'], "JD Update", f"JD '{jd_id}' has been updated.", created_by="system", notification_type="Job")
+            if DataOperations.get_user_settings(user['user_id']).get('notifications_enabled', False):
+                MessageProviders.send_notification(user['user_id'], "JD Update", f"JD '{jd_id}' has been updated.", created_by="system", notification_type="Job")
 
         cursor.close()
         conn.close()
@@ -825,7 +828,7 @@ def assign_jd(request):
     # Send notifications to all team members about the JD assignment
     for member in members:
         user_id = DataOperations.get_user_id_from_emp_id(member['emp_id'])
-        if user_id:
+        if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(user_id, "JD Assignment", f"A new JD has been assigned to your team: {jd['jd_summary']}", created_by="system", notification_type="JD Assignment")
 
     conn.close()
@@ -1469,7 +1472,7 @@ def schedule_interview(request):
             
             # TO DO: If necessary, need to send notification to team leads.
             team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(candidate['team_id'])
-            if team_lead_user_id:
+            if team_lead_user_id and DataOperations.get_user_settings(team_lead_user_id).get('notifications_enabled', False):
                 MessageProviders.send_notification(team_lead_user_id, "Interview Scheduled", f"Interview for {candidate['name']} ({level.upper()}) has been scheduled.", created_by=user_email, notification_type="Candidate")
 
             return JsonResponse({
@@ -1592,7 +1595,7 @@ def submit_interview_result(request):
     if team_row:
         team_id = team_row['team_id']
         team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(team_id)
-        if team_lead_user_id:
+        if team_lead_user_id and DataOperations.get_user_settings(team_lead_user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(team_lead_user_id, "Interview Result Submitted", f"Interview result for candidate ID {candidate_id} ({level.upper()}) has been submitted.", notification_type="Candidate")
     cursor.close()
     conn.close()
@@ -1677,7 +1680,7 @@ def update_candidate_status(request):
             team_id = candidate_data['team_id']
             hr_member_id = candidate_data['hr_member_id']
             hr_user_id = DataOperations.get_user_id_from_emp_id(hr_member_id)
-            if hr_user_id:
+            if hr_user_id and DataOperations.get_user_settings(hr_user_id).get('notifications_enabled', False):
                 MessageProviders.send_notification(
                     user_id=hr_user_id,
                     title="Candidate Status Updated",
@@ -1688,7 +1691,7 @@ def update_candidate_status(request):
             if team_row:
                 lead_emp_id = team_row['lead_emp_id']
                 lead_user_id = DataOperations.get_user_id_from_emp_id(lead_emp_id)
-                if lead_user_id and lead_user_id != hr_user_id:
+                if lead_user_id and lead_user_id != hr_user_id and DataOperations.get_user_settings(lead_user_id).get('notifications_enabled', False):
                     MessageProviders.send_notification(
                         user_id=lead_user_id,
                         title="Candidate Status Updated",
@@ -2913,7 +2916,8 @@ def change_role(request):
         conn.commit()
         cursor.close()
         conn.close()
-        MessageProviders.send_notification(user_id, "Role Update", f"Your role has been changed to {role}")
+        if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
+            MessageProviders.send_notification(user_id, "Role Update", f"Your role has been changed to {role}")
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 
