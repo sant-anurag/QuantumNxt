@@ -26,8 +26,10 @@
                         {% endfor %}
                     </select>
                     <select name="role" required>
-                        <option value="User">User</option>
-                        <option value="Admin">Admin</option>
+                        <option value="">Select Role</option>
+                        {% for key, value in roles.items %}
+                            <option value="{{ key }}">{{ value }}</option>
+                        {% endfor %}
                     </select>
                     <button type="submit" class="btn-primary">Change Role</button>
                     <span id="changeRoleMsg" class="ap-msg"></span>

@@ -39,7 +39,13 @@
                         <td>{{ team.strength }}</td>
                         <td>{{ team.created_at|date:"Y-m-d" }}</td>
                         <td>
-                            <a href="#" class="ct-link view-edit-team" data-team-id="{{ team.team_id }}">View/Edit Members</a>
+                            {% if user_role == 'Admin' %}
+                                <a href="#" class="ct-link view-edit-team" data-team-id="{{ team.team_id }}">View/Edit Members</a>
+                            {% elif user_role == 'Team_Lead' %}
+                                <a href="#" class="ct-link view-edit-team" data-team-id="{{ team.team_id }}">View Members</a>
+                            {% else %}
+                                ---
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -51,16 +57,32 @@
 </div>
 <!-- Modal for editing team members -->
 <div class="ct-modal-overlay" id="edit-team-modal" style="display:none;">
-    <div class="ct-modal-content" style="max-width:600px;">
+    {% if user_role == 'Admin' or user_role == 'Team_Lead' %}
+    <div class="ct-modal-content" id="edit-team-modal-content" style="max-width:600px;" data-user-role="{{ user_role }}">
         <span class="ct-close-modal" id="close-edit-modal">&times;</span>
         <h3>Edit Team Members</h3>
         <div id="edit-team-members-list"></div>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                        <p class="{% if 'error' in message.tags %}text-red-600{% elif 'success' in message.tags %}text-green-600{% endif %} mb-4">{{ message }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if user_role == 'Admin' %}
         <div class="ct-form-group" style="margin-top:18px;">
             <label for="add-member-select">Add Member to Team:</label>
             <select id="add-member-select" style="width:100%;padding:8px;border-radius:8px;"></select>
             <button class="ct-btn-primary" id="add-member-btn" style="margin-top:10px;">Add Member</button>
         </div>
+        {% endif %}
     </div>
+    {% endif %}
 </div>
 <script src="{% static 'js/view_edit_teams.js' %}"></script>
+{% if user_role == 'Admin' or user_role == 'Team_Lead' %}
+<script src="{% static 'js/view_edit_teams_admin.js' %}"></script>
+{% endif %}
 {% endblock %}

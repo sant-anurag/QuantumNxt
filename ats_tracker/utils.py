@@ -14,6 +14,7 @@ from django.conf import settings
 import smtplib
 
 
+
 class DataOperations:
     @staticmethod
     def generate_random_string(length=8):
@@ -256,5 +257,17 @@ def decrypt_password(token):
     f = Fernet(FERNET_KEY)
     return f.decrypt(token.encode()).decode()
 
+class Constants:
+    ROLES = {
+        'Admin': 'Admin',
+        'Team Lead': 'Team_Lead',
+        'User': 'User'
+    }
+    NOTIFICATION_TYPES = ['General', 'Task', 'Alert', 'Reminder']
+    EMAIL_PROVIDERS = list(MessageProviders.MAIL_SERVICE_PROVIDERS.keys())
+    
+    def validate_role(role):
+        return role in Constants.ROLES.keys()
+    # Add more constants as needed
 
 # tdbksrwtmgqzbyid

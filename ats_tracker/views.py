@@ -31,7 +31,7 @@ from openpyxl.utils import get_column_letter
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .utils import DataOperations, MessageProviders
+from .utils import Constants, DataOperations, MessageProviders
 from .authentication import login_required, role_required
 
 def login_view(request):
@@ -143,7 +143,7 @@ def home(request):
 
 
 
-
+@role_required('Admin')
 def add_member(request):
     """
     View to add a new HR team member.
@@ -214,6 +214,8 @@ def add_member(request):
         'error': error
     })
 
+
+@role_required('Admin')
 def create_team(request):
     """
     View to create a new team.
@@ -316,25 +318,65 @@ def view_edit_teams(request):
     View to edit existing teams.
     """
     teams = []
+    
     try:
+        user_id = request.session.get('user_id', None)
+        name = request.session.get('name', 'Guest')
+        role = request.session.get('role', 'Guest')
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
-            FROM teams t
-            LEFT JOIN team_members tm ON t.team_id = tm.team_id
-            GROUP BY t.team_id, t.team_name, t.created_at
-            ORDER BY t.created_at DESC
-        """)
-        teams = cursor.fetchall()
+        if user_id and role!='Guest':
+            cursor.execute("""
+                    SELECT emp_id FROM hr_team_members
+                            WHERE email=(SELECT email from users WHERE user_id=%s)
+                            LIMIT 1;
+                """, [user_id])
+            row = cursor.fetchone()
+            emp_id=row['emp_id']
+
+            if role == 'Admin':
+                cursor.execute("""
+                    SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
+                    FROM teams t
+                    LEFT JOIN team_members tm ON t.team_id = tm.team_id
+                    GROUP BY t.team_id, t.team_name, t.created_at
+                    ORDER BY t.created_at DESC
+                """)
+
+            elif role == 'Team_Lead':
+                cursor.execute("""
+                    SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
+                    FROM teams t
+                    LEFT JOIN team_members tm ON t.team_id = tm.team_id
+                    WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+                    GROUP BY t.team_id, t.team_name, t.created_at
+                    ORDER BY t.created_at DESC
+                """, [emp_id, emp_id])
+
+            elif role == 'User':
+
+                cursor.execute("""
+                    SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
+                    FROM teams t
+                    LEFT JOIN team_members tm ON t.team_id = tm.team_id
+                    WHERE tm.emp_id=%s
+                    GROUP BY t.team_id, t.team_name, t.created_at
+                    ORDER BY t.created_at DESC;
+                """, [emp_id])
+            else:
+                pass
+            teams = cursor.fetchall()
     finally:
         if 'cursor' in locals():
             cursor.close()
         if 'conn' in locals():
             conn.close()
-    name = request.session.get('name', 'Guest')
+
     return render(request, 'view_edit_teams.html', {'teams': teams,
-                                                    'name': name})
+                                                    'name': name, 
+                                                    'user_role': role
+                                                    })
+
 
 def team_members_api(request, team_id):
     """
@@ -370,6 +412,7 @@ def team_members_api(request, team_id):
     return JsonResponse({'members': members, 'available_members': available_members})
 
 @csrf_exempt
+@role_required('Admin', is_api=True)
 def add_member_api(request, team_id):
     """
     API endpoint to add a member to a specific team.
@@ -378,6 +421,8 @@ def add_member_api(request, team_id):
     try:
         data = json.loads(request.body)
         emp_id = data.get('emp_id')
+        # Get user id of the member (from users table, by matching email from hr_team_members)
+        user_id = DataOperations.get_user_id_from_emp_id(emp_id)
         if not emp_id:
             return HttpResponseBadRequest("emp_id required")
         conn = DataOperations.get_db_connection()
@@ -387,8 +432,7 @@ def add_member_api(request, team_id):
             INSERT IGNORE INTO team_members (team_id, emp_id) VALUES (%s, %s)
         """, [team_id, emp_id])
 
-        # Get user id of the member (from users table, by matching email from hr_team_members)
-        user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+
 
         # Get team name
         cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", [team_id])
@@ -409,6 +453,7 @@ def add_member_api(request, team_id):
     return team_members_api(request, team_id)
 
 @csrf_exempt
+@role_required(['Admin'], is_api=True)
 def remove_member_api(request, team_id):
     """
     API endpoint to remove a member from a specific team.
@@ -601,6 +646,7 @@ def jd_detail(request, jd_id):
         return JsonResponse({"success": True})
 
 
+@role_required('Admin')
 def create_customer(request):
     """
     View to create a new customer.
@@ -2784,6 +2830,8 @@ def ccr_reports_export(request):
     conn.close()
     return response
 
+
+@login_required
 def user_profile(request):
     """
     View to render the user profile page.
@@ -2815,6 +2863,8 @@ def user_profile(request):
         return HttpResponse(f"Database error: {err}", status=500)
     return render(request, "user_profile.html", {"user": userDetails})
 
+
+@role_required('Admin')
 def manage_sessions_view(request):
     """
     View to manage user sessions.
@@ -2839,7 +2889,6 @@ def manage_sessions_view(request):
         })
     cursor.close()
     conn.close()
-    print(sessions)
     name = request.session.get('name', 'Guest')
     return render(request, 'manage_sessions.html', {'sessions': json.dumps(sessions), 'name': name})
 
@@ -2880,7 +2929,7 @@ def access_permissions(request):
     users = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render(request, "access_permissions.html", {"users": users, "is_admin": is_admin})
+    return render(request, "access_permissions.html", {"users": users, "is_admin": is_admin, "roles": Constants.ROLES})
 
 
 @csrf_exempt
@@ -2919,7 +2968,11 @@ def change_role(request):
     if request.method == "POST":
         data = json.loads(request.body)
         user_id = data.get("user_id")
-        role = data.get("role")
+        role = Constants.ROLES.get(data.get("role"), None)
+
+        if not user_id or not role:
+            return JsonResponse({"success": False, "message": "Invalid user ID or role."})
+        
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET role=%s WHERE user_id=%s", (role, user_id))
@@ -2928,7 +2981,7 @@ def change_role(request):
         conn.close()
 
         # change session of role changed user
-        
+
         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(user_id, "Role Update", f"Your role has been changed to {role}, please re-login to see the changes.")
         return JsonResponse({"success": True, "message": "Role updated successfully."})

@@ -224,6 +224,8 @@
     border-radius: 6px;
 }
 
+
+
 /* ===== Responsive Adjustments ===== */
 @media (max-width: 768px) {
     .ct-modal-content {
