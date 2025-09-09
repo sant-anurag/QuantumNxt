@@ -52,3 +52,21 @@ def role_required(role_names, is_api=False):
                 
         return _wrapped_view
     return decorator
+
+
+
+# This decorator checks that user is not logged in.
+def anonymous_required(view_func):
+    """
+    Decorator to ensure that the user is not authenticated.
+    Redirects to the home page if the user is authenticated.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Check for the custom 'authenticated' key in the session.
+        if 'authenticated' in request.session and request.session['authenticated']:
+            return redirect('home')  # Redirect to home if already logged in.
+        
+        return view_func(request, *args, **kwargs)
+        
+    return _wrapped_view     
