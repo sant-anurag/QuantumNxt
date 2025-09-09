@@ -2,6 +2,7 @@ from functools import wraps
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.conf import settings
+from django.contrib import messages
 
 # This decorator checks if any user is logged in.
 def login_required(view_func):
@@ -44,6 +45,7 @@ def role_required(role_names, is_api=False):
                 return view_func(request, *args, **kwargs)
             else:
                 if is_api:
+                    messages.error(request, "You don't have the required permissions.")
                     return JsonResponse({'error': 'You do not have the required permissions.'}, status=403)
                 else:
                     return render(request, 'access_denied.html', status=403)
