@@ -2,7 +2,7 @@
     {% load static %}
     {% block content %}
     <link rel="stylesheet" href="{% static 'css/view_edit_jds.css' %}">
-    <div class="jd-main">
+    <div class="jd-main" data-user-role="{{ user_role }}">
         <header class="jd-header">
             <h2><i class="fas fa-file-alt"></i> View/Edit JDs</h2>
             <div class="jd-search-container" style="display: flex; align-items: center; justify-content: flex-start; gap: 12px;">
@@ -49,7 +49,7 @@
                         </td>
                         <td>{{ jd.created_at|date:"Y-m-d" }}</td>
                         <td>
-                            <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
+                            <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View{% if user_role == "Admin" %}/Edit{% endif %}</button>
                         </td>
                     </tr>
                     {% empty %}
@@ -59,7 +59,7 @@
             </table>
             <div id="jd-table-pagination" class="jd-pagination"></div>
         </div>
-        <div id="jd-card-view" class="jd-card-list" style="display:none;">
+        <div id="jd-card-view" class="jd-card-list" style="display:none;" >
             {% for jd in jds %}
             <div class="jd-card">
                 <div class="jd-card-header">
@@ -82,7 +82,7 @@
                     <p><b>Created:</b> {{ jd.created_at|date:"Y-m-d" }}</p>
                 </div>
                 <div class="jd-card-actions">
-                    <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
+                    <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i>  View{% if user_role == "Admin" %}/Edit{% endif %}</button>
                 </div>
             </div>
             {% empty %}
@@ -175,12 +175,17 @@
                     </div>
                 </div>
                 <div class="jd-modal-actions">
-                    <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
-                    <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
+                    {% if user_role == "Admin" %}
+                        <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
+                        <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
+                    {% endif %}
                     <button type="button" id="jd-close-btn" class="jd-btn-secondary"><i class="fas fa-times"></i> Close</button>
                 </div>
             </form>
         </div>
     </div>
     <script src="{% static 'js/view_edit_jds.js' %}"></script>
+    {% if user_role == "Admin" %}
+        <script src="{% static 'js/view_edit_jds_admin.js' %}"></script>
+    {% endif %}
     {% endblock %}

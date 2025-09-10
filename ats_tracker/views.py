@@ -32,8 +32,9 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .utils import Constants, DataOperations, MessageProviders
-from .authentication import login_required, role_required
+from .authentication import anonymous_required, login_required, role_required
 
+@anonymous_required
 def login_view(request):
     """
     Login view for user authentication.
@@ -504,52 +505,54 @@ def generate_jd_id():
         num = 1
     return f"JD{num:02d}"
 
-def jd_list(request):
+@role_required('Admin')
+def create_jd_view(request):
     """
-    View to list all job descriptions.
+    View to create a new job description.
     """
-    print("jd_list -> Request method:", request.method)
-    search = request.GET.get("search", "")
-    page = int(request.GET.get("page", 1))
-    limit = 10
-    offset = (page - 1) * limit
+    print("create_jd -> Request method:", request.method)
+    # search = request.GET.get("search", "")
+    # page = int(request.GET.get("page", 1))
+    # limit = 10
+    # offset = (page - 1) * limit
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Join with customers to get company name
-    query = """
-        SELECT j.*, c.company_name
-        FROM recruitment_jds j
-        LEFT JOIN customers c ON j.company_id = c.company_id
-    """
-    params = []
-    if search:
-        query += " WHERE j.jd_id LIKE %s OR j.jd_summary LIKE %s"
-        params = [f"%{search}%", f"%{search}%"]
-    query += " ORDER BY j.created_at DESC LIMIT %s OFFSET %s"
-    params += [limit, offset]
-    cursor.execute(query, params)
-    jds = cursor.fetchall()
-    cursor.execute("SELECT COUNT(*) FROM recruitment_jds" + (" WHERE jd_id LIKE %s OR jd_summary LIKE %s" if search else ""), params[:2] if search else [])
-    count_row = cursor.fetchone()
-    total = count_row['COUNT(*)'] if count_row else 0
-    num_pages = (total // limit) + (1 if total % limit else 0)
-    page_range = range(1, num_pages + 1)
+    # query = """
+    #     SELECT j.*, c.company_name
+    #     FROM recruitment_jds j
+    #     LEFT JOIN customers c ON j.company_id = c.company_id
+    # """
+    # params = []
+    # if search:
+    #     query += " WHERE j.jd_id LIKE %s OR j.jd_summary LIKE %s"
+    #     params = [f"%{search}%", f"%{search}%"]
+    # query += " ORDER BY j.created_at DESC LIMIT %s OFFSET %s"
+    # params += [limit, offset]
+    # cursor.execute(query, params)
+    # jds = cursor.fetchall()
+    # cursor.execute("SELECT COUNT(*) FROM recruitment_jds" + (" WHERE jd_id LIKE %s OR jd_summary LIKE %s" if search else ""), params[:2] if search else [])
+    # count_row = cursor.fetchone()
+    # total = count_row['COUNT(*)'] if count_row else 0
+    # num_pages = (total // limit) + (1 if total % limit else 0)
+    # page_range = range(1, num_pages + 1)
     # Fetch companies for dropdown
     cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
     companies = cursor.fetchall()
     conn.close()
-    name = request.session.get('name', 'Guest')
+    # name = request.session.get('name', 'Guest')
     return render(request, "jd_create.html", {
-        "jds": jds,
-        "total": total,
-        "page": page,
-        "name": name,
-        "search": search,
-        "page_range": page_range,
+        # "jds": jds,
+        # "total": total,
+        # "page": page,
+        # "name": name,
+        # "search": search,
+        # "page_range": page_range,
         "companies": companies
     })
 
 @csrf_exempt
+@role_required('Admin', is_api=True)
 def create_jd(request):
     """
     View to create a new job description.
@@ -576,11 +579,13 @@ def create_jd(request):
             """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by))
             conn.commit()
             message = f"Task {escape(jd_id)} created successfully!"
+            messages.success(request, message)
         except Exception as e:
             if "Duplicate entry" in str(e):
                 error = "A JD with this ID already exists."
             else:
                 error = f"Failed to create JD: {escape(str(e))}"
+            messages.error(request, error)
         finally:
             if 'cursor' in locals():
                 cursor.close()
@@ -598,11 +603,13 @@ def create_jd(request):
                 cursor.close()
             if 'conn' in locals():
                 conn.close()
-        return render(request, "jd_create.html", {
-            "companies": companies,
-            "message": message,
-            "error": error
-        })
+        return redirect('jd_create')
+        # messages.messages.error(request, error)
+        # return render(request, "jd_create.html", {
+        #     "companies": companies,
+        #     "message": message,
+        #     "error": error
+        # })
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 @csrf_exempt
@@ -698,15 +705,62 @@ def view_edit_jds(request):
     View to edit existing job descriptions.
 
     """
+    user_role_ = request.session.get('role', 'Guest')
 
     print("view_edit_jds -> Request method:", request.method)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
-        FROM recruitment_jds
-        ORDER BY created_at DESC
-    """)
+    if user_role_ == 'Admin':
+        cursor.execute("""
+            SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
+            FROM recruitment_jds
+            ORDER BY created_at DESC
+        """)
+    elif user_role_ == 'Team_Lead':
+        user_id = request.session.get('user_id', None)
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row[0]
+
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+            ORDER BY j.created_at DESC
+        """, [emp_id, emp_id])
+    elif user_role_ == 'User':
+        user_id = request.session.get('user_id', None)
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row[0]
+
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE tm.emp_id=%s
+            ORDER BY j.created_at DESC
+        """, [emp_id])
+    else:
+        cursor.execute("""
+            SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
+            FROM recruitment_jds
+           
+            ORDER BY created_at DESC
+        """)
+
+
     jds = [
         {
             'jd_id': row[0],
@@ -729,7 +783,8 @@ def view_edit_jds(request):
         'jds': jds,
         'name': name,
         'companies': companies,
-        'teams': teams
+        'teams': teams,
+        'user_role': user_role_
     })
 
 def get_jd(request, jd_id):
@@ -763,6 +818,7 @@ def get_jd(request, jd_id):
     return JsonResponse({'jd': jd})
 
 @csrf_exempt
+@role_required('Admin', is_api=True)
 def update_jd(request, jd_id):
     """
     View to update an existing job description.
@@ -804,7 +860,7 @@ def update_jd(request, jd_id):
         ])
         conn.commit()
 
-        # TO DO: Send notification to the members of team if jd is allocated to a team.
+        # Send notification to the members of team if jd is allocated to a team.
         cursor.execute("""
             SELECT user_id from users 
                 WHERE email IN (
@@ -828,13 +884,58 @@ def assign_jd_data(request):
     """
     View to get data for assigning job descriptions.
     """
+
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
-        FROM recruitment_jds
-        ORDER BY created_at DESC
-    """)
+    if user_role == 'Admin':
+        cursor.execute("""
+            SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
+            FROM recruitment_jds
+            ORDER BY created_at DESC
+        """)
+    elif user_role == 'Team_Lead':
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row['emp_id']
+
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+            ORDER BY j.created_at DESC
+        """, [emp_id, emp_id])
+    elif user_role == 'User':
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row['emp_id']
+
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE tm.emp_id=%s
+            ORDER BY j.created_at DESC
+        """, [emp_id])
+    else:
+        cursor.execute("""
+            SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id
+            FROM recruitment_jds
+            ORDER BY created_at DESC
+        """)
+
     jds = cursor.fetchall()
     cursor.execute("SELECT team_id, team_name FROM teams ORDER BY team_name")
     teams = cursor.fetchall()
@@ -842,6 +943,7 @@ def assign_jd_data(request):
     return JsonResponse({"jds": jds, "teams": teams})
 
 @csrf_exempt
+@role_required('Admin', is_api=True)
 def assign_jd(request):
     """
     View to assign a job description to a team.
@@ -867,7 +969,7 @@ def assign_jd(request):
     cursor.execute("SELECT team_id, team_name FROM teams WHERE team_id=%s", [team_id])
     team = cursor.fetchone()
     cursor.execute("""
-        SELECT m.first_name, m.last_name, m.email
+        SELECT m.emp_id, m.first_name, m.last_name, m.email
         FROM hr_team_members m
         INNER JOIN team_members tm ON m.emp_id = tm.emp_id
         WHERE tm.team_id=%s
@@ -883,6 +985,7 @@ def assign_jd(request):
     conn.close()
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
 
+@role_required('Admin')
 def assign_jd_page(request):
     """
     View to render the job description assignment page.
@@ -891,6 +994,7 @@ def assign_jd_page(request):
     name = request.session.get('name', 'Guest')
     return render(request, "assign_jd.html",{'name': name})
 
+@login_required
 def employee_view_page(request):
     """
     View to render the employee details page.
@@ -902,9 +1006,14 @@ def employee_view_data(request):
     """
     API endpoint to get data for a specific employee.
     """
+    user_role = request.session.get('role', 'Guest')
     print("employee_view_data -> Request method:", request.method)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    # For admin there will be all members, for team lead there will be members of his teams, for user there will be only his details
+    
+
     cursor.execute("""
         SELECT emp_id, first_name, last_name, email, role, status
         FROM hr_team_members
