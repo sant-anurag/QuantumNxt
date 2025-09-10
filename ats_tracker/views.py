@@ -905,7 +905,7 @@ def assign_jd_data(request):
         emp_id=row['emp_id']
 
         cursor.execute("""
-            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
@@ -1007,19 +1007,62 @@ def employee_view_data(request):
     API endpoint to get data for a specific employee.
     """
     user_role = request.session.get('role', 'Guest')
+    user_email = request.session.get('email', None)
     print("employee_view_data -> Request method:", request.method)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     # For admin there will be all members, for team lead there will be members of his teams, for user there will be only his details
-    
+    if user_role == 'Admin':
+        cursor.execute("""
+            SELECT emp_id, first_name, last_name, email, role, status
+            FROM hr_team_members
+            WHERE status='active'
+            ORDER BY first_name, last_name
+        """)
+    elif user_role == 'Team_Lead':
+        cursor.execute("""
+                       SELECT
+                            T1.emp_id,
+                            T1.first_name,
+                            T1.last_name,
+                            T1.email,
+                            T1.role,
+                            T1.status
+                        FROM
+                            hr_team_members AS T1
+                        JOIN
+                            team_members AS T2
+                        ON 
+                            T1.emp_id = T2.emp_id
+                        JOIN
+                            teams AS T3
+                        ON
+                            T2.team_id = T3.team_id
+                        JOIN
+                            hr_team_members AS T4
+                        ON
+                            T3.lead_emp_id = T4.emp_id
+                        WHERE
+                            T4.email = %s AND T1.status = 'active'
+                        ORDER BY T1.first_name, T1.last_name;
+            """, [user_email])
 
-    cursor.execute("""
-        SELECT emp_id, first_name, last_name, email, role, status
-        FROM hr_team_members
-        WHERE status='active'
-        ORDER BY first_name, last_name
-    """)
+    elif user_role == 'User':
+        cursor.execute("""
+                       SELECT emp_id, first_name, last_name, email, role, status
+                        FROM hr_team_members
+                        WHERE email = %s AND status='active'
+                        ORDER BY first_name, last_name;
+            """, [user_email])
+    else:
+        # TO DO: need to be checked
+        cursor.execute("""
+            SELECT emp_id, first_name, last_name, email, role, status
+            FROM hr_team_members
+            WHERE status='active'
+            ORDER BY first_name, last_name
+        """)
     members = cursor.fetchall()
     conn.close()
     return JsonResponse({"members": members})
@@ -1078,15 +1121,40 @@ def upload_resume_page(request):
     """
     View to render the resume upload page.
     """
+
+    # get the user role and emp_id
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+    
     # Get all JDs for dropdown
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT jd.jd_id, jd.jd_summary, c.company_name
-        FROM recruitment_jds jd
-        LEFT JOIN customers c ON jd.company_id = c.company_id
-        ORDER BY jd.jd_id DESC
-    """)
+    if user_role in ['Team_Lead', 'User']:
+
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row['emp_id']
+        cursor.execute("""
+            SELECT DISTINCT jd.jd_id, jd.jd_summary, c.company_name
+            FROM recruitment_jds jd
+            LEFT JOIN teams t ON jd.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            LEFT JOIN customers c ON jd.company_id = c.company_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+            ORDER BY jd.jd_id DESC
+        """, [emp_id, emp_id])
+
+    else:
+        cursor.execute("""
+            SELECT jd.jd_id, jd.jd_summary, c.company_name
+            FROM recruitment_jds jd
+            LEFT JOIN customers c ON jd.company_id = c.company_id
+            ORDER BY jd.jd_id DESC
+        """)
     jds = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -1165,17 +1233,40 @@ def recent_resumes(request):
     """
     View to list recent resumes.
     """
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on,
-               c.company_name, r.status
-        FROM resumes r
-        LEFT JOIN recruitment_jds jd ON r.jd_id = jd.jd_id
-        LEFT JOIN customers c ON r.customer_id = c.company_id
-        ORDER BY r.uploaded_on DESC
-        LIMIT 20
-    """)
+    if user_role in ['Team_Lead', 'User']:
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row['emp_id']
+        cursor.execute("""
+            SELECT DISTINCT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on, c.company_name, r.status 
+            FROM resumes r
+            LEFT JOIN recruitment_jds jd ON r.jd_id=jd.jd_id
+            LEFT JOIN customers c ON r.customer_id=c.company_id
+            LEFT JOIN teams t ON jd.team_id=t.team_id
+            LEFT JOIN team_members tm ON jd.team_id=tm.team_id
+            WHERE tm.emp_id=%s OR t.lead_emp_id=%s
+            ORDER BY r.resume_id DESC
+            LIMIT 20;
+        """, [emp_id, emp_id])
+    else:
+        cursor.execute("""
+            SELECT r.resume_id, r.file_name, r.jd_id, jd.jd_summary, r.uploaded_on,
+                c.company_name, r.status
+            FROM resumes r
+            LEFT JOIN recruitment_jds jd ON r.jd_id = jd.jd_id
+            LEFT JOIN customers c ON r.customer_id = c.company_id
+            ORDER BY r.uploaded_on DESC
+            LIMIT 20
+        """)
     resumes = []
     for row in cursor.fetchall():
         # Build file URL for static serving
@@ -1774,27 +1865,68 @@ def manage_candidate_status_data(request):
     """
     API endpoint to get candidate status data.
     """
+
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
     search = request.GET.get("search", "")
     page = int(request.GET.get("page", 1))
     limit = 10
     offset = (page - 1) * limit
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    query = """
-        SELECT c.*, jd.jd_summary
-        FROM candidates c
-        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
-        WHERE c.screen_status = 'selected'
-    """
+
+    # Build base query and params
     params = []
-    if search:
-        query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
-        params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+    if user_role == 'Admin':
+        query = """
+            SELECT c.*, jd.jd_summary, jd.jd_id
+            FROM candidates c
+            LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+            WHERE c.screen_status = 'selected'
+        """
+        count_query = "SELECT COUNT(*) as total FROM candidates c LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id WHERE c.screen_status = 'selected'"
+        if search:
+            query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
+            count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
+            params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+    else:
+        # Team_Lead or User: restrict to JDs associated with their teams
+        # Get emp_id for user
+        emp_id = None
+        if request.session.get('email'):
+            cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=%s", (request.session.get('email'),))
+            emp_row = cursor.fetchone()
+            emp_id = emp_row['emp_id'] if emp_row else None
+        team_ids = []
+        if emp_id:
+            cursor.execute("SELECT team_id FROM team_members WHERE emp_id=%s", (emp_id,))
+            team_ids = [row['team_id'] for row in cursor.fetchall()]
+        if team_ids:
+            team_ids_str = ','.join(str(tid) for tid in team_ids)
+            query = f"""
+                SELECT c.*, jd.jd_summary, jd.jd_id
+                FROM candidates c
+                LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+                WHERE c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})
+            """
+            count_query = f"SELECT COUNT(*) as total FROM candidates c LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id WHERE c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})"
+            if search:
+                query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
+                count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
+                params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+        else:
+            # No teams, return empty
+            cursor.close()
+            conn.close()
+            return JsonResponse({"candidates": [], "page": page, "num_pages": 0})
+
     query += " ORDER BY c.updated_at DESC LIMIT %s OFFSET %s"
     params += [limit, offset]
     cursor.execute(query, params)
     candidates = cursor.fetchall()
-    cursor.execute("SELECT COUNT(*) as total FROM candidates WHERE screen_status = 'selected'" + (" AND (name LIKE %s OR email LIKE %s OR jd_id LIKE %s)" if search else ""), params[:3] if search else [])
+    # For count, only use search params if present
+    count_params = params[:3] if search else []
+    cursor.execute(count_query, count_params)
     total = cursor.fetchone()['total']
     num_pages = (total // limit) + (1 if total % limit else 0)
     cursor.close()
@@ -1879,9 +2011,32 @@ def api_jds(request):
     """
     API endpoint to get job descriptions.
     """
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
+    if user_role in ['Team_Lead', 'User']:
+        # Get emp_id for user
+        cursor.execute("""
+            SELECT emp_id FROM hr_team_members
+                    WHERE email=(SELECT email from users WHERE user_id=%s)
+                    LIMIT 1;
+        """, [user_id])
+        row = cursor.fetchone()
+        emp_id=row['emp_id']
+
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+            AND j.jd_status='active'
+            ORDER BY j.jd_summary
+        """, [emp_id, emp_id])
+    else:
+        cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active'")
     jds = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -1941,8 +2096,9 @@ def candidate_profile(request):
     View to render the candidate profile page.
     """
     name = request.session.get('name', 'Guest')
+    user_role_ = request.session.get('role', 'Guest')
     """Render the Candidate Profile page."""
-    return render(request, 'candidate_profile.html', {'name': name})
+    return render(request, 'candidate_profile.html', {'name': name, 'user_role': user_role_})
 
 @csrf_exempt
 def get_candidate_details_profile(request):
@@ -1951,15 +2107,52 @@ def get_candidate_details_profile(request):
         search_query = request.GET.get('query', '').strip()
         print("get_candidate_details -> Search query:", search_query)
         if search_query:
+            user_role = request.session.get('role', 'Guest')
+            user_id = request.session.get('user_id', None)
             conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
-                       l1_comments, l2_comments, l3_comments, screen_status
-                FROM candidates
-                WHERE email LIKE %s OR name LIKE %s
-                LIMIT 1
-            """, [f"%{search_query}%", f"%{search_query}%"])
+            params = [f"%{search_query}%", f"%{search_query}%"]
+            if user_role == 'Admin':
+                # Admin can search all candidates
+                query = """
+                    SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
+                           l1_comments, l2_comments, l3_comments, screen_status
+                    FROM candidates
+                    WHERE email LIKE %s OR name LIKE %s
+                    LIMIT 1
+                """
+            elif user_role in ['Team_Lead', 'User']:
+                # Restrict to candidates in user's team
+                # Get emp_id for user
+                cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s) LIMIT 1", [user_id])
+                emp_row = cursor.fetchone()
+                team_id = None
+                if emp_row:
+                    cursor.execute("SELECT team_id FROM team_members WHERE emp_id=%s LIMIT 1", [emp_row['emp_id']])
+                    team_row = cursor.fetchone()
+                    if team_row:
+                        team_id = team_row['team_id']
+                if team_id:
+                    query = """
+                        SELECT candidate_id, name, email, phone, skills, experience, screened_remarks,
+                               l1_comments, l2_comments, l3_comments, screen_status
+                        FROM candidates
+                        WHERE (email LIKE %s OR name LIKE %s) AND team_id = %s
+                        LIMIT 1
+                    """
+                    params.append(team_id)
+                else:
+                    # No team found, return not found
+                    cursor.close()
+                    conn.close()
+                    return JsonResponse({'success': False, 'message': 'No team found for user.'})
+            else:
+                # Other roles not allowed
+                cursor.close()
+                conn.close()
+                return JsonResponse({'success': False, 'message': 'Permission denied.'})
+
+            cursor.execute(query, params)
             candidate = cursor.fetchone()
             print("get_candidate_details -> Candidate found:", candidate)
             if candidate:
@@ -1979,6 +2172,8 @@ def get_candidate_details_profile(request):
                         'status': candidate['screen_status'],
                     }
                 })
+            cursor.close()
+            conn.close()
         return JsonResponse({'success': False, 'message': 'Candidate not found.'})
 
 def save_candidate_details_profile(request):
@@ -2007,19 +2202,53 @@ def candidate_suggestions(request):
     """
     API endpoint to get candidate suggestions based on a search query.
     """
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
         if len(query) < 3:
             return JsonResponse({'results': []})
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT candidate_id, name, email
-            FROM candidates
-            WHERE name LIKE %s OR email LIKE %s
-            LIMIT 8
-        """, [f"%{query}%", f"%{query}%"])
+        params = [f"%{query}%", f"%{query}%"]
+        if user_role == 'Admin':
+            sql = """
+                SELECT candidate_id, name, email
+                FROM candidates
+                WHERE name LIKE %s OR email LIKE %s
+                LIMIT 8
+            """
+        elif user_role in ['Team_Lead', 'User']:
+            # Get emp_id for user
+            cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s) LIMIT 1", [user_id])
+            emp_row = cursor.fetchone()
+            team_id = None
+            if emp_row:
+                cursor.execute("SELECT team_id FROM team_members WHERE emp_id=%s LIMIT 1", [emp_row['emp_id']])
+                team_row = cursor.fetchone()
+                if team_row:
+                    team_id = team_row['team_id']
+            if team_id:
+                sql = """
+                    SELECT candidate_id, name, email
+                    FROM candidates
+                    WHERE (name LIKE %s OR email LIKE %s) AND team_id = %s
+                    LIMIT 8
+                """
+                params.append(team_id)
+            else:
+                cursor.close()
+                conn.close()
+                return JsonResponse({'results': []})
+        else:
+            cursor.close()
+            conn.close()
+            return JsonResponse({'results': []})
+        cursor.execute(sql, params)
         results = cursor.fetchall()
+        cursor.close()
+        conn.close()
         return JsonResponse({'results': results})
     return JsonResponse({'results': []})
 
@@ -2284,8 +2513,8 @@ def team_report(request):
     if request.method != "POST":
         return JsonResponse({}, status=400)
     params = json.loads(request.body)
-    db = ATSDatabaseInitializer()
-    db.cursor.execute("USE ats")
+    conne = DataOperations.get_db_connection()
+    cursor = conne.cursor(dictionary=True)
     # --- Team Overview ---
     team_name = params.get("team_search", "")
     overview_sql = """
@@ -2298,32 +2527,32 @@ def team_report(request):
         WHERE (%s = '' OR t.team_name = %s)
         GROUP BY t.team_id
     """
-    db.cursor.execute(overview_sql, (team_name, team_name))
+    cursor.execute(overview_sql, (team_name, team_name))
     team_overview = []
-    for row in db.cursor.fetchall():
+    for row in cursor.fetchall():
         team_overview.append({
-            "team_name": row[0],
-            "team_lead": f"{row[1]} {row[2]}" if row[1] else "",
-            "members": row[3].split(",") if row[3] else []
+            "team_name": row['team_name'],
+            "team_lead": f"{row['first_name']} {row['last_name']}" if row['first_name'] else "",
+            "members": row['members'].split(",") if row['members'] else []
         })
     # --- Recruitment Metrics ---
     jd_status = params.get("jd_status", "")
     metrics_sql = """
-        SELECT COUNT(jd_id), 
-            SUM(jd_status='active'), 
-            SUM(jd_status='closed'), 
-            AVG(DATEDIFF(closure_date, created_at))
+        SELECT COUNT(jd_id) AS total_jds, 
+            SUM(jd_status='active') AS in_progress, 
+            SUM(jd_status='closed') AS closed, 
+            AVG(DATEDIFF(closure_date, created_at)) AS avg_closure_time
         FROM recruitment_jds
         WHERE (%s = '' OR jd_status = %s)
         AND (%s = '' OR team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
     """
-    db.cursor.execute(metrics_sql, (jd_status, jd_status, team_name, team_name))
-    row = db.cursor.fetchone()
+    cursor.execute(metrics_sql, (jd_status, jd_status, team_name, team_name))
+    row = cursor.fetchone()
     recruitment_metrics = [{
-        "total_jds": row[0] or 0,
-        "in_progress": row[1] or 0,
-        "closed": row[2] or 0,
-        "avg_closure_time": float(row[3]) if row[3] else 0
+        "total_jds": row['total_jds'] or 0,
+        "in_progress": row['in_progress'] or 0,
+        "closed": row['closed'] or 0,
+        "avg_closure_time": float(row['avg_closure_time']) if row['avg_closure_time'] else 0
     }]
     # --- Candidate Pipeline ---
     pipeline_sql = """
@@ -2338,8 +2567,8 @@ def team_report(request):
         FROM candidates
         WHERE (%s = '' OR team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
     """
-    db.cursor.execute(pipeline_sql, (team_name, team_name))
-    row = db.cursor.fetchone()
+    cursor.execute(pipeline_sql, (team_name, team_name))
+    row = cursor.fetchone()
     candidate_pipeline = [{
         "sourced": row[0] or 0,
         "l1": row[1] or 0,
@@ -2359,16 +2588,17 @@ def team_report(request):
     for i in range(6, 0, -1):
         month_start = (datetime.now().replace(day=1) - timedelta(days=30 * i))
         month_end = (datetime.now().replace(day=1) - timedelta(days=30 * (i - 1)))
-        db.cursor.execute("SELECT COUNT(*) as cnt FROM recruitment_jds WHERE jd_status='closed' AND closure_date >= %s AND closure_date < %s", (month_start.date(), month_end.date()))
-        count = int(db.cursor.fetchone()[0])
+        cursor.execute("SELECT COUNT(*) as cnt FROM recruitment_jds WHERE jd_status='closed' AND closure_date >= %s AND closure_date < %s", (month_start.date(), month_end.date()))
+        count = int(cursor.fetchone()[0])
         monthly_trends['labels'].append(month_start.strftime('%b %Y'))
         monthly_trends['values'].append(count)
 
     # --- Member Contribution ---
     member_sql = """
         SELECT m.first_name, m.last_name,
-            COUNT(DISTINCT j.jd_id), COUNT(c.candidate_id),
-            SUM(offer_status='released')
+            COUNT(DISTINCT j.jd_id) AS jds_handled, 
+            COUNT(c.candidate_id) AS candidates_processed,
+            SUM(offer_status='released') AS offers_made
         FROM hr_team_members m
         LEFT JOIN team_members tm ON m.emp_id = tm.emp_id
         LEFT JOIN teams t ON tm.team_id = t.team_id
@@ -2377,14 +2607,14 @@ def team_report(request):
         WHERE (%s = '' OR t.team_name = %s)
         GROUP BY m.emp_id
     """
-    db.cursor.execute(member_sql, (team_name, team_name))
+    cursor.execute(member_sql, (team_name, team_name))
     member_contribution = []
-    for row in db.cursor.fetchall():
+    for row in cursor.fetchall():
         member_contribution.append({
-            "member": f"{row[0]} {row[1]}",
-            "jds_handled": row[2] or 0,
-            "candidates_processed": row[3] or 0,
-            "offers_made": row[4] or 0,
+            "member": f"{row['first_name']} {row['last_name']}",
+            "jds_handled": row['jds_handled'] or 0,
+            "candidates_processed": row['candidates_processed'] or 0,
+            "offers_made": row['offers_made'] or 0,
             "top_performer": False  # Add logic if needed
         })
     # --- Customer Distribution ---
@@ -2396,15 +2626,16 @@ def team_report(request):
         WHERE (%s = '' OR j.team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
         GROUP BY c.company_id
     """
-    db.cursor.execute(customer_sql, (team_name, team_name))
+    cursor.execute(customer_sql, (team_name, team_name))
     customer_distribution = []
-    for row in db.cursor.fetchall():
+    for row in cursor.fetchall():
         customer_distribution.append({
-            "customer": row[0],
-            "jds_handled": row[1] or 0,
-            "candidates_placed": row[2] or 0
+            "customer": row['company_name'],
+            "jds_handled": row['jds_handled'] or 0,
+            "candidates_placed": row['candidates_placed'] or 0
         })
-    db.close()
+    cursor.close()
+    conne.close()
     return JsonResponse({
         "team_overview": team_overview,
         "recruitment_metrics": recruitment_metrics,
@@ -3099,19 +3330,31 @@ def change_role(request):
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .db_initializer import ATSDatabaseInitializer
 
 def status_report_page(request):
     """
     View to render the status report page.
     """
-    db = ATSDatabaseInitializer()
-    db.cursor.execute("USE ats")
-    db.cursor.execute("SELECT team_id, team_name FROM teams")
-    teams = [{"team_id": t[0], "team_name": t[1]} for t in db.cursor.fetchall()]
-    db.cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
-    members = [{"emp_id": m[0], "first_name": m[1], "last_name": m[2]} for m in db.cursor.fetchall()]
-    db.close()
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT team_id, team_name FROM teams")
+    teams = [
+        {
+            "team_id": t["team_id"], 
+            "team_name": t["team_name"]
+        } for t in cursor.fetchall()
+    ]
+    cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+    members = [
+        {
+            "emp_id": m["emp_id"], 
+            "first_name": m["first_name"], 
+            "last_name": m["last_name"]
+        } 
+        for m in cursor.fetchall()
+    ]
+    cursor.close()
+    conn.close()
     return render(request, 'status_report.html', {"teams": teams, "members": members})
 
 @csrf_exempt
@@ -3119,9 +3362,9 @@ def generate_status_report(request):
     """
     API endpoint to generate status reports.
     """
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     if request.method == "POST":
-        db = ATSDatabaseInitializer()
-        db.cursor.execute("USE ats")
         report_type = request.POST.get("report_type")
         team_id = request.POST.get("team_id")
         member_id = request.POST.get("member_id")
@@ -3148,7 +3391,7 @@ def generate_status_report(request):
             params.extend([from_date, to_date])
 
         where_clause = " AND ".join(where) if where else "1=1"
-        db.cursor.execute(f"""
+        cursor.execute(f"""
             SELECT
                 cu.company_name,
                 j.jd_summary,
@@ -3162,19 +3405,23 @@ def generate_status_report(request):
             WHERE {where_clause}
             GROUP BY cu.company_name, j.jd_summary, c.jd_id, shared_on
             ORDER BY shared_on DESC
-        """, tuple(params))
-        rows = db.cursor.fetchall()
+        """, 
+        tuple(params)
+        )
+
+        rows = cursor.fetchall()
         report = []
         for idx, r in enumerate(rows):
             report.append({
-                "company_name": r[0],
-                "jd_summary": r[1],
-                "jd_id": r[2],
-                "shared_on": r[3],
-                "profile_count": r[4],
-                "feedback": r[5] or ""
+                "company_name": r['company_name'],
+                "jd_summary": r['jd_summary'],
+                "jd_id": r['jd_id'],
+                "shared_on": r['shared_on'],
+                "profile_count": r['profile_count'],
+                "feedback": r['feedback'] or ""
             })
-        db.close()
+        cursor.close()
+        conn.close()
         return JsonResponse({"report": report, "message": "Report generated."})
     return JsonResponse({"report": [], "message": "Invalid request."})
 

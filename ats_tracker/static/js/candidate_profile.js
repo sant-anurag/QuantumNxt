@@ -50,51 +50,53 @@ document.addEventListener('DOMContentLoaded', function () {
                            suggestionsBox.innerHTML = '';
                        });
 
-                       editBtn.addEventListener('click', function () {
-                           document.querySelectorAll('#candidate-details input, #candidate-details textarea, #candidate-details select').forEach(el => {
-                               el.disabled = false;
-                           });
-                           editBtn.classList.add('hidden');
-                           saveBtn.classList.remove('hidden');
-                       });
+                            editBtn.addEventListener('click', function () {
+                                document.querySelectorAll('#candidate-details input, #candidate-details textarea, #candidate-details select').forEach(el => {
+                                    el.disabled = false;
+                                });
+                                editBtn.classList.add('hidden');
+                                saveBtn.classList.remove('hidden');
+                            });
 
-                       saveBtn.addEventListener('click', function () {
-                           const candidateId = document.getElementById('candidate-id') ? document.getElementById('candidate-id').value : '';
-                           const data = {
-                               candidate_id: candidateId,
-                               screened_remarks: document.getElementById('screened-remarks').value,
-                               l1_comments: document.getElementById('l1-comments').value,
-                               l2_comments: document.getElementById('l2-comments').value,
-                               l3_comments: document.getElementById('l3-comments').value,
-                               status: document.getElementById('candidate-status').value,
-                           };
 
-                           fetch('/save_candidate_details_profile/', {
-                               method: 'POST',
-                               headers: {
-                                   'Content-Type': 'application/json',
-                                   'X-CSRFToken': getCSRFToken(),
-                               },
-                               body: JSON.stringify(data),
-                           })
-                               .then(response => response.json())
-                               .then(data => {
-                                   if (data.success) {
-                                       alert('Candidate details saved successfully!');
-                                       document.querySelectorAll('#candidate-details input, #candidate-details textarea, #candidate-details select').forEach(el => {
-                                           el.disabled = true;
-                                       });
-                                       saveBtn.classList.add('hidden');
-                                       editBtn.classList.remove('hidden');
-                                   } else {
-                                       alert(data.message || 'Failed to save candidate details.');
-                                   }
-                               })
-                               .catch(error => {
-                                   console.error('Error saving candidate details:', error);
-                                   alert('An error occurred while saving candidate details.');
-                               });
-                       });
+                            saveBtn.addEventListener('click', function () {
+                                const candidateId = document.getElementById('candidate-id') ? document.getElementById('candidate-id').value : '';
+                                const data = {
+                                    candidate_id: candidateId,
+                                    screened_remarks: document.getElementById('screened-remarks').value,
+                                    l1_comments: document.getElementById('l1-comments').value,
+                                    l2_comments: document.getElementById('l2-comments').value,
+                                    l3_comments: document.getElementById('l3-comments').value,
+                                    status: document.getElementById('candidate-status').value,
+                                };
+
+                                fetch('/save_candidate_details_profile/', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': getCSRFToken(),
+                                    },
+                                    body: JSON.stringify(data),
+                                })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            alert('Candidate details saved successfully!');
+                                            document.querySelectorAll('#candidate-details input, #candidate-details textarea, #candidate-details select').forEach(el => {
+                                                el.disabled = true;
+                                            });
+                                            saveBtn.classList.add('hidden');
+                                            editBtn.classList.remove('hidden');
+                                        } else {
+                                            alert(data.message || 'Failed to save candidate details.');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error saving candidate details:', error);
+                                        alert('An error occurred while saving candidate details.');
+                                    });
+                            });
+                       
 
                        function getCSRFToken() {
                            const cookieValue = document.cookie

@@ -45,6 +45,19 @@
     .btn-success {
         background: linear-gradient(92deg, #38a169 0%, #2f855a 100%);
         color: #fff;
+        padding: 10px 20px;
+        font-size: 1em;
+        border: none;
+        border-radius: 8px;
+    }
+
+    .btn-success:disabled {
+        background: #a3d3b8;
+        cursor: not-allowed;
+    }
+
+    .btn-success:hover:enabled {
+        background: linear-gradient(92deg, #2f855a 0%, #276749 100%);
     }
 
     .profile-header {

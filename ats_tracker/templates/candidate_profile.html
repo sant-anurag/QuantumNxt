@@ -3,7 +3,7 @@
 
         {% block content %}
         <link rel="stylesheet" href="{% static 'css/candidate_profile.css' %}">
-        <div class="candidate-profile-container">
+        <div class="candidate-profile-container" date-user-role="{{ user_role }}">
             <div class="search-bar" style="position: relative;">
                 <input type="text" id="search-input" placeholder="Enter Candidate Name or Email" autocomplete="off">
                 <div id="suggestions" class="suggestions hidden"></div>
