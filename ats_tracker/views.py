@@ -635,6 +635,7 @@ def jd_detail(request, jd_id):
         conn.close()
         return JsonResponse(jd)
     elif request.method == "POST":
+
         company_id = request.POST.get("company_id")
         jd_summary = request.POST["jd_summary"]
         jd_description = request.POST["jd_description"]
@@ -642,6 +643,7 @@ def jd_detail(request, jd_id):
         good_to_have_skills = request.POST["good_to_have_skills"]
         no_of_positions = int(request.POST.get("no_of_positions", 1))
         jd_status = request.POST.get("jd_status", "active")
+        total_profiles = int(request.POST.get("total_profiles", 0))
         cursor.execute("""
             UPDATE recruitment_jds SET
             company_id=%s, jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
@@ -1371,7 +1373,7 @@ def update_resume_status(request):
     if request.method == 'POST':
         resume_id = request.POST.get('resume_id')
         status = request.POST.get('status')
-        if not resume_id or status not in ['selected', 'rejected']:
+        if not resume_id or status not in ['selected', 'rejected', 'toBeScreened']:
             return JsonResponse({'success': False, 'error': 'Invalid input'}, status=400)
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
@@ -1483,8 +1485,27 @@ def save_candidate_details(request):
         data = json.loads(request.body)
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
+
         try:
+            name = data.get('name')
+            phone = data.get('phone')
+            email = data.get('email')
+            skills = data.get('skills')
+            experience = data.get('experience')
+            resume_id = data.get('resume_id')
+            jd_id = data.get('jd_id', None)
+            screened_on = data.get('screened_on')
+            screen_status = data.get('screen_status')
+            screened_remarks = data.get('screened_remarks')
+            screening_team = data.get('screening_team')
+            hr_member_id = data.get('hr_member_id')
+
+            if not resume_id or not name or not screen_status or not screening_team or not hr_member_id:
+                return JsonResponse({'success': False, 'error': 'Missing required fields'}, status=400)
+
             # Always fetch after SELECT
+
+
             cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
             _ = cursor.fetchall()  # Fetch all results, even if you only need one
 
@@ -1496,11 +1517,11 @@ def save_candidate_details(request):
                         team_id=%s, hr_member_id=%s, updated_at=NOW()
                     WHERE resume_id=%s
                 """, [
-                    data.get('name'), data.get('phone'), data.get('email'),
-                    data.get('skills'), data.get('experience'), data.get('screened_on'),
-                    data.get('screen_status'), data.get('screened_remarks'),
-                    data.get('screening_team'), data.get('hr_member_id'),
-                    data.get('resume_id')
+                    name, phone, email,
+                    skills, experience, screened_on,
+                    screen_status, screened_remarks,
+                    screening_team, hr_member_id,
+                    resume_id
                 ])
             else:
                 cursor.execute("""
@@ -1508,16 +1529,19 @@ def save_candidate_details(request):
                     experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
-                    data.get('jd_id'), data.get('resume_id'), data.get('name'), data.get('phone'),
-                    data.get('email'), data.get('skills'), data.get('experience'), data.get('screened_on'),
-                    data.get('screen_status'), data.get('screened_remarks'),
-                    data.get('screening_team'), data.get('hr_member_id')
+                    jd_id, resume_id, name, phone,
+                    email, skills, experience, screened_on,
+                    screen_status, screened_remarks,
+                    screening_team, hr_member_id
                 ])
 
             conn.commit()
-            return JsonResponse({'success': True})
+            response = {'success': True}
+
+            return JsonResponse(response)
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            response = {'success': False, 'error': str(e)}
+            return JsonResponse(response, status=500)
         finally:
             cursor.close()
             conn.close()
@@ -2275,19 +2299,38 @@ def dashboard_data(request):
     # Python
     # Logic Fault @1627
     cursor.execute("""
-        SELECT 
-            r.jd_id, 
-            r.jd_summary, 
-            r.jd_status, 
+        SELECT
+            r.jd_id,
+            r.jd_summary,
+            r.jd_status,
             cu.company_name,
-            COUNT(CASE WHEN (c.l3_result IS NULL OR c.l3_result != 'selected') AND (c.l3_result != 'rejected' AND c.l2_result != 'rejected' AND c.l1_result != 'rejected' AND c.screen_status != 'rejected') THEN 1 END) AS not_finalized_count
-        FROM recruitment_jds r
-        JOIN customers cu ON r.company_id = cu.company_id
-        JOIN candidates c ON r.jd_id = c.jd_id
-        WHERE c.hr_member_id = %s AND r.jd_status = 'active'
-        GROUP BY r.jd_id, r.jd_summary, r.jd_status, cu.company_name
-        ORDER BY r.jd_id DESC
-    """, (emp_id,))
+            COUNT(
+                CASE
+                    WHEN (c.l3_result IS NULL OR c.l3_result != 'selected')
+                    AND c.screen_status != 'rejected'
+                    AND c.l1_result != 'rejected'
+                    AND c.l2_result != 'rejected'
+                    AND c.l3_result != 'rejected'
+                    AND c.hr_member_id = %s THEN 1
+                    ELSE NULL
+                END
+            ) AS not_finalized_count
+        FROM
+            recruitment_jds r
+        JOIN
+            customers cu ON r.company_id = cu.company_id
+        LEFT JOIN
+            candidates c ON r.jd_id = c.jd_id
+        WHERE
+            r.jd_status = 'active'
+            AND r.team_id IN (
+                SELECT team_id FROM team_members WHERE emp_id = %s
+            )
+        GROUP BY
+            r.jd_id, r.jd_summary, r.jd_status, cu.company_name
+        ORDER BY
+            r.jd_id DESC;
+    """, (emp_id, emp_id))
 
     pending_jds = cursor.fetchall()
     print("dashboard_data -> Pending JDs:", pending_jds)
@@ -2453,14 +2496,28 @@ import mysql.connector
 import csv
 from datetime import datetime, timedelta
 
+
+@role_required(['Admin', 'Team_Lead'], is_api=True)
 def teams_list(request):
     """
     API endpoint to get the list of teams.
     """
     print("teams_list -> Request method:", request.method)
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT team_id, team_name FROM teams")
+    query = "SELECT team_id, team_name FROM teams"
+    params = []
+    if user_role == 'Admin':
+        pass
+    elif user_role == 'Team_Lead':
+        query += " WHERE lead_emp_id = (SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s) LIMIT 1)"
+        params.append(user_id)
+    else:
+        query += "1=0"
+
+    cursor.execute(query, params)
     teams = [{"id": row['team_id'], "name": row['team_name']} for row in cursor.fetchall()]
     cursor.close()
     conn.close()
@@ -2472,6 +2529,7 @@ def teams_filters(request):
     API endpoint to get filters for teams.
     """
     print("teams_filters -> Request method:", request.method)
+
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
@@ -2483,6 +2541,7 @@ def teams_filters(request):
     conn.close()
     return JsonResponse({"members": members, "customers": customers})
 
+@role_required(['Admin', 'Team_Lead'])
 def team_reports_page(request):
     """
     View to render the team reports page.
@@ -2505,6 +2564,7 @@ def team_report_filters(request):
     return JsonResponse({'members': members, 'customers': customers})
 
 @csrf_exempt
+@role_required(['Admin', 'Team_Lead'], is_api=True)
 def team_report(request):
     """
     API endpoint to get team report data.
@@ -2512,27 +2572,32 @@ def team_report(request):
     print("team_reports_api -> Request method:", request.method)
     if request.method != "POST":
         return JsonResponse({}, status=400)
+
+
     params = json.loads(request.body)
     conne = DataOperations.get_db_connection()
     cursor = conne.cursor(dictionary=True)
     # --- Team Overview ---
     team_name = params.get("team_search", "")
     overview_sql = """
-        SELECT t.team_name, m.first_name, m.last_name,
-            GROUP_CONCAT(tm2.first_name, ' ', tm2.last_name)
-        FROM teams t
-        LEFT JOIN hr_team_members m ON t.lead_emp_id = m.emp_id
-        LEFT JOIN team_members tm ON t.team_id = tm.team_id
-        LEFT JOIN hr_team_members tm2 ON tm.emp_id = tm2.emp_id
-        WHERE (%s = '' OR t.team_name = %s)
-        GROUP BY t.team_id
+        SELECT 
+        t.team_name, 
+        CONCAT(m.first_name, ' ', m.last_name) AS team_lead,
+        GROUP_CONCAT(CONCAT(tm2.first_name, ' ', tm2.last_name) SEPARATOR ', ') AS members
+    FROM teams t
+    LEFT JOIN hr_team_members m ON t.lead_emp_id = m.emp_id
+    LEFT JOIN team_members tm ON t.team_id = tm.team_id
+    LEFT JOIN hr_team_members tm2 ON tm.emp_id = tm2.emp_id
+    WHERE (%s = '' OR LOWER(t.team_name) = LOWER(%s))
+    GROUP BY t.team_id
     """
     cursor.execute(overview_sql, (team_name, team_name))
     team_overview = []
-    for row in cursor.fetchall():
+    rows = cursor.fetchall()
+    for row in rows:
         team_overview.append({
             "team_name": row['team_name'],
-            "team_lead": f"{row['first_name']} {row['last_name']}" if row['first_name'] else "",
+            "team_lead": row['team_lead'] if row['team_lead'] else "",
             "members": row['members'].split(",") if row['members'] else []
         })
     # --- Recruitment Metrics ---
@@ -2557,39 +2622,50 @@ def team_report(request):
     # --- Candidate Pipeline ---
     pipeline_sql = """
         SELECT 
-            SUM(screen_status='toBeScreened'), 
-            SUM(l1_result='selected'), 
-            SUM(l2_result='selected'), 
-            SUM(l3_result='selected'), 
-            SUM(offer_status='released'), 
-            SUM(offer_status='accepted'), 
-            SUM(screen_status='rejected')
+            SUM(screen_status='toBeScreened') AS sourced, 
+            SUM(l1_result='selected') AS l1, 
+            SUM(l2_result='selected') AS l2, 
+            SUM(l3_result='selected') AS l3, 
+            SUM(offer_status='released') AS offered, 
+            SUM(offer_status='accepted') AS accepted, 
+            SUM(screen_status='rejected') AS rejected
         FROM candidates
         WHERE (%s = '' OR team_id IN (SELECT team_id FROM teams WHERE team_name = %s))
     """
     cursor.execute(pipeline_sql, (team_name, team_name))
     row = cursor.fetchone()
     candidate_pipeline = [{
-        "sourced": row[0] or 0,
-        "l1": row[1] or 0,
-        "l2": row[2] or 0,
-        "l3": row[3] or 0,
-        "offered": row[4] or 0,
-        "accepted": row[5] or 0,
-        "rejected": row[6] or 0
+        "sourced": row['sourced'] or 0,
+        "l1": row['l1'] or 0,
+        "l2": row['l2'] or 0,
+        "l3": row['l3'] or 0,
+        "offered": row['offered'] or 0,
+        "accepted": row['accepted'] or 0,
+        "rejected": row['rejected'] or 0
     }]
     # Performance Analytics
-    offered = int(row[4] or 0)
-    accepted = int(row[5] or 0)
-    sourced = int(row[0] or 0)
+    offered = int(row['offered'] or 0)
+    accepted = int(row['accepted'] or 0)
+    sourced = int(row['sourced'] or 0)
     conversion_rate = round((offered / sourced) * 100, 2) if sourced else 0
     success_rate = round((accepted / offered) * 100, 2) if offered else 0
     monthly_trends = {'labels': [], 'values': []}
     for i in range(6, 0, -1):
         month_start = (datetime.now().replace(day=1) - timedelta(days=30 * i))
         month_end = (datetime.now().replace(day=1) - timedelta(days=30 * (i - 1)))
-        cursor.execute("SELECT COUNT(*) as cnt FROM recruitment_jds WHERE jd_status='closed' AND closure_date >= %s AND closure_date < %s", (month_start.date(), month_end.date()))
-        count = int(cursor.fetchone()[0])
+        cursor.execute("""
+            SELECT COUNT(*) as cnt 
+            FROM recruitment_jds 
+            WHERE jd_status='closed' 
+                AND closure_date >= %s 
+                AND closure_date < %s
+                       """, 
+            (
+                month_start.date(), 
+                month_end.date()
+            )
+        )
+        count = int(cursor.fetchone()['cnt'] or 0)
         monthly_trends['labels'].append(month_start.strftime('%b %Y'))
         monthly_trends['values'].append(count)
 
@@ -2619,7 +2695,7 @@ def team_report(request):
         })
     # --- Customer Distribution ---
     customer_sql = """
-        SELECT c.company_name, COUNT(j.jd_id), SUM(cand.screen_status='selected')
+        SELECT c.company_name, COUNT(j.jd_id) AS jds_handled, SUM(cand.screen_status='selected') AS candidates_placed
         FROM customers c
         LEFT JOIN recruitment_jds j ON c.company_id = j.company_id
         LEFT JOIN candidates cand ON j.jd_id = cand.jd_id

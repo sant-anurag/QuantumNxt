@@ -20,27 +20,34 @@ teamSearchInput.addEventListener("input", function() {
         return;
     }
     const filtered = allTeams.filter(t => t.name.toLowerCase().includes(term));
-    teamDropdownList.innerHTML = "";
-    if (filtered.length === 0) {
-        teamDropdownList.innerHTML = `<div class="no-results">No teams found.</div>`;
-    } else {
-        filtered.forEach(t => {
-            const div = document.createElement("div");
-            div.className = "dropdown-item";
-            div.textContent = t.name;
-            div.onclick = function() {
-                teamSearchInput.value = t.name;
-                teamSearchHidden.value = t.name;
-                teamDropdownList.style.display = "none";
-            };
-            teamDropdownList.appendChild(div);
-        });
-    }
-    teamDropdownList.style.display = "block";
+        teamDropdownList.innerHTML = "";
+        if (filtered.length === 0) {
+            teamDropdownList.innerHTML = `<div class="no-results">No teams found.</div>`;
+        } else {
+            filtered.forEach(t => {
+                const div = document.createElement("div");
+                div.className = "dropdown-item";
+                div.textContent = t.name;
+                div.style.cursor = "pointer";
+                div.style.pointerEvents = "auto";
+                div.addEventListener("mousedown", function(e) {
+                    teamSearchInput.value = t.name;
+                    teamSearchHidden.value = t.name;
+                    setTimeout(() => { teamDropdownList.style.display = "none"; }, 0);
+                    e.preventDefault();
+                });
+                teamDropdownList.appendChild(div);
+            });
+        }
+        teamDropdownList.style.display = "block";
 });
 
 teamSearchInput.addEventListener("blur", function() {
-    setTimeout(() => { teamDropdownList.style.display = "none"; }, 200);
+    setTimeout(() => {
+        if (!teamDropdownList.matches(':hover')) {
+            teamDropdownList.style.display = "none";
+        }
+    }, 200);
 });
 
 teamSearchInput.addEventListener("focus", function() {
