@@ -15,6 +15,41 @@ document.addEventListener('DOMContentLoaded', function() {
     let resumeData = [];
     let isParsing = false;
 
+    // Limit 'Screened On' date to today and restrict 'Shared On' date
+    function setupScreenedAndSharedDateLimits() {
+        var screenedOnInput = document.getElementById('modal-screened-on');
+        var sharedOnInput = document.getElementById('modal-shared-on');
+        if (screenedOnInput) {
+            var today = new Date().toISOString().split('T')[0];
+            screenedOnInput.setAttribute('max', today);
+            screenedOnInput.addEventListener('change', function() {
+                if (sharedOnInput) {
+                    if (screenedOnInput.value) {
+                        sharedOnInput.setAttribute('min', screenedOnInput.value);
+                    } else {
+                        sharedOnInput.removeAttribute('min');
+                    }
+                }
+            });
+        }
+        // Also set min for shared date on modal open (in case screened date is pre-filled)
+        if (sharedOnInput && screenedOnInput && screenedOnInput.value) {
+            sharedOnInput.setAttribute('min', screenedOnInput.value);
+        }
+    }
+
+    // Call setupScreenedAndSharedDateLimits when modal is opened
+    if (candidateModal) {
+        candidateModal.addEventListener('transitionend', function(e) {
+            if (candidateModal.style.display === 'flex') {
+                setupScreenedAndSharedDateLimits();
+            }
+        });
+    }
+        // Also call after DOMContentLoaded in case modal is already open
+    setupScreenedAndSharedDateLimits();
+
+
     // Initialize - Load JDs for dropdown
     function loadJDs() {
         fetch('/assign_jd_data/')
@@ -249,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 document.getElementById('modal-screened-on').value = c.screened_on || '';
                                 document.getElementById('modal-screen-status').value = c.screen_status || 'toBeScreened';
                                 document.getElementById('modal-screened-remarks').value = c.screened_remarks || '';
+                                document.getElementById('modal-shared-on').value = c.shared_on || '';
 
                                 if (c.hr_member_id) {
                                     document.getElementById('modal-hr-member-id').value = c.hr_member_id;
@@ -290,7 +326,8 @@ document.addEventListener('DOMContentLoaded', function() {
             screen_status: document.getElementById('modal-screen-status').value,
             screened_remarks: document.getElementById('modal-screened-remarks').value,
             screening_team: document.getElementById('modal-team-id').value,
-            hr_member_id: document.getElementById('modal-hr-member-id').value
+            hr_member_id: document.getElementById('modal-hr-member-id').value,
+            shared_on: document.getElementById('modal-shared-on').value
         };
 
         fetch('/save_candidate_details/', {

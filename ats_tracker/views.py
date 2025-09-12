@@ -1484,8 +1484,8 @@ def save_candidate_details(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         conn = DataOperations.get_db_connection()
-        cursor = conn.cursor()
-
+        cursor = conn.cursor(dictionary=True)
+        # if True:
         try:
             name = data.get('name')
             phone = data.get('phone')
@@ -1499,40 +1499,82 @@ def save_candidate_details(request):
             screened_remarks = data.get('screened_remarks')
             screening_team = data.get('screening_team')
             hr_member_id = data.get('hr_member_id')
+            shared_on = data.get('shared_on')
 
-            if not resume_id or not name or not screen_status or not screening_team or not hr_member_id:
+            # Normalize shared_on to None if empty or falsy
+            shared_on = shared_on or None
+
+            # Validate required fields
+            required_fields = [resume_id, name, screen_status, screening_team, hr_member_id]
+            if not all(required_fields):
                 return JsonResponse({'success': False, 'error': 'Missing required fields'}, status=400)
 
+            # If sharing date is provided, screened_on must also be provided
+            if shared_on:
+                if not screened_on:
+                    return JsonResponse({'success': False, 'error': 'Screened on date is required if shared on date is provided.'}, status=400)
+                # Sharing date cannot be before screened date
+                if screened_on and shared_on < screened_on:
+                    return JsonResponse({'success': False, 'error': 'Sharing date cannot be before screened date.'}, status=400)
+                # Cannot share if status is rejected or to be screened
+                if screen_status in ('rejected', 'toBeScreened'):
+                    return JsonResponse({'success': False, 'error': 'Cannot share profile if status is rejected or to be screened.'}, status=400)
+            
+            
             # Always fetch after SELECT
+            cursor.execute("SELECT candidate_id,  screen_status, screened_on, shared_on FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
+            cd_data = cursor.fetchall()  # Fetch all results, even if you only need one
+
+            if cd_data:
+
+                # screen date and shared date could not be set to past dates if already set
+                # Convert string dates to date objects for comparison
+                from datetime import datetime, date
+                existing_screened_on = cd_data[0]['screened_on']
+                existing_shared_on = cd_data[0]['shared_on']
+                screened_on_date = None
+                shared_on_date = None
+                if screened_on:
+                    try:
+                        screened_on_date = datetime.strptime(screened_on, "%Y-%m-%d").date()
+                    except Exception:
+                        pass
+                if shared_on:
+                    try:
+                        shared_on_date = datetime.strptime(shared_on, "%Y-%m-%d").date()
+                    except Exception:
+                        pass
+                # Compare only if both are date objects
+                if existing_screened_on and screened_on_date and screened_on_date < existing_screened_on:
+                    return JsonResponse({'success': False, 'error': 'Screened on date cannot be earlier than the existing screened on date.'}, status=400)
+
+                if existing_shared_on and shared_on_date and shared_on_date < existing_shared_on:
+                    return JsonResponse({'success': False, 'error': 'Sharing date cannot be earlier than the existing sharing date.'}, status=400)
 
 
-            cursor.execute("SELECT candidate_id FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
-            _ = cursor.fetchall()  # Fetch all results, even if you only need one
-
-            if _:
                 cursor.execute("""
                     UPDATE candidates
                     SET name=%s, phone=%s, email=%s, skills=%s, experience=%s,
                         screened_on=%s, screen_status=%s, screened_remarks=%s,
-                        team_id=%s, hr_member_id=%s, updated_at=NOW()
+                        team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s
                     WHERE resume_id=%s
                 """, [
                     name, phone, email,
                     skills, experience, screened_on,
                     screen_status, screened_remarks,
                     screening_team, hr_member_id,
-                    resume_id
+                    shared_on, resume_id
                 ])
             else:
                 cursor.execute("""
                     INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
-                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id, shared_on)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
                     email, skills, experience, screened_on,
                     screen_status, screened_remarks,
-                    screening_team, hr_member_id
+                    screening_team, hr_member_id, shared_on
                 ])
 
             conn.commit()

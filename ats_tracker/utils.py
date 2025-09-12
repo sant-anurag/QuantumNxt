@@ -71,6 +71,24 @@ class DataOperations:
         conn.close()
         return settings if settings else {}
 
+    @staticmethod
+    def get_jds(columns=[], Where_clause="", params=()):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        query = f"""
+            SELECT {', '.join(columns) if columns else '*'}
+            FROM recruitment_jds 
+        """
+        if Where_clause:
+            query += f" WHERE {Where_clause}"
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        jds = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jds
 
 class MessageProviders:
 
