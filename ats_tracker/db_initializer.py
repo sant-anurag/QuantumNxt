@@ -186,7 +186,7 @@ class ATSDatabaseInitializer:
                 l3_comments TEXT,
                 l3_interviewer_name VARCHAR(100),
                 l3_interviewer_email VARCHAR(100),
-                offer_status ENUM('in_progress', 'released', 'not_initiated') DEFAULT 'in_progress',
+                offer_status ENUM('in_progress', 'released', 'not_initiated', 'accepted', 'declined') DEFAULT 'in_progress',
                 team_id INT,
                 hr_member_id INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

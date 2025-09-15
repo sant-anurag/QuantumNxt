@@ -92,6 +92,7 @@ teamReportFilter.addEventListener("submit", function(e) {
     })
     .then(resp => resp.json())
     .then(data => {
+        console.log("Report Data:", data);
         renderReportTables(data);
     });
 });
@@ -176,12 +177,16 @@ function renderReportTables(data) {
     } else {
         teamOverviewTable.innerHTML = `<tr><td colspan="3" class="ct-no-data">No data found.</td></tr>`;
     }
+
+
     // Recruitment Metrics
     const recruitmentMetricsTable = document.getElementById("recruitmentMetricsTable").querySelector("tbody");
     recruitmentMetricsTable.innerHTML = "";
     if (data.recruitment_metrics && data.recruitment_metrics.length) {
-        data.recruitment_metrics.forEach(row => {
-            recruitmentMetricsTable.innerHTML += `<tr>
+        data.recruitment_metrics.forEach((row, idx) => {
+            const isLast = idx === data.recruitment_metrics.length - 1;
+            recruitmentMetricsTable.innerHTML += `<tr${isLast ? ' style="font-weight:bold;"' : ''}>
+                <td>${row.team_name}</td>
                 <td>${row.total_jds}</td>
                 <td>${row.in_progress}</td>
                 <td>${row.closed}</td>
@@ -191,13 +196,19 @@ function renderReportTables(data) {
     } else {
         recruitmentMetricsTable.innerHTML = `<tr><td colspan="4" class="ct-no-data">No data found.</td></tr>`;
     }
+
+
     // Candidate Pipeline
     const candidatePipelineTable = document.getElementById("candidatePipelineTable").querySelector("tbody");
     candidatePipelineTable.innerHTML = "";
     if (data.candidate_pipeline && data.candidate_pipeline.length) {
-        data.candidate_pipeline.forEach(row => {
-            candidatePipelineTable.innerHTML += `<tr>
+        data.candidate_pipeline.forEach((row, idx) => {
+            const isLast = idx === data.candidate_pipeline.length - 1;
+            candidatePipelineTable.innerHTML += `<tr${isLast ? ' style="font-weight:bold;"' : ''}>
+                <td>${row.team_name}</td>
+                <td>${row.total_candidates}</td>
                 <td>${row.sourced}</td>
+                <td>${row.screened}</td>
                 <td>${row.l1}</td>
                 <td>${row.l2}</td>
                 <td>${row.l3}</td>
@@ -209,6 +220,8 @@ function renderReportTables(data) {
     } else {
         candidatePipelineTable.innerHTML = `<tr><td colspan="7" class="ct-no-data">No data found.</td></tr>`;
     }
+
+
     // Member Contribution
     const memberContributionTable = document.getElementById("memberContributionTable").querySelector("tbody");
     memberContributionTable.innerHTML = "";
@@ -241,6 +254,123 @@ function renderReportTables(data) {
     }
     // Charts (Performance Analytics)
     // You can update chart.js code here as needed using data.performance_analytics
+
+        // --- Performance Analytics Charts ---
+    if (data.performance_analytics) {
+        // --- Conversion Rate Chart (Per Team + Overall) ---
+        const conversionRateCtx = document.getElementById('conversionRateChart').getContext('2d');
+        if (window.conversionRateChartInstance) window.conversionRateChartInstance.destroy();
+        const teamConvLabels = data.performance_analytics.team_conversion_rates.map(t => t.team_name);
+        const teamConvData = data.performance_analytics.team_conversion_rates.map(t => t.conversion_rate);
+        // Add overall as last bar
+        teamConvLabels.push('Overall');
+        teamConvData.push(data.performance_analytics.overall_conversion_rate);
+        window.conversionRateChartInstance = new Chart(conversionRateCtx, {
+            type: 'bar',
+            data: {
+                labels: teamConvLabels,
+                datasets: [{
+                    label: 'Conversion Rate (%)',
+                    data: teamConvData,
+                    backgroundColor: teamConvLabels.map((l, i) => i === teamConvLabels.length - 1 ? '#36a2eb' : '#90caf9'),
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Conversion Rate by Team (%)'
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: 'Conversion Rate (%)' }
+                    }
+                }
+            }
+        });
+
+        // --- Success Rate Chart (Per Team + Overall) ---
+        const successRateCtx = document.getElementById('successRateChart').getContext('2d');
+        if (window.successRateChartInstance) window.successRateChartInstance.destroy();
+        const teamSuccLabels = data.performance_analytics.team_success_rates.map(t => t.team_name);
+        const teamSuccData = data.performance_analytics.team_success_rates.map(t => t.success_rate);
+        teamSuccLabels.push('Overall');
+        teamSuccData.push(data.performance_analytics.overall_success_rate);
+        window.successRateChartInstance = new Chart(successRateCtx, {
+            type: 'bar',
+            data: {
+                labels: teamSuccLabels,
+                datasets: [{
+                    label: 'Success Rate (%)',
+                    data: teamSuccData,
+                    backgroundColor: teamSuccLabels.map((l, i) => i === teamSuccLabels.length - 1 ? '#4caf50' : '#a5d6a7'),
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Success Rate by Team (%)'
+                    },
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: 'Success Rate (%)' }
+                    }
+                }
+            }
+        });
+
+        // --- Monthly/Yearly Trends Chart (Closed JDs by Team) ---
+        const monthlyTrendsCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+        if (window.monthlyTrendsChartInstance) window.monthlyTrendsChartInstance.destroy();
+        const trends = data.performance_analytics.monthly_trends;
+        window.monthlyTrendsChartInstance = new Chart(monthlyTrendsCtx, {
+            type: 'line',
+            data: {
+                labels: trends.labels,
+                datasets: trends.datasets.map(ds => ({
+                    label: ds.label,
+                    data: ds.data,
+                    borderColor: ds.borderColor,
+                    backgroundColor: ds.backgroundColor,
+                    fill: ds.fill,
+                    tension: ds.tension || 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }))
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Closure Trends by Team'
+                    },
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Closed JDs' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Month/Year' }
+                    }
+                }
+            }
+        });
+    }
+
 }
 
 // CSRF helper for Django

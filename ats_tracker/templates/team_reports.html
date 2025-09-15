@@ -50,6 +50,7 @@
             <table class="report-table" id="recruitmentMetricsTable">
                 <thead>
                     <tr>
+                        <th>Team Name</th>
                         <th>Total JDs</th>
                         <th>In Progress</th>
                         <th>Closed</th>
@@ -65,13 +66,16 @@
             <table class="report-table" id="candidatePipelineTable">
                 <thead>
                     <tr>
+                        <th>Team Name</th>
+                        <th>Total Candidates</th>
                         <th>Sourced</th>
+                        <th>Screened</th>
                         <th>L1</th>
                         <th>L2</th>
                         <th>L3</th>
                         <th>Offered</th>
                         <th>Accepted</th>
-                        <th>Rejected</th>
+                        <th>Rejected/Not Joined</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -82,13 +86,13 @@
             <h2>Performance Analytics</h2>
             <div class="charts-row">
                 <div class="chart-card">
-                    <canvas id="conversionRateChart"></canvas>
+                    <canvas id="conversionRateChart" width="220" height="220"></canvas>
                 </div>
                 <div class="chart-card">
-                    <canvas id="successRateChart"></canvas>
+                    <canvas id="successRateChart" width="220" height="220"></canvas>
                 </div>
                 <div class="chart-card">
-                    <canvas id="monthlyTrendsChart"></canvas>
+                    <canvas id="monthlyTrendsChart" width="220" height="220"></canvas>
                 </div>
             </div>
         </section>
