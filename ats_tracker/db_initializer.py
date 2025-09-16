@@ -111,7 +111,10 @@ class ATSDatabaseInitializer:
                 company_name VARCHAR(255) NOT NULL UNIQUE,
                 contact_person_name VARCHAR(100) NOT NULL,
                 contact_email VARCHAR(100) NOT NULL,
-                contact_phone VARCHAR(20) NOT NULL
+                contact_phone VARCHAR(20) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                note TEXT
             );
         """)
 

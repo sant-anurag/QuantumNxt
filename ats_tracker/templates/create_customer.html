@@ -6,11 +6,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <div class="customer-form-outer">
         <h2><i class="fas fa-building" style="margin-right:10px;"></i>Create Customer</h2>
-        {% if message %}
-            <div class="alert success">{{ message }}</div>
-        {% endif %}
-        {% if error %}
-            <div class="alert error">{{ error }}</div>
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="alert {% if msg.tags == 'success' %}success{% elif msg.tags == 'error' or msg.tags == 'danger' %}error{% endif %}">{{ msg }}</div>
+            {% endfor %}
         {% endif %}
         <form id="customerForm" method="post" action="{% url 'create_customer' %}" class="customer-grid-form">
             {% csrf_token %}
@@ -35,5 +34,114 @@
             </div>
         </form>
     </div>
+
+    <!-- Customer List Table -->
+    <div class="customer-list-section">
+        <h3 style="margin-top:40px;margin-bottom:18px;color:#233a63;font-size:1.3em;font-weight:600;">Customer List</h3>
+        <form method="get" action="" class="customer-search-form" style="margin-bottom:18px;display:flex;gap:12px;align-items:center;">
+            <input type="text" name="search" value="{{ search|default:'' }}" placeholder="Search company..." style="flex:1;padding:10px 14px;border-radius:7px;border:1.2px solid #c7d0e2;font-size:1.08em;">
+            <button type="submit" class="btn-primary" style="padding:10px 24px;">Search</button>
+        </form>
+        <table class="customer-list-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fbff;border-bottom:1.5px solid #e0e6ef;">
+                    <th style="padding:10px 8px;text-align:left;">ID</th>
+                    <th style="padding:10px 8px;text-align:left;">Company Name</th>
+                    <th style="padding:10px 8px;text-align:left;">Contact Person</th>
+                    <th style="padding:10px 8px;text-align:left;">Email</th>
+                    <th style="padding:10px 8px;text-align:left;">Phone</th>
+                    <th style="padding:10px 8px;text-align:left;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if search %}
+                    {% for customer in customer_list %}
+                    <tr style="border-bottom:1px solid #e0e6ef;" data-created-at="{{ customer.created_at|date:'Y-m-d' }}" data-note="{{ customer.note|default_if_none:''|escape|linebreaksbr|safe }}">
+                        <td style="padding:8px 6px;">{{ customer.company_id }}</td>
+                        <td style="padding:8px 6px;">{{ customer.company_name }}</td>
+                        <td style="padding:8px 6px;">{{ customer.contact_person_name }}</td>
+                        <td style="padding:8px 6px;">{{ customer.contact_email }}</td>
+                        <td style="padding:8px 6px;">{{ customer.contact_phone }}</td>
+                        <td style="padding:8px 6px;">
+                            <button class="btn-primary btn-view-edit" data-customer-id="{{ customer.company_id }}" style="padding:7px 18px;font-size:0.98em;">View/Edit</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center;padding:18px;color:#888;">No data available.</td></tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6" style="text-align:center;padding:18px;color:#888;">No data available.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <!-- Pagination Controls -->
+        <div class="pagination-controls" style="margin-top:18px;text-align:center;">
+            {% if num_pages > 1 %}
+                <nav aria-label="Customer list pagination">
+                    <ul class="pagination" style="display:inline-flex;list-style:none;padding:0;">
+                        {% if page > 1 %}
+                        <li><a href="?page={{ page|add:-1 }}" class="pagination-btn">&laquo; Prev</a></li>
+                        {% endif %}
+                        {% for p in page_range %}
+                        <li style="margin:0 2px;">
+                            {% if p == page %}
+                                <span class="pagination-btn active" style="background:#233a63;color:#fff;padding:6px 12px;border-radius:4px;">{{ p }}</span>
+                            {% else %}
+                                <a href="?page={{ p }}" class="pagination-btn" style="padding:6px 12px;border-radius:4px;">{{ p }}</a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                        {% if page < num_pages %}
+                        <li><a href="?page={{ page|add:1 }}" class="pagination-btn">Next &raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Customer Edit Modal -->
+    <div id="customerEditModal" class="customer-edit-modal">
+        <div class="modal-content">
+            <button id="closeModalBtn" class="modal-close-btn">&times;</button>
+            <h3 class="modal-title">View/Edit Customer</h3>
+            <form id="editCustomerForm">
+                <div class="modal-grid">
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" name="company_name" id="modalCompanyName" disabled required maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Person Name</label>
+                        <input type="text" name="contact_person_name" id="modalContactPersonName" disabled required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" name="contact_email" id="modalContactEmail" disabled required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Phone</label>
+                        <input type="text" name="contact_phone" id="modalContactPhone" disabled required maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Relation Since</label>
+                        <div id="modalRelationSince" class="modal-showcase-date"></div>
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label>Note</label>
+                        <textarea name="note" id="modalNote" rows="3" disabled maxlength="500" style="resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="editCustomerBtn" class="btn-primary">Edit</button>
+                    <button type="submit" id="saveCustomerBtn" class="btn-primary" style="display:none;">Save</button>
+                </div>
+            </form>
+            <div id="modalMsg" class="modal-msg"></div>
+        </div>
+    </div>
     <script src="{% static 'js/customer.js' %}"></script>
+    <script>
+    
+    </script>
     {% endblock %}

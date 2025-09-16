@@ -89,6 +89,120 @@ class DataOperations:
         cursor.close()
         conn.close()
         return jds
+    
+    @staticmethod
+    def update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data):
+        """
+        Checks for status changes in a candidate profile and updates the
+        corresponding JD's progress counts in the recruitment_jds table.
+
+        Args:
+            cursor: A MySQL cursor object.
+            previous_candidate_data (dict): The candidate's data before the update.
+            current_candidate_data (dict): The candidate's data after the update.
+        """
+        jd_id = current_candidate_data.get("jd_id")
+        
+        if not jd_id:
+            print("Error: JD ID not found in candidate data.")
+            return False
+
+        # A dictionary to hold the fields to update and their new values
+        update_fields = {}
+        
+        # Check for change in screen_status
+        prev_screen_status = previous_candidate_data.get('screen_status')
+        curr_screen_status = current_candidate_data.get('screen_status')
+
+        # Condition 1: Update total_profiles
+        # This should be handled at the point of candidate creation, not update.
+        # The initial function would have an INSERT trigger or logic to increment total_profiles.
+
+        # Condition 2: Update profiles_in_progress
+        # A profile moves to 'in progress' when it is screened 'selected' but hasn't completed all rounds.
+        # A profile is removed from 'in progress' when it's completed.
+        
+        # Check if a profile is now completed or rejected, and if it was previously in progress
+        is_now_completed_or_rejected = (
+            (curr_screen_status == 'rejected') or 
+            (current_candidate_data.get('l1_result') == 'rejected') or 
+            (current_candidate_data.get('l2_result') == 'rejected') or 
+            (current_candidate_data.get('l3_result') == 'selected')
+        )
+        was_in_progress = (
+            (prev_screen_status == 'selected' and current_candidate_data.get('l1_result') == 'toBeScreened') or
+            (previous_candidate_data.get('l1_result') == 'selected' and current_candidate_data.get('l2_result') == 'toBeScreened') or
+            (previous_candidate_data.get('l2_result') == 'selected' and current_candidate_data.get('l3_result') == 'toBeScreened')
+        )
+
+        if is_now_completed_or_rejected and was_in_progress:
+            # A profile is no longer 'in progress' once completed or rejected in a later round
+            update_fields['profiles_in_progress'] = 'profiles_in_progress - 1'
+
+        # Condition 3 & 4: Update profiles_selected and profiles_completed
+        # A profile is considered completed if it's rejected at any stage or selected in all stages.
+        prev_l1_result = previous_candidate_data.get('l1_result')
+        prev_l2_result = previous_candidate_data.get('l2_result')
+        prev_l3_result = previous_candidate_data.get('l3_result')
+
+        curr_l1_result = current_candidate_data.get('l1_result')
+        curr_l2_result = current_candidate_data.get('l2_result')
+        curr_l3_result = current_candidate_data.get('l3_result')
+
+        # When a candidate is fully selected
+        if (curr_l3_result == 'selected' and 
+            prev_l3_result in ['toBeScreened', 'onHold'] and
+            curr_l1_result == 'selected' and 
+            curr_l2_result == 'selected'):
+            update_fields['profiles_selected'] = 'profiles_selected + 1'
+            update_fields['profiles_completed'] = 'profiles_completed + 1'
+
+        # Condition 5: Update profiles_rejected
+        # When a candidate is rejected at any stage
+        is_now_rejected = (
+            (curr_screen_status == 'rejected' and prev_screen_status != 'rejected') or
+            (curr_l1_result == 'rejected' and prev_l1_result != 'rejected') or
+            (curr_l2_result == 'rejected' and prev_l2_result != 'rejected') or
+            (curr_l3_result == 'rejected' and prev_l3_result != 'rejected')
+        )
+        if is_now_rejected:
+            update_fields['profiles_rejected'] = 'profiles_rejected + 1'
+            update_fields['profiles_completed'] = 'profiles_completed + 1'
+
+        # Condition 6: Update profiles_on_hold
+        # When a candidate is put on hold at any stage
+        is_now_on_hold = (
+            (curr_screen_status == 'onHold' and prev_screen_status != 'onHold') or
+            (curr_l1_result == 'onHold' and prev_l1_result != 'onHold') or
+            (curr_l2_result == 'onHold' and prev_l2_result != 'onHold') or
+            (curr_l3_result == 'onHold' and prev_l3_result != 'onHold')
+        )
+        was_on_hold = (
+            (prev_screen_status == 'onHold' and curr_screen_status != 'onHold') or
+            (prev_l1_result == 'onHold' and curr_l1_result != 'onHold') or
+            (prev_l2_result == 'onHold' and curr_l2_result != 'onHold') or
+            (prev_l3_result == 'onHold' and curr_l3_result != 'onHold')
+        )
+
+        if is_now_on_hold:
+            update_fields['profiles_on_hold'] = 'profiles_on_hold + 1'
+        if was_on_hold:
+            update_fields['profiles_on_hold'] = 'profiles_on_hold - 1'
+
+        # Build and execute the dynamic UPDATE query
+        if update_fields:
+            set_clauses = [f"{field} = {value}" for field, value in update_fields.items()]
+            query = f"UPDATE recruitment_jds SET {', '.join(set_clauses)} WHERE jd_id = %s"
+            try:
+                cursor.execute(query, (jd_id,))
+                print(f"Updated recruitment_jds for JD: {jd_id} with changes: {update_fields}")
+                return True
+            except mysql.connector.Error as err:
+                print(f"Error updating recruitment_jds: {err}")
+        return False
+
+
+
 
 class MessageProviders:
 

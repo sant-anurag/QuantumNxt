@@ -505,7 +505,7 @@ def generate_jd_id():
         num = 1
     return f"JD{num:02d}"
 
-@role_required('Admin')
+@login_required
 def create_jd_view(request):
     """
     View to create a new job description.
@@ -552,7 +552,7 @@ def create_jd_view(request):
     })
 
 @csrf_exempt
-@role_required('Admin', is_api=True)
+@login_required
 def create_jd(request):
     """
     View to create a new job description.
@@ -591,13 +591,10 @@ def create_jd(request):
                 cursor.close()
             if 'conn' in locals():
                 conn.close()
-        # Fetch companies for dropdown
-        companies = []
         try:
             conn = DataOperations.get_db_connection()
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
-            companies = cursor.fetchall()
         finally:
             if 'cursor' in locals():
                 cursor.close()
@@ -650,6 +647,18 @@ def jd_detail(request, jd_id):
             no_of_positions=%s, jd_status=%s, updated_at=NOW()
             WHERE jd_id=%s
         """, (company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, jd_id))
+        # get emp_ids of all users who are part of team of given jd
+        cursor.execute("""
+            SELECT DISTINCT tm.emp_id
+            FROM team_members tm
+            JOIN recruitment_jds j ON tm.team_id = j.assigned_team_id
+            WHERE j.jd_id = %s
+        """, [jd_id])
+        emp_ids = [row['emp_id'] for row in cursor.fetchall()]
+        for emp_id in emp_ids:
+            user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+            if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
+                MessageProviders.send_notification(user_id, "JD Update", f"The job description '{jd_id}' has been updated.", created_by="system", notification_type="JD")
         conn.commit()
         conn.close()
         return JsonResponse({"success": True})
@@ -662,6 +671,9 @@ def create_customer(request):
     """
     message = error = None
     if request.method == "POST":
+        # POST: Handle customer creation
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         company_name = request.POST.get("company_name", "").strip()
         contact_person_name = request.POST.get("contact_person_name", "").strip()
         contact_email = request.POST.get("contact_email", "").strip()
@@ -677,8 +689,6 @@ def create_customer(request):
             error = "Phone number too long."
         else:
             try:
-                conn = DataOperations.get_db_connection()
-                cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO customers (company_name, contact_person_name, contact_email, contact_phone)
                     VALUES (%s, %s, %s, %s)
@@ -688,19 +698,115 @@ def create_customer(request):
             except Exception as e:
                 if 'Duplicate entry' in str(e):
                     error = "A customer with this company name or email/phone already exists."
-                else:
-                    error = f"Failed to create customer: {str(e)}"
+            else:
+                # If search is blank, show first 10 companies ordered by company name
+                cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers ORDER BY company_name ASC LIMIT 10")
+                customer_list = cursor.fetchall()
+                customer_list = [dict(customer, created_at=customer['created_at'].date()) for customer in customer_list]
+
             finally:
+                if message:
+                    messages.success(request, message)
+                if error:
+                    messages.error(request, error)
                 if 'cursor' in locals():
                     cursor.close()
                 if 'conn' in locals():
                     conn.close()
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    search = request.GET.get('search', '').strip()
+    page = int(request.GET.get('page', 1))
+    per_page = 5
+    customer_list = []
+    num_pages = 1
+    total = 0
+    page_range = range(1, 2)
+    if search:
+        # Search by company name, contact person, email, or phone
+        search_query = "%" + search + "%"
+        cursor.execute("SELECT COUNT(*) as total FROM customers WHERE company_name LIKE %s OR contact_person_name LIKE %s OR contact_email LIKE %s OR contact_phone LIKE %s", [search_query]*4)
+        total = cursor.fetchone()['total']
+        num_pages = (total // per_page) + (1 if total % per_page else 0)
+        offset = (page - 1) * per_page
+        cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers WHERE company_name LIKE %s OR contact_person_name LIKE %s OR contact_email LIKE %s OR contact_phone LIKE %s ORDER BY company_name LIMIT %s OFFSET %s", [search_query]*4 + [per_page, offset])
+        customer_list = cursor.fetchall()
+        customer_list = [dict(customer, created_at=customer['created_at'].date()) for customer in customer_list]
+        page_range = range(1, num_pages + 1)
+    cursor.close()
+    conn.close()
+
     return render(request, "create_customer.html", {
-        "message": message,
-        "error": error
+        "customer_list": customer_list,
+        "page": page,
+        "num_pages": num_pages,
+        "total": total,
+        "page_range": page_range,
+        "search": search
     })
 
+@csrf_exempt
+@role_required('Admin', is_api=True)
+def update_customer(request, company_id):
+    """
+    View to update an existing customer.
+    """
+    if request.method == "POST":
+        company_name = request.POST.get("company_name", "").strip()
+        contact_person_name = request.POST.get("contact_person_name", "").strip()
+        contact_email = request.POST.get("contact_email", "").strip()
+        contact_phone = request.POST.get("contact_phone", "").strip()
+        customer_note = request.POST.get("note", "").strip()
+        # Basic validation
+        if not company_name or not contact_person_name or not contact_email or not contact_phone:
+            return JsonResponse({"error": "All fields are required."}, status=400)
+        elif '@' not in contact_email or len(contact_email) > 100:
+            return JsonResponse({"error": "Invalid email address."}, status=400)
+        elif len(company_name) > 255 or len(contact_person_name) > 100:
+            return JsonResponse({"error": "Company or contact name too long."}, status=400)
+        elif len(contact_phone) > 20:
+            return JsonResponse({"error": "Phone number too long."}, status=400)
+        
+        try:
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE customers SET
+                company_name=%s, contact_person_name=%s, contact_email=%s, contact_phone=%s, note=%s, updated_at=NOW()
+                WHERE company_id=%s
+            """, [company_name, contact_person_name, contact_email, contact_phone, customer_note, company_id])
+            conn.commit()
+            return JsonResponse({"success": True})
+        except Exception as e:
+            if 'Duplicate entry' in str(e):
+                return JsonResponse({"error": "A customer with this company name or email/phone already exists."}, status=400)
+            else:
+                return JsonResponse({"error": f"Failed to update customer: {str(e)}"}, status=500)
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
+
+
+def delete_customer(request, company_id):
+    if request.method == "DELETE":
+        try:
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM customers WHERE company_id=%s", [company_id])
+            conn.commit()
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to delete customer: {str(e)}"}, status=500)
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
 
 def view_edit_jds(request):
     """
@@ -1522,7 +1628,7 @@ def save_candidate_details(request):
             
             
             # Always fetch after SELECT
-            cursor.execute("SELECT candidate_id,  screen_status, screened_on, shared_on FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
+            cursor.execute("SELECT jd_id, candidate_id,  screen_status, l1_result, l2_result, l3_result, screened_on, shared_on FROM candidates WHERE resume_id=%s", [data.get('resume_id')])
             cd_data = cursor.fetchall()  # Fetch all results, even if you only need one
 
             if cd_data:
@@ -1551,6 +1657,14 @@ def save_candidate_details(request):
                 if existing_shared_on and shared_on_date and shared_on_date < existing_shared_on:
                     return JsonResponse({'success': False, 'error': 'Sharing date cannot be earlier than the existing sharing date.'}, status=400)
 
+                # count parts
+                candidate_prev_data = cd_data[0]
+                candidate_new_data = {
+                    "jd_id": jd_id,
+                    "screen_status": screen_status
+                }
+
+               
 
                 cursor.execute("""
                     UPDATE candidates
@@ -1565,6 +1679,11 @@ def save_candidate_details(request):
                     screening_team, hr_member_id,
                     shared_on, resume_id
                 ])
+
+                check = DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
+                if not check:
+                    conn.rollback()
+                    return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
             else:
                 cursor.execute("""
                     INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
@@ -1576,6 +1695,13 @@ def save_candidate_details(request):
                     screen_status, screened_remarks,
                     screening_team, hr_member_id, shared_on
                 ])
+                # increase the total_profiles count for the JD
+                
+                screen_addition = ', profiles_in_progress = profiles_in_progress + 1' if screen_status=='selected' else ''
+                cursor.execute(f"""
+                    UPDATE recruitment_jds SET total_profiles = total_profiles + 1 {screen_addition}
+                    WHERE jd_id = (SELECT jd_id FROM candidates WHERE resume_id = %s)
+                """, (resume_id,))
 
             conn.commit()
             response = {'success': True}
@@ -1598,10 +1724,27 @@ def update_candidate_screen_status(request):
         resume_id = request.POST.get('resume_id')
         status = request.POST.get('status')
         conn = DataOperations.get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT jd_id, screen_status FROM candidates WHERE resume_id=%s", (resume_id,))
+        candidate_prev_data = cursor.fetchone()
+        if not candidate_prev_data:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+        candidate_new_data = {
+            "jd_id": candidate_prev_data['jd_id'],
+            "screen_status": status
+        }
+
+        
+
         cursor.execute("""
             UPDATE candidates SET screen_status=%s WHERE resume_id=%s
         """, (status, resume_id))
+
+        check = DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -1750,7 +1893,10 @@ def schedule_interview(request):
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT c.candidate_id, c.name, c.email, c.jd_id, r.jd_summary
+            SELECT 
+                       c.candidate_id, c.name, 
+                       c.email, c.jd_id, 
+                       r.jd_summary
             FROM candidates c
             JOIN recruitment_jds r ON c.jd_id = r.jd_id
             WHERE c.candidate_id = %s
@@ -1759,6 +1905,7 @@ def schedule_interview(request):
 
         if not candidate:
             return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+        
 
         # Update candidate record with interview details
         cursor.execute(f"""
@@ -1878,6 +2025,7 @@ def record_interview_result_page(request):
         'token': token
     })
 
+
 @csrf_exempt
 def submit_interview_result(request):
     """
@@ -1885,36 +2033,66 @@ def submit_interview_result(request):
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
     data = json.loads(request.body)
     candidate_id = data.get('candidate_id')
     level = data.get('level')
     result = data.get('result')
     comments = data.get('comments')
     token = data.get('token')
-    # Optionally validate token here
+
     if not all([candidate_id, level, result]):
         return JsonResponse({'success': False, 'error': 'Missing fields'}, status=400)
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"""
-        UPDATE candidates
-        SET {level}_result = %s, {level}_comments = %s, updated_at = NOW()
-        WHERE candidate_id = %s
-    """, (result, comments, candidate_id))
-    conn.commit()
 
+    conn = None
+    cursor = None
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    # TO DO: If necessary, need to send notification to team leads.
-    cursor.execute("SELECT team_id FROM candidates WHERE candidate_id=%s", (candidate_id,))
-    team_row = cursor.fetchone()
-    if team_row:
-        team_id = team_row['team_id']
-        team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(team_id)
-        if team_lead_user_id and DataOperations.get_user_settings(team_lead_user_id).get('notifications_enabled', False):
-            MessageProviders.send_notification(team_lead_user_id, "Interview Result Submitted", f"Interview result for candidate ID {candidate_id} ({level.upper()}) has been submitted.", notification_type="Candidate")
-    cursor.close()
-    conn.close()
-    DataOperations.get_team_lead_user_id_from_team_id()
+        # Step 1: Get the current (previous) data of the candidate
+        cursor.execute("SELECT jd_id, screen_status, l1_result, l2_result, l3_result FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        previous_candidate_data = cursor.fetchone()
+        
+        if not previous_candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+
+        # Step 2: Update the candidate's interview result
+        cursor.execute(f"""
+            UPDATE candidates
+            SET {level}_result = %s, {level}_comments = %s, updated_at = NOW()
+            WHERE candidate_id = %s
+        """, (result, comments, candidate_id))
+        conn.commit()
+
+        # Step 3: Get the new (current) data of the candidate
+        cursor.execute("SELECT jd_id, screen_status, l1_result, l2_result, l3_result FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        current_candidate_data = cursor.fetchone()
+
+        if current_candidate_data:
+            # Step 4: Call the function to update recruitment_jds based on the change
+            DataOperations.update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data)
+            conn.commit()  # Commit changes made by update_recruitment_jds
+
+        # TO DO: If necessary, need to send notification to team leads.
+        cursor.execute("SELECT team_id FROM candidates WHERE candidate_id=%s", (candidate_id,))
+        team_row = cursor.fetchone()
+        if team_row:
+            team_id = team_row['team_id']
+            team_lead_user_id = DataOperations.get_team_lead_user_id_from_team_id(team_id)
+            if team_lead_user_id and DataOperations.get_user_settings(team_lead_user_id).get('notifications_enabled', False):
+                MessageProviders.send_notification(team_lead_user_id, "Interview Result Submitted", f"Interview result for candidate ID {candidate_id} ({level.upper()}) has been submitted.", notification_type="Candidate")
+
+    except Exception as e:
+        if conn:
+            conn.rollback() # Rollback in case of an error
+        print(f"Error in submit_interview_result: {e}")
+        return JsonResponse({'success': False, 'error': 'Internal Server Error'}, status=500)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
     return JsonResponse({'success': True})
 
@@ -2022,10 +2200,28 @@ def update_candidate_status(request):
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("""
+            SELECT jd_id, screen_status, l1_result, l2_result, l3_result
+            FROM candidates
+            WHERE candidate_id=%s
+        """, [candidate_id])
+        previous_candidate_data = cursor.fetchone()
+        if not previous_candidate_data:
+            return JsonResponse({"success": False, "error": "Candidate not found"}, status=404)
+    
+        cursor.execute("""
             UPDATE candidates
             SET l1_result=%s, l2_result=%s, l3_result=%s, updated_at=NOW()
             WHERE candidate_id=%s
         """, [l1_result, l2_result, l3_result, candidate_id])
+
+        candidata_new_data = {
+            "jd_id": previous_candidate_data['jd_id'],
+            "screen_status": previous_candidate_data['screen_status'],
+            "l1_result": l1_result,
+            "l2_result": l2_result,
+            "l3_result": l3_result
+        }
+        DataOperations.update_recruitment_jds(cursor, previous_candidate_data, candidata_new_data)
         conn.commit()
 
         # TO DO: Send notification to team lead if any candidate is finallized.(means, selected for all levels)
@@ -2254,11 +2450,28 @@ def save_candidate_details_profile(request):
 
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        # get candidate_prev_data
+        cursor.execute("SELECT jd_id, screen_status, l1_result, l2_result, l3_result FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        candidate_prev_data = cursor.fetchone()
+        if not candidate_prev_data:
+            return JsonResponse({'success': False, 'message': 'Candidate not found.'}, status=404)
+        candidate_new_data = {
+            "jd_id": candidate_prev_data['jd_id'],
+            "screen_status": status,
+            "l1_result": candidate_prev_data['l1_result'],
+            "l2_result": candidate_prev_data['l2_result'],
+            "l3_result": candidate_prev_data['l3_result']
+        }
         cursor.execute("""
             UPDATE candidates
             SET screened_remarks = %s, l1_comments = %s, l2_comments = %s, l3_comments = %s, screen_status = %s
             WHERE candidate_id = %s
         """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
+
+        DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
+        conn.commit()
+        cursor.close()
+        conn.close()
         return JsonResponse({'success': True, 'message': 'Candidate details updated successfully.'})
     return JsonResponse({'success': False, 'message': 'Invalid request method.'})
 
@@ -2600,10 +2813,24 @@ def teams_filters(request):
     API endpoint to get filters for teams.
     """
     print("teams_filters -> Request method:", request.method)
-
+    role = request.session.get('role', 'Guest')
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+    if role == 'Admin':
+        cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+    if role == 'Team_Lead':
+        user_id = request.session.get('user_id', None)
+        cursor.execute("""
+            SELECT emp_id, first_name, last_name 
+            FROM hr_team_members 
+            WHERE status='active' AND emp_id IN (
+                SELECT emp_id FROM team_members 
+                WHERE team_id IN (
+                    SELECT team_id FROM teams 
+                    WHERE lead_emp_id = (SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s) LIMIT 1)
+                )
+            )
+        """, (user_id,))
     members = [{"id": row['emp_id'], "name": f"{row['first_name']} {row['last_name']}"} for row in cursor.fetchall()]
     cursor.execute("SELECT company_id, company_name FROM customers")
     # Python
@@ -2620,20 +2847,6 @@ def team_reports_page(request):
     name = request.session.get('name', 'Guest')
     return render(request, 'team_reports.html', {'name': name})
 
-# def team_report_filters(request):
-#     """
-#     API endpoint to get filters for team reports.
-#     """
-#     print("team_report_filters -> Request method:", request.method)
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-#     cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
-#     members = [{'id': m['emp_id'], 'name': f"{m['first_name']} {m['last_name']}"} for m in cursor.fetchall()]
-#     cursor.execute("SELECT company_id, company_name FROM customers")
-#     customers = [{'id': c['company_id'], 'name': c['company_name']} for c in cursor.fetchall()]
-#     cursor.close()
-#     conn.close()
-#     return JsonResponse({'members': members, 'customers': customers})
 
 
 import mysql.connector
@@ -3483,6 +3696,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 import csv
 
+@role_required(['Admin', 'Team_Lead'])
 def task_progress_reports_page(request):
     """
     View to render the task progress reports page.
@@ -3519,19 +3733,134 @@ def team_report_filters(request):
     conn.close()
     return JsonResponse({"teams": teams})
 
+
+
+
+@csrf_exempt
+@role_required(['Admin', 'Team_Lead'], is_api=True)
 def team_reports_api(request):
     """
     API endpoint to get team reports.
     """
-    team_id = request.GET.get("team_id")
-    jd_status = request.GET.get("jd_status")
-    from_date = request.GET.get("from_date")
-    to_date = request.GET.get("to_date")
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
+    cursor = None
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    # JD Progress Overview
-    jd_query = """
+        params = {
+            "team_id": request.GET.get("team_id"),
+            "jd_status": request.GET.get("jd_status"),
+            "from_date": request.GET.get("from_date"),
+            "to_date": request.GET.get("to_date"),
+            "role": request.session.get('role', 'Guest'),
+            "user_id": request.session.get('user_id', None)
+        }
+
+        # Centralized access control and parameter validation
+        access_result, access_error = _check_access_and_get_team_ids(cursor, params)
+        if access_error:
+            return access_error
+
+        lead_team_ids = access_result
+        
+        # Consolidate all data fetching into helper functions
+        jd_progress = _fetch_jd_progress(cursor, params, lead_team_ids)
+        profile_status_chart = _fetch_profile_status_chart(cursor, params, lead_team_ids)
+        team_contribution = _fetch_team_contribution(cursor, params, lead_team_ids)
+        timeline_chart = _fetch_timeline_chart(cursor, params, lead_team_ids)
+        
+        # Calculate derived metrics
+        jd_completion_chart = _get_jd_completion_chart(jd_progress)
+
+        # Single return statement
+        return JsonResponse({
+            "jd_progress": jd_progress,
+            "profile_status_chart": profile_status_chart,
+            "jd_completion_chart": jd_completion_chart,
+            "team_contribution": team_contribution,
+            "timeline_chart": timeline_chart
+        })
+
+    except Exception as e:
+        print(f"Error in team_reports_api: {e}")
+        return JsonResponse({"error": "Internal Server Error"}, status=500)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# --- Helper Functions ---
+
+def _check_access_and_get_team_ids(cursor, params):
+    """
+    Handles Team_Lead access control and returns a list of team IDs
+    or an error response if access is denied.
+    """
+    lead_team_ids = None
+    if params["role"] == 'Team_Lead':
+        cursor.execute("SELECT emp_id FROM hr_team_members WHERE email = (SELECT email FROM users WHERE user_id = %s)", (params["user_id"],))
+        emp_row = cursor.fetchone()
+        emp_id = emp_row['emp_id'] if emp_row else None
+
+        if not emp_id:
+            lead_team_ids = []
+        else:
+            cursor.execute("SELECT team_id FROM teams WHERE lead_emp_id = %s", (emp_id,))
+            lead_team_ids = [row['team_id'] for row in cursor.fetchall()]
+
+        if params["team_id"] and (not lead_team_ids or int(params["team_id"]) not in lead_team_ids):
+            # Team Lead requesting a team they don't lead
+            return None, JsonResponse({
+                "jd_progress": [],
+                "profile_status_chart": {"labels": ["To Be Screened", "Selected", "Rejected", "On Hold"], "data": [0, 0, 0, 0]},
+                "jd_completion_chart": {"labels": [], "data": []},
+                "team_contribution": [],
+                "timeline_chart": {"labels": [], "datasets": []}
+            })
+    return lead_team_ids, None
+
+def _build_query_with_filters(base_query, params, lead_team_ids):
+    """
+    Dynamically builds the WHERE clause and a list of parameters for a query.
+    Returns (query_string, query_params_list).
+    """
+    query_parts = [base_query]
+    query_params = []
+    
+    # Handle team filtering based on role
+    if params["role"] == 'Team_Lead':
+        if lead_team_ids:
+            format_strings = ','.join(['%s'] * len(lead_team_ids))
+            if not params["team_id"]:
+                query_parts.append(f"AND jd.team_id IN ({format_strings})")
+                query_params.extend(lead_team_ids)
+            else:
+                query_parts.append("AND jd.team_id = %s")
+                query_params.append(params["team_id"])
+        else: # Team lead with no teams
+            query_parts.append("AND 1=2") # Force no results
+    elif params["team_id"]:
+        query_parts.append("AND jd.team_id = %s")
+        query_params.append(params["team_id"])
+    
+    # Add other filters if present
+    if params["jd_status"]:
+        query_parts.append("AND jd.jd_status = %s")
+        query_params.append(params["jd_status"])
+    if params["from_date"]:
+        query_parts.append("AND jd.created_at >= %s")
+        query_params.append(params["from_date"])
+    if params["to_date"]:
+        query_parts.append("AND jd.created_at <= %s")
+        query_params.append(params["to_date"])
+        
+    return " ".join(query_parts), query_params
+
+def _fetch_jd_progress(cursor, params, lead_team_ids):
+    """Fetches JD progress data based on filters."""
+    base_query = """
         SELECT jd.jd_id, jd.jd_summary, t.team_name, jd.jd_status, jd.total_profiles,
             jd.profiles_in_progress, jd.profiles_completed, jd.profiles_selected,
             jd.profiles_rejected, jd.profiles_on_hold
@@ -3539,48 +3868,24 @@ def team_reports_api(request):
         LEFT JOIN teams t ON jd.team_id = t.team_id
         WHERE 1=1
     """
-    params = []
-    if team_id:
-        jd_query += " AND jd.team_id = %s"
-        params.append(team_id)
-    if jd_status:
-        jd_query += " AND jd.jd_status = %s"
-        params.append(jd_status)
-    if from_date:
-        jd_query += " AND jd.created_at >= %s"
-        params.append(from_date)
-    if to_date:
-        jd_query += " AND jd.created_at <= %s"
-        params.append(to_date)
-    cursor.execute(jd_query, params)
-    jd_progress = cursor.fetchall()
+    query, query_params = _build_query_with_filters(base_query, params, lead_team_ids)
+    cursor.execute(query, query_params)
+    return cursor.fetchall()
 
-    # Profile Status Breakdown (Pie) - filtered
-    status_counts = {"toBeScreened": 0, "selected": 0, "rejected": 0, "onHold": 0}
-    status_query = """
+def _fetch_profile_status_chart(cursor, params, lead_team_ids):
+    """Fetches data for the profile status pie chart."""
+    base_query = """
         SELECT c.screen_status, COUNT(*) as cnt
         FROM candidates c
         LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
         WHERE 1=1
     """
-    status_params = []
-    if team_id:
-        status_query += " AND jd.team_id = %s"
-        status_params.append(team_id)
-    if jd_status:
-        status_query += " AND jd.jd_status = %s"
-        status_params.append(jd_status)
-    if from_date:
-        status_query += " AND jd.created_at >= %s"
-        status_params.append(from_date)
-    if to_date:
-        status_query += " AND jd.created_at <= %s"
-        status_params.append(to_date)
-    status_query += " GROUP BY c.screen_status"
-    cursor.execute(status_query, status_params)
-    for row in cursor.fetchall():
-        status_counts[row["screen_status"]] = row["cnt"]
-    profile_status_chart = {
+    query, query_params = _build_query_with_filters(base_query, params, lead_team_ids)
+    query += " GROUP BY c.screen_status"
+    cursor.execute(query, query_params)
+    
+    status_counts = {row["screen_status"]: row["cnt"] for row in cursor.fetchall()}
+    return {
         "labels": ["To Be Screened", "Selected", "Rejected", "On Hold"],
         "data": [
             status_counts.get("toBeScreened", 0),
@@ -3590,8 +3895,9 @@ def team_reports_api(request):
         ]
     }
 
-    # JD Completion Rate (Bar)
-    jd_completion_chart = {
+def _get_jd_completion_chart(jd_progress):
+    """Calculates the JD completion chart data from progress data."""
+    return {
         "labels": [jd["jd_id"] for jd in jd_progress],
         "data": [
             int((jd["profiles_selected"] / jd["total_profiles"] * 100) if jd["total_profiles"] else 0)
@@ -3599,8 +3905,9 @@ def team_reports_api(request):
         ]
     }
 
-    # Team/Member Contribution
-    cursor.execute("""
+def _fetch_team_contribution(cursor, params, lead_team_ids):
+    """Fetches team/member contribution data."""
+    base_query = """
         SELECT c.jd_id, t.team_name, CONCAT(m.first_name, ' ', m.last_name) AS member_name,
             COUNT(c.candidate_id) AS profiles_processed,
             SUM(c.screen_status='selected') AS selected,
@@ -3609,12 +3916,28 @@ def team_reports_api(request):
         FROM candidates c
         LEFT JOIN teams t ON c.team_id = t.team_id
         LEFT JOIN hr_team_members m ON c.hr_member_id = m.emp_id
-        GROUP BY c.jd_id, t.team_name, member_name
-    """)
-    team_contribution = cursor.fetchall()
+        WHERE 1=1
+    """
+    # Build query for Team_Lead or Admin/other roles
+    query_parts = [base_query]
+    query_params = []
+    
+    if params["role"] == 'Team_Lead':
+        if lead_team_ids:
+            format_strings = ','.join(['%s'] * len(lead_team_ids))
+            query_parts.append(f"AND c.team_id IN ({format_strings})")
+            query_params.extend(lead_team_ids)
+        else:
+            query_parts.append("AND 1=2") # No teams, force no results
+    
+    query_parts.append("GROUP BY c.jd_id, t.team_name, member_name")
+    
+    cursor.execute(" ".join(query_parts), query_params)
+    return cursor.fetchall()
 
-    # Timeline/Trend Analysis (Line)
-    cursor.execute("""
+def _fetch_timeline_chart(cursor, params, lead_team_ids):
+    """Fetches data for the timeline chart."""
+    base_query = """
         SELECT DATE(screened_on) as date, 
             SUM(screen_status='selected') as selected,
             SUM(screen_status='rejected') as rejected,
@@ -3622,12 +3945,26 @@ def team_reports_api(request):
             COUNT(*) as processed
         FROM candidates
         WHERE screened_on IS NOT NULL
-        GROUP BY DATE(screened_on)
-        ORDER BY date ASC
-    """)
+    """
+    # Build query for Team_Lead or Admin/other roles
+    query_parts = [base_query]
+    query_params = []
+    
+    if params["role"] == 'Team_Lead':
+        if lead_team_ids:
+            format_strings = ','.join(['%s'] * len(lead_team_ids))
+            query_parts.append(f"AND team_id IN ({format_strings})")
+            query_params.extend(lead_team_ids)
+        else:
+            query_parts.append("AND 1=2")
+            
+    query_parts.append("GROUP BY DATE(screened_on) ORDER BY date ASC")
+    
+    cursor.execute(" ".join(query_parts), query_params)
     rows = cursor.fetchall()
+    
     labels = [r["date"].strftime("%Y-%m-%d") for r in rows]
-    timeline_chart = {
+    return {
         "labels": labels,
         "datasets": [
             {"label": "Processed", "data": [r["processed"] for r in rows], "borderColor": "#2563eb", "fill": False},
@@ -3636,16 +3973,6 @@ def team_reports_api(request):
             {"label": "On Hold", "data": [r["on_hold"] for r in rows], "borderColor": "#f59e42", "fill": False}
         ]
     }
-
-    cursor.close()
-    conn.close()
-    return JsonResponse({
-        "jd_progress": jd_progress,
-        "profile_status_chart": profile_status_chart,
-        "jd_completion_chart": jd_completion_chart,
-        "team_contribution": team_contribution,
-        "timeline_chart": timeline_chart
-    })
 
 def api_jd_detail(request, jd_id):
     """
