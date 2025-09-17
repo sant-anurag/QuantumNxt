@@ -53,20 +53,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const tbody = document.querySelector('#statusReportTable tbody');
             tbody.innerHTML = '';
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No data found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No data found.</td></tr>';
                 return;
             }
             rows.forEach((row, idx) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td>${row.company_name}</td>
-                    <td>${row.jd_summary}</td>
-                    <td>${row.jd_id}</td>
-                    <td>${row.shared_on}</td>
-                    <td>${row.profile_count}</td>
-                    <td>${row.feedback}</td>
-                `;
+                if (idx === rows.length - 1) {
+                    // Last row: summary, bold, no serial number
+                    tr.innerHTML = `
+                        <td></td>
+                        <td style="font-weight:bold;">${row.company_name}</td>
+                        <td style="font-weight:bold;">${row.jd_summary}</td>
+                        <td style="font-weight:bold;">${row.jd_id}</td>
+                        <td style="font-weight:bold;">${row.profile_count}</td>
+                        <td style="font-weight:bold;">${row.feedback}</td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td>${idx + 1}</td>
+                        <td>${row.company_name}</td>
+                        <td>${row.jd_summary}</td>
+                        <td>${row.jd_id}</td>
+                        <td>${row.profile_count}</td>
+                        <td>${row.feedback}</td>
+                    `;
+                }
                 tbody.appendChild(tr);
             });
         }

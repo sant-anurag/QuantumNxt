@@ -1,0 +1,35 @@
+/* Custom styles for customer details table */
+.customer-form-outer {
+	background: #fff;
+	border-radius: 18px;
+	box-shadow: 0 6px 32px rgba(60, 120, 255, 0.07);
+	padding: 38px 48px 32px 48px;
+	margin: 36px auto 0 auto;
+	max-width: 1100px;
+	width: 98vw;
+}
+.btn-primary {
+	font-weight: 600;
+	box-shadow: 0 2px 8px rgba(60, 120, 255, 0.08);
+	transition: background 0.18s;
+}
+.btn-primary:active {
+	transform: scale(0.98);
+}
+.customer-form-outer table {
+	border-radius: 12px;
+	overflow: hidden;
+}
+.customer-form-outer th, .customer-form-outer td {
+	font-size: 1.07em;
+	vertical-align: middle;
+}
+.customer-form-outer th {
+	background: #f8fbff;
+	color: #233a63;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+.customer-form-outer tr:last-child td {
+	border-bottom: none;
+}

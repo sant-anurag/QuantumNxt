@@ -59,21 +59,48 @@
                 </div>
             </div>
 
-            <!-- Skills, Experience, Screened On -->
+            <!-- Skills, Education, Experience, Previous Job profile  -->
             <div class="modal-row">
                 <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
                     <label for="modal-skills">Skills:</label>
                     <input type="text" id="modal-skills" maxlength="255">
                 </div>
+
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-education">Education:</label>
+                    <input type="text" id="modal-education" maxlength="255">
+                </div>
+
                 <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
                     <label for="modal-experience">Experience (years):</label>
-                    <input type="text" id="modal-experience" maxlength="20">
+                    <input type="number" id="modal-experience" min="0" step="0.1" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-screened-on">Screened On:</label>
-                    <input type="date" id="modal-screened-on">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-prev-job-profile">Previous Job Profile:</label>
+                    <input type="text" id="modal-prev-job-profile" maxlength="255">
                 </div>
             </div>
+
+            <!-- Current CTC, Expected CTC, Notice Period, Job location -->
+           <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-current-ctc">Current CTC:</label>
+                    <input type="number" id="modal-current-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-expected-ctc">Expected CTC:</label>
+                    <input type="number" id="modal-expected-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
+                    <label for="modal-notice-period">Notice Period (days):</label>
+                    <input type="number" id="modal-notice-period" min="0" step="1" maxlength="3" oninput="this.value = this.value.replace(/[^\d]/g, '')">
+                </div>
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-location">Location:</label>
+                    <input type="text" id="modal-location" maxlength="100">
+                </div>
+            </div>
+
 
             <!-- Screen Status, Screening Team, HR Member ID -->
             <div class="modal-row">
@@ -99,15 +126,30 @@
                 </div>
             </div>
 
-            <!-- Screened Remarks -->
             <div class="modal-row">
+                <div style="flex:1; display:flex; flex-direction:column;">
+                    <label for="modal-screened-on">Screened On:</label>
+                    <input type="date" id="modal-screened-on">
+                </div>
                 <div style="flex:1; display:flex; flex-direction:column;">
                     <label for="modal-shared-on">Shared On:</label>
                     <input type="date" id="modal-shared-on">
                 </div>
-                <div style="flex:2; display:flex; flex-direction:column;">
+            </div>
+
+            <!-- Screened Remarks -->
+            <div class="modal-row">
+                <div style="flex:3; display:flex; flex-direction:column;">
                     <label for="modal-screened-remarks">Screened Remarks:</label>
                     <textarea id="modal-screened-remarks" maxlength="500"></textarea>
+                </div>
+            </div>
+
+            <!-- Recruiter Comments -->
+            <div class="modal-row">
+                <div style="flex:3; display:flex; flex-direction:column;">
+                    <label for="modal-recruiter-comments">Recruiter Comments:</label>
+                    <textarea id="modal-recruiter-comments" maxlength="200"></textarea>
                 </div>
             </div>
 

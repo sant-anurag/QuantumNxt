@@ -317,17 +317,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const candidateData = {
             resume_id: document.getElementById('modal-resume-id').value,
             jd_id: document.getElementById('modal-jd-id').value,
+            team_id: document.getElementById('modal-team-id').value,
             name: document.getElementById('modal-name').value,
             phone: document.getElementById('modal-phone').value,
             email: document.getElementById('modal-email').value,
             skills: document.getElementById('modal-skills').value,
+            education: document.getElementById('modal-education') ? document.getElementById('modal-education').value : '',
             experience: document.getElementById('modal-experience').value,
-            screened_on: document.getElementById('modal-screened-on').value,
+            prev_job_profile: document.getElementById('modal-prev-job-profile').value,
+            current_ctc: document.getElementById('modal-current-ctc').value,
+            expected_ctc: document.getElementById('modal-expected-ctc').value,
+            notice_period: document.getElementById('modal-notice-period').value,
+            location: document.getElementById('modal-location').value,
             screen_status: document.getElementById('modal-screen-status').value,
-            screened_remarks: document.getElementById('modal-screened-remarks').value,
-            screening_team: document.getElementById('modal-team-id').value,
+            screening_team: document.getElementById('modal-screening-team').value,
             hr_member_id: document.getElementById('modal-hr-member-id').value,
-            shared_on: document.getElementById('modal-shared-on').value
+            screened_on: document.getElementById('modal-screened-on').value,
+            shared_on: document.getElementById('modal-shared-on').value,
+            screened_remarks: document.getElementById('modal-screened-remarks').value,
+            recruiter_comments: document.getElementById('modal-recruiter-comments').value
         };
 
         fetch('/save_candidate_details/', {

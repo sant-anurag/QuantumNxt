@@ -569,14 +569,24 @@ def create_jd(request):
         no_of_positions = int(request.POST.get("no_of_positions", 1))
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
+        budget_ctc = request.POST.get("budget_ctc", 0)
+        experience_required = request.POST.get("experience_required", "")
+        education_required = request.POST.get("education_required", "")
+        location = request.POST.get("location", "")
+
         try:
             conn = DataOperations.get_db_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO recruitment_jds
-                (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by))
+                (
+                    jd_id, company_id, jd_summary, jd_description, 
+                    must_have_skills, good_to_have_skills, no_of_positions, 
+                    jd_status, created_by, budget_ctc, experience_required, 
+                    education_required, location
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (jd_id, company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, jd_status, created_by, budget_ctc, experience_required, education_required, location))
             conn.commit()
             message = f"Task {escape(jd_id)} created successfully!"
             messages.success(request, message)
@@ -601,12 +611,7 @@ def create_jd(request):
             if 'conn' in locals():
                 conn.close()
         return redirect('jd_create')
-        # messages.messages.error(request, error)
-        # return render(request, "jd_create.html", {
-        #     "companies": companies,
-        #     "message": message,
-        #     "error": error
-        # })
+    
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 @csrf_exempt
@@ -699,8 +704,8 @@ def create_customer(request):
                 if 'Duplicate entry' in str(e):
                     error = "A customer with this company name or email/phone already exists."
             else:
-                # If search is blank, show first 10 companies ordered by company name
-                cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers ORDER BY company_name ASC LIMIT 10")
+                # If search is blank, show first 10 companies ordered by created_at
+                cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers ORDER BY created_at DESC LIMIT 10")
                 customer_list = cursor.fetchall()
                 customer_list = [dict(customer, created_at=customer['created_at'].date()) for customer in customer_list]
 
@@ -807,6 +812,62 @@ def delete_customer(request, company_id):
                 cursor.close()
             if 'conn' in locals():
                 conn.close()
+
+@login_required
+def customer_details(request):
+    """
+    View of details of customers for recruiters.
+
+    Here hr_team_members can view the details of customers. and can edit note field only if it is not already filled.
+    """
+    message = error = None
+    if request.method == "POST":
+        customer_id = request.POST.get("customer_id")
+        note = request.POST.get("note", "").strip()
+        if customer_id and note:
+            try:
+                conn = DataOperations.get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE customers SET note=%s WHERE company_id=%s", [note, customer_id])
+                conn.commit()
+                message = "Note updated successfully."
+            except Exception as e:
+                error = f"Failed to update note: {str(e)}"
+            finally:
+                if 'cursor' in locals():
+                    cursor.close()
+                if 'conn' in locals():
+                    conn.close()
+            # Redirect after POST to prevent resubmission
+            from django.urls import reverse
+            from django.http import HttpResponseRedirect
+            url = reverse('customer_details')
+            # Pass message/error via session (or use Django messages framework)
+            if message:
+                request.session['customer_details_message'] = message
+            if error:
+                request.session['customer_details_error'] = error
+            return HttpResponseRedirect(url)
+    # Always show customer list
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers ORDER BY created_at DESC")
+    customers = cursor.fetchall()
+    for customer in customers:
+        customer['created_at'] = customer['created_at'].date()
+    name = request.session.get('name', 'Guest')
+    user_role_ = request.session.get('role', 'Guest')
+    # Retrieve message/error from session if present
+    message = request.session.pop('customer_details_message', None)
+    error = request.session.pop('customer_details_error', None)
+    context = {
+        "customers": customers,
+        "name": name,
+        "user_role": user_role_,
+        "message": message,
+        "error": error
+    }
+    return render(request, "customer_details.html", context)
 
 def view_edit_jds(request):
     """
@@ -1597,7 +1658,13 @@ def save_candidate_details(request):
             phone = data.get('phone')
             email = data.get('email')
             skills = data.get('skills')
+            education = data.get('education')
             experience = data.get('experience')
+            previous_job_profile = data.get('prev_job_profile')
+            current_ctc = data.get('current_ctc')
+            expected_ctc = data.get('expected_ctc')
+            notice_period = data.get('notice_period')
+            location = data.get('location')
             resume_id = data.get('resume_id')
             jd_id = data.get('jd_id', None)
             screened_on = data.get('screened_on')
@@ -1606,6 +1673,7 @@ def save_candidate_details(request):
             screening_team = data.get('screening_team')
             hr_member_id = data.get('hr_member_id')
             shared_on = data.get('shared_on')
+            recruiters_comment = data.get('recruiter_comments')
 
             # Normalize shared_on to None if empty or falsy
             shared_on = shared_on or None
@@ -1613,17 +1681,21 @@ def save_candidate_details(request):
             # Validate required fields
             required_fields = [resume_id, name, screen_status, screening_team, hr_member_id]
             if not all(required_fields):
+                DataOperations.close_db_connection(conn, cursor)
                 return JsonResponse({'success': False, 'error': 'Missing required fields'}, status=400)
 
             # If sharing date is provided, screened_on must also be provided
             if shared_on:
                 if not screened_on:
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Screened on date is required if shared on date is provided.'}, status=400)
                 # Sharing date cannot be before screened date
                 if screened_on and shared_on < screened_on:
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Sharing date cannot be before screened date.'}, status=400)
                 # Cannot share if status is rejected or to be screened
                 if screen_status in ('rejected', 'toBeScreened'):
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Cannot share profile if status is rejected or to be screened.'}, status=400)
             
             
@@ -1652,48 +1724,60 @@ def save_candidate_details(request):
                         pass
                 # Compare only if both are date objects
                 if existing_screened_on and screened_on_date and screened_on_date < existing_screened_on:
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Screened on date cannot be earlier than the existing screened on date.'}, status=400)
 
                 if existing_shared_on and shared_on_date and shared_on_date < existing_shared_on:
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Sharing date cannot be earlier than the existing sharing date.'}, status=400)
 
                 # count parts
                 candidate_prev_data = cd_data[0]
                 candidate_new_data = {
                     "jd_id": jd_id,
-                    "screen_status": screen_status
+                    "screen_status": screen_status,
+                    "l1_result": candidate_prev_data.get("l1_result"),
+                    "l2_result": candidate_prev_data.get("l2_result"),
+                    "l3_result": candidate_prev_data.get("l3_result"),
+                    "screened_on": screened_on,
                 }
 
                
 
                 cursor.execute("""
                     UPDATE candidates
-                    SET name=%s, phone=%s, email=%s, skills=%s, experience=%s,
-                        screened_on=%s, screen_status=%s, screened_remarks=%s,
-                        team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s
+                    SET name=%s, phone=%s, email=%s, skills=%s, education=%s, experience=%s,
+                        previous_job_profile=%s, current_ctc=%s, expected_ctc=%s, notice_period=%s, 
+                        location=%s, screened_on=%s, screen_status=%s, screened_remarks=%s,
+                        team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s, recruiter_comments=%s
                     WHERE resume_id=%s
                 """, [
-                    name, phone, email,
-                    skills, experience, screened_on,
-                    screen_status, screened_remarks,
-                    screening_team, hr_member_id,
-                    shared_on, resume_id
+                    name, phone, email, skills, education, 
+                    experience, previous_job_profile, current_ctc, 
+                    expected_ctc, notice_period, location, screened_on,
+                    screen_status, screened_remarks, screening_team, hr_member_id,
+                    shared_on, recruiters_comment, resume_id
                 ])
 
                 check = DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
                 if not check:
                     conn.rollback()
+                    DataOperations.close_db_connection(conn, cursor)
                     return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
             else:
                 cursor.execute("""
-                    INSERT INTO candidates (jd_id, resume_id, name, phone, email, skills,
-                    experience, screened_on, screen_status, screened_remarks, team_id, hr_member_id, shared_on)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO candidates (
+                                jd_id, resume_id, name, phone, email, skills,
+                                education, experience, previous_job_profile, 
+                                current_ctc, expected_ctc, notice_period, 
+                                location, screened_on, screen_status, screened_remarks, recruiter_comments)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
-                    email, skills, experience, screened_on,
-                    screen_status, screened_remarks,
-                    screening_team, hr_member_id, shared_on
+                    email, skills, education, experience,
+                    previous_job_profile, current_ctc, 
+                    expected_ctc, notice_period, location, 
+                    screened_on, screen_status, screened_remarks, recruiters_comment
                 ])
                 # increase the total_profiles count for the JD
                 
@@ -1711,8 +1795,7 @@ def save_candidate_details(request):
             response = {'success': False, 'error': str(e)}
             return JsonResponse(response, status=500)
         finally:
-            cursor.close()
-            conn.close()
+            DataOperations.close_db_connection(conn, cursor)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
@@ -1725,13 +1808,17 @@ def update_candidate_screen_status(request):
         status = request.POST.get('status')
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT jd_id, screen_status FROM candidates WHERE resume_id=%s", (resume_id,))
+        cursor.execute("SELECT jd_id, screen_status, l1_result, l2_result, l3_result, screened_on FROM candidates WHERE resume_id=%s", (resume_id,))
         candidate_prev_data = cursor.fetchone()
         if not candidate_prev_data:
             return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
         candidate_new_data = {
             "jd_id": candidate_prev_data['jd_id'],
-            "screen_status": status
+            "screen_status": status,
+            "l1_result": candidate_prev_data.get("l1_result"),
+            "l2_result": candidate_prev_data.get("l2_result"),
+            "l3_result": candidate_prev_data.get("l3_result"),
+            "screened_on": candidate_prev_data.get("screened_on"),
         }
 
         
@@ -2063,17 +2150,24 @@ def submit_interview_result(request):
             SET {level}_result = %s, {level}_comments = %s, updated_at = NOW()
             WHERE candidate_id = %s
         """, (result, comments, candidate_id))
-        conn.commit()
+        
 
         # Step 3: Get the new (current) data of the candidate
-        cursor.execute("SELECT jd_id, screen_status, l1_result, l2_result, l3_result FROM candidates WHERE candidate_id = %s", (candidate_id,))
-        current_candidate_data = cursor.fetchone()
+        current_candidate_data = {
+            "jd_id": previous_candidate_data['jd_id'],
+            "screen_status": previous_candidate_data['screen_status'],
+            "l1_result": previous_candidate_data['l1_result'] if level != 'l1' else result,
+            "l2_result": previous_candidate_data['l2_result'] if level != 'l2' else result,
+            "l3_result": previous_candidate_data['l3_result'] if level != 'l3' else result,
+        }
 
         if current_candidate_data:
             # Step 4: Call the function to update recruitment_jds based on the change
-            DataOperations.update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data)
-            conn.commit()  # Commit changes made by update_recruitment_jds
-
+            check = DataOperations.update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data)
+            if not check:
+                conn.rollback()
+                return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+        conn.commit()
         # TO DO: If necessary, need to send notification to team leads.
         cursor.execute("SELECT team_id FROM candidates WHERE candidate_id=%s", (candidate_id,))
         team_row = cursor.fetchone()
@@ -2221,7 +2315,10 @@ def update_candidate_status(request):
             "l2_result": l2_result,
             "l3_result": l3_result
         }
-        DataOperations.update_recruitment_jds(cursor, previous_candidate_data, candidata_new_data)
+        check = DataOperations.update_recruitment_jds(cursor, previous_candidate_data, candidata_new_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({"success": False, "error": "Error updating recruitment_jds counts after candidate status update"}, status=500)
         conn.commit()
 
         # TO DO: Send notification to team lead if any candidate is finallized.(means, selected for all levels)
@@ -2468,7 +2565,10 @@ def save_candidate_details_profile(request):
             WHERE candidate_id = %s
         """, [screened_remarks, l1_comments, l2_comments, l3_comments, status, candidate_id])
 
-        DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
+        check = DataOperations.update_recruitment_jds(cursor, candidate_prev_data, candidate_new_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'message': 'Error updating recruitment_jds counts after candidate status update'}, status=500)
         conn.commit()
         cursor.close()
         conn.close()
@@ -4500,6 +4600,7 @@ def generate_status_report(request):
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     if request.method == "POST":
+        role = request.session.get("role")
         report_type = request.POST.get("report_type")
         team_id = request.POST.get("team_id")
         member_id = request.POST.get("member_id")
@@ -4507,8 +4608,29 @@ def generate_status_report(request):
         from_date = request.POST.get("from_date")
         to_date = request.POST.get("to_date")
 
+        if report_type != "custom" and not date:
+            messages.error(request, "date is required.")
+            return JsonResponse({"report": [], "message": "date is required."})
+        if report_type == "custom" and (not from_date or not to_date):
+            messages.error(request, "From and To dates are required for custom report.")
+            return JsonResponse({"report": [], "message": "From and To dates are required for custom report."})
+
         where = []
         params = []
+        if role == "Team_Lead":
+            lead_team_ids = DataOperations.get_team_lead_teams(request.session.get("user_id"))
+            if lead_team_ids:
+                format_strings = ','.join(['%s'] * len(lead_team_ids))
+                where.append(f"c.team_id IN ({format_strings})")
+                params.extend(lead_team_ids)
+            else:
+                return JsonResponse({"report": [], "message": "No teams assigned."})
+            if team_id and team_id != "all":
+                if int(team_id) in lead_team_ids:
+                    where.append("c.team_id=%s")
+                    params.append(team_id)
+                else:
+                    return JsonResponse({"report": [], "message": "Unauthorized team access."})
         if team_id and team_id != "all":
             where.append("c.team_id=%s")
             params.append(team_id)
@@ -4531,7 +4653,6 @@ def generate_status_report(request):
                 cu.company_name,
                 j.jd_summary,
                 c.jd_id,
-                DATE_FORMAT(c.shared_on, '%%d-%%b-%%Y') AS shared_on,
                 COUNT(c.candidate_id) AS profile_count,
                 GROUP_CONCAT(c.screened_remarks SEPARATOR ', ') AS feedback
             FROM candidates c
@@ -4546,15 +4667,28 @@ def generate_status_report(request):
 
         rows = cursor.fetchall()
         report = []
+        unique_companies = set()
+        unique_jds = set()
+        total_profiles = 0
         for idx, r in enumerate(rows):
             report.append({
                 "company_name": r['company_name'],
                 "jd_summary": r['jd_summary'],
                 "jd_id": r['jd_id'],
-                "shared_on": r['shared_on'],
                 "profile_count": r['profile_count'],
                 "feedback": r['feedback'] or ""
             })
+            unique_companies.add(r['company_name'])
+            unique_jds.add(r['jd_id'])
+            total_profiles += r['profile_count'] if r['profile_count'] else 0
+        # Add summary line
+        report.append({
+            "company_name": f"Total Unique Companies: {len(unique_companies)}",
+            "jd_summary": f"Total JDs: {len(unique_jds)}",
+            "jd_id": "",
+            "profile_count": f"Total Shared Profiles: {total_profiles}",
+            "feedback": ""
+        })
         cursor.close()
         conn.close()
         return JsonResponse({"report": report, "message": "Report generated."})

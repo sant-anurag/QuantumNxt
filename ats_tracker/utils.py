@@ -39,6 +39,16 @@ class DataOperations:
             return None
 
     @staticmethod
+    def close_db_connection(conn, cursor=None):
+        """
+        Closes the database connection.
+        """
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    @staticmethod
     def get_user_id_from_emp_id(emp_id):
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
@@ -199,7 +209,8 @@ class DataOperations:
                 return True
             except mysql.connector.Error as err:
                 print(f"Error updating recruitment_jds: {err}")
-        return False
+                return False
+        return True
 
 
 
