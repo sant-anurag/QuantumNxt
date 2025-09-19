@@ -204,6 +204,8 @@ class ATSDatabaseInitializer:
                 candidate_note TEXT,
                 team_id INT,
                 hr_member_id INT,
+                UNIQUE KEY unique_jd_phone (jd_id, phone),
+                UNIQUE KEY unique_jd_email (jd_id, email),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id),
