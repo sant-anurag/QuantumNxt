@@ -5,31 +5,31 @@
 <div class="glass-card status-report-container">
     <h2 class="sr-title"><i class="fas fa-file-excel"></i> Status Reports</h2>
     <form id="statusReportForm" class="sr-form">
-        <label>Report Type:</label>
+        <label for="reportType">Report Type:</label>
         <select name="report_type" id="reportType" required>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="custom">Custom Duration</option>
         </select>
-        <label>Team:</label>
+        <label for="teamSelect">Team:</label>
         <select name="team_id" id="teamSelect">
             <option value="all">All Teams</option>
             {% for team in teams %}
             <option value="{{ team.team_id }}">{{ team.team_name }}</option>
             {% endfor %}
         </select>
-        <label>Member:</label>
+        <label for="memberSelect">Member:</label>
         <select name="member_id" id="memberSelect">
             <option value="all">All Members</option>
             {% for member in members %}
             <option value="{{ member.emp_id }}">{{ member.first_name }} {{ member.last_name }}</option>
             {% endfor %}
         </select>
-        <label id="dateLabel">Date:</label>
+        <label for="dateInput" id="dateLabel">Date:</label>
         <input type="date" name="date" id="dateInput" required>
-        <label id="fromLabel" style="display:none;">From:</label>
+        <label for="fromDateInput" id="fromLabel" style="display:none;">From:</label>
         <input type="date" name="from_date" id="fromDateInput" style="display:none;">
-        <label id="toLabel" style="display:none;">To:</label>
+        <label for="toDateInput" id="toLabel" style="display:none;">To:</label>
         <input type="date" name="to_date" id="toDateInput" style="display:none;">
         <button type="submit" class="btn-primary">Generate Report</button>
         <button type="button" id="exportBtn" class="btn-primary" style="margin-left:10px;">Export to Excel</button>
@@ -52,7 +52,10 @@
             </tbody>
         </table>
     </div>
+    <!-- Candidate tables will be rendered here -->
+    <div id="candidateTablesContainer" class="candidate-tables-container"></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="{% static 'js/candidate_tables.js' %}"></script>
 <script src="{% static 'js/status_report.js' %}"></script>
 {% endblock %}

@@ -43,9 +43,19 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(res => res.json())
             .then(data => {
+                console.log(data);
                 renderTable(data.report);
                 document.getElementById('statusReportMsg').textContent = data.message || '';
+                if (window.renderCandidateTables) {
+                    renderCandidateTables(data.list_of_candidates);
+                }
             });
+// Load candidate_tables.js dynamically if not already loaded
+if (!window.renderCandidateTables) {
+    const script = document.createElement('script');
+    script.src = '/static/js/candidate_tables.js';
+    document.head.appendChild(script);
+}
         });
 
         // Render table
@@ -85,7 +95,32 @@ document.addEventListener('DOMContentLoaded', function() {
         // Export to Excel
         document.getElementById('exportBtn').addEventListener('click', function() {
             const table = document.getElementById('statusReportTable');
-            const wb = XLSX.utils.table_to_book(table, {sheet:"Status Report"});
+            const wb = XLSX.utils.book_new();
+            // Add main status report sheet
+            const mainSheet = XLSX.utils.table_to_sheet(table);
+            XLSX.utils.book_append_sheet(wb, mainSheet, "Status Report");
+
+            // Add candidate tables as sheets
+            const candidateBlocks = document.querySelectorAll('.candidate-meta');
+            const candidateTables = document.querySelectorAll('.candidate-table');
+            candidateTables.forEach((candTable, idx) => {
+                // Try to get jd_id and company name from metadata block
+                let sheetName = `Candidates_${idx+1}`;
+                if (candidateBlocks[idx]) {
+                    const metaText = candidateBlocks[idx].textContent;
+                    // Extract JD and company name
+                    const jdMatch = metaText.match(/JD:\s*([^|]+)/);
+                    const companyMatch = metaText.match(/Company:\s*([^|]+)/);
+                    let jd = jdMatch ? jdMatch[1].trim() : '';
+                    let company = companyMatch ? companyMatch[1].trim() : '';
+                    if (jd || company) {
+                        sheetName = `${jd}${company ? '_' + company : ''}`.replace(/[^A-Za-z0-9_]/g, '').slice(0, 31);
+                    }
+                }
+                const sheet = XLSX.utils.table_to_sheet(candTable);
+                XLSX.utils.book_append_sheet(wb, sheet, sheetName || `Candidates_${idx+1}`);
+            });
+
             const today = new Date().toISOString().slice(0,10);
             XLSX.writeFile(wb, `Report_${today}.xlsx`);
         });
