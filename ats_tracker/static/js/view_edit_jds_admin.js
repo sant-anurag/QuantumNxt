@@ -51,14 +51,18 @@ document.addEventListener("DOMContentLoaded", function() {
             jd_description: document.getElementById("jd_description").value,
             must_have_skills: document.getElementById("must_have_skills").value,
             good_to_have_skills: document.getElementById("good_to_have_skills").value,
-            experience_range: document.getElementById("experience_range").value,
             education: document.getElementById("education").value,
             no_of_positions: document.getElementById("no_of_positions").value,
             jd_status: document.getElementById("jd_status").value,
             company_id: document.getElementById("company_id").value,
             team_id: document.getElementById("team_id").value,
+            budget_ctc: document.getElementById("budget_ctc").value,
+            location: document.getElementById("location").value,
+            experience_required: document.getElementById("experience").value,
+            education_required: document.getElementById("education").value,
             closure_date: document.getElementById("closure_date").value
         };
+        console.log("Submitting data:", data);
         fetch(`/update_jd/${jd_id}/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

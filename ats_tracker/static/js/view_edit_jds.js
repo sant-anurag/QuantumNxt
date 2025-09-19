@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function() {
     tableBody.querySelectorAll("tr").forEach(row => {
         if (row.querySelector(".jd-no-data")) return;
         const cells = row.children;
-        allJDs.push({
+        const jd = {
             jd_id: cells[0].textContent.trim(),
             jd_summary: cells[1].textContent.trim(),
             jd_status: cells[2].textContent.trim(),
@@ -33,10 +33,13 @@ document.addEventListener("DOMContentLoaded", function() {
             company: cells[4].textContent.trim(),
             team: cells[5].textContent.trim(),
             created_at: cells[6].textContent.trim()
-        });
+        }
+        console.log("Parsed JD:", jd);
+        allJDs.push(jd);
     });
 
     function renderCards(jds) {
+        console.log("Rendering cards:", jds);
         cardList.innerHTML = "";
         if (jds.length === 0) {
             cardList.innerHTML = `<div class="jd-no-data">No JDs found.</div>`;
@@ -58,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <p><b>Created:</b> ${jd.created_at}</p>
                 </div>
                 <div class="jd-card-actions">
-                    <button class="jd-btn-view" data-jd="${jd.jd_id}"><i class="fas fa-eye"></i> View${user_role === "Admin" ? "/Edit" : ""}</button>
+                    <button class="jd-btn-view" data-jd="${jd.jd_id}"><i class="fas fa-eye"></i> View/Edit</button>
                 </div>
             `;
             cardList.appendChild(card);
@@ -86,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td>${jd.team}</td>
                 <td>${jd.created_at}</td>
                 <td>
-                    <button class="jd-btn-view" data-jd="${jd.jd_id}"><i class="fas fa-eye"></i> View${user_role === "Admin" ? "/Edit" : ""}</button>
+                    <button class="jd-btn-view" data-jd="${jd.jd_id}"><i class="fas fa-eye"></i> View/Edit</button>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -190,8 +193,10 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("jd_description").value = jd.jd_description || "";
         document.getElementById("must_have_skills").value = jd.must_have_skills || "";
         document.getElementById("good_to_have_skills").value = jd.good_to_have_skills || "";
-        document.getElementById("experience_range").value = jd.experience_range || "";
-        document.getElementById("education").value = jd.education || "";
+        document.getElementById("experience").value = jd.experience_required || "";
+        document.getElementById("education").value = jd.education_required || "";
+        document.getElementById("budget_ctc").value = jd.budget_ctc || "";
+        document.getElementById("location").value = jd.location || "";
         document.getElementById("no_of_positions").value = jd.no_of_positions || "";
         document.getElementById("jd_status").value = jd.jd_status || "active";
         document.getElementById("company_id").value = jd.company_id || "";
