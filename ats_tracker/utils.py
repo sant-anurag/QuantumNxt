@@ -1,3 +1,7 @@
+import re
+# ...existing code...
+
+import os
 from cryptography.fernet import Fernet
 
 import mysql.connector
@@ -212,7 +216,23 @@ class DataOperations:
                 return False
         return True
 
-
+    @staticmethod
+    def get_team_lead_teams(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT team_id 
+            FROM teams 
+            WHERE lead_emp_id = (
+                SELECT emp_id 
+                FROM hr_team_members 
+                WHERE email = (SELECT email FROM users WHERE user_id=%s)
+            )
+        """, (user_id,))
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [row['team_id'] for row in results] if results else []
 
 
 class MessageProviders:
@@ -389,6 +409,8 @@ class MessageProviders:
             return False
     
 
+
+
 # Valid Fernet key (32 url-safe base64-encoded bytes)
 FERNET_KEY = b'1cLjiFtjouXMiGiZ75eRUKkWo2MYpYqlguFRXQgv2wQ='
 
@@ -399,6 +421,39 @@ def encrypt_password(password):
 def decrypt_password(token):
     f = Fernet(FERNET_KEY)
     return f.decrypt(token.encode()).decode()
+
+def get_display_filename(file_name, jd_id):
+    # file_name format: JDID__OriginalName__Unique.ext
+    # Remove prefix and suffix
+    try:
+        parts = file_name.split('__')
+        if len(parts) >= 3:
+            # parts[1] is the original name
+            orig_name = parts[1]
+            ext = os.path.splitext(file_name)[1]
+            return orig_name + ext
+        return file_name
+    except Exception:
+        return file_name
+
+
+def compare_mobile_numbers(num1, num2):
+    """
+    Compare two mobile numbers for equality, ignoring country codes, spaces, dashes, brackets, and leading zeros.
+    Returns True if numbers match, False otherwise.
+    """
+    def normalize(number):
+        # Remove all non-digit characters
+        digits = re.sub(r'\D', '', str(number))
+        # Remove leading country code (assume country code is up to 3 digits)
+        # Remove leading zeros
+        digits = digits.lstrip('0')
+        # If number is longer than 10 digits, take last 10 digits (assume Indian mobile numbers)
+        if len(digits) > 10:
+            digits = digits[-10:]
+        return digits
+
+    return normalize(num1) == normalize(num2)
 
 class Constants:
     ROLES = {
