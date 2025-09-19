@@ -39,17 +39,17 @@
                         <td>{{ jd.no_of_positions }}</td>
                         <td>
                             {% for c in companies %}
-                                {% if c.0 == jd.company_id %}{{ c.1 }}{% endif %}
+                                {% if c.company_id == jd.company_id %}{{ c.company_name }}{% endif %}
                             {% endfor %}
                         </td>
                         <td>
                             {% for t in teams %}
-                                {% if t.0 == jd.team_id %}{{ t.1 }}{% endif %}
+                                {% if t.team_id == jd.team_id %}{{ t.team_name }}{% endif %}
                             {% endfor %}
                         </td>
-                        <td>{{ jd.created_at|date:"Y-m-d" }}</td>
+                        <td>{{ jd.created_at }}</td>
                         <td>
-                            <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View{% if user_role == "Admin" %}/Edit{% endif %}</button>
+                            <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
                         </td>
                     </tr>
                     {% empty %}
@@ -71,18 +71,18 @@
                     <p><b>Positions:</b> {{ jd.no_of_positions }}</p>
                     <p><b>Company:</b>
                         {% for c in companies %}
-                            {% if c.0 == jd.company_id %}{{ c.1 }}{% endif %}
+                            {% if c.company_id == jd.company_id %}{{ c.company_name }}{% endif %}
                         {% endfor %}
                     </p>
                     <p><b>Team:</b>
                         {% for t in teams %}
-                            {% if t.0 == jd.team_id %}{{ t.1 }}{% endif %}
+                            {% if t.team_id == jd.team_id %}{{ t.team_name }}{% endif %}
                         {% endfor %}
                     </p>
                     <p><b>Created:</b> {{ jd.created_at|date:"Y-m-d" }}</p>
                 </div>
                 <div class="jd-card-actions">
-                    <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i>  View{% if user_role == "Admin" %}/Edit{% endif %}</button>
+                    <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
                 </div>
             </div>
             {% empty %}
@@ -128,12 +128,22 @@
                 </div>
                 <div class="jd-form-row">
                     <div class="jd-form-group">
-                        <label>Experience Range</label>
-                        <input type="text" name="experience_range" id="experience_range" placeholder="e.g. 2-5 years">
+                        <label>Experience required</label>
+                        <input type="text" name="experience" id="experience" placeholder="e.g. 2-5 years">
                     </div>
                     <div class="jd-form-group">
-                        <label>Education</label>
+                        <label>Education Required</label>
                         <input type="text" name="education" id="education" placeholder="e.g. B.Tech, MBA">
+                    </div>
+                </div>
+                <div class="jd-form-row">
+                    <div class="jd-form-group">
+                        <label>Budget/CTC</label>
+                        <input type="text" name="budget_ctc" id="budget_ctc" min="1", placeholder="e.g. INR 10-15 LPA, USD 20-30K">
+                    </div>
+                    <div class="jd-form-group">
+                        <label>Location</label>
+                        <input type="text" name="location" id="location" placeholder="e.g. Remote, On-site">
                     </div>
                 </div>
                 <div class="jd-form-row">
@@ -155,7 +165,7 @@
                         <label>Company</label>
                         <select name="company_id" id="company_id">
                             {% for c in companies %}
-                                <option value="{{ c.0 }}">{{ c.1 }}</option>
+                                <option value="{{ c.company_id }}">{{ c.company_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -165,7 +175,7 @@
                         <label>Team</label>
                         <select name="team_id" id="team_id">
                             {% for t in teams %}
-                                <option value="{{ t.0 }}">{{ t.1 }}</option>
+                                <option value="{{ t.team_id }}">{{ t.team_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -175,17 +185,13 @@
                     </div>
                 </div>
                 <div class="jd-modal-actions">
-                    {% if user_role == "Admin" %}
-                        <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
-                        <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
-                    {% endif %}
+                    <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
+                    <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
                     <button type="button" id="jd-close-btn" class="jd-btn-secondary"><i class="fas fa-times"></i> Close</button>
                 </div>
             </form>
         </div>
     </div>
     <script src="{% static 'js/view_edit_jds.js' %}"></script>
-    {% if user_role == "Admin" %}
-        <script src="{% static 'js/view_edit_jds_admin.js' %}"></script>
-    {% endif %}
+    <script src="{% static 'js/view_edit_jds_admin.js' %}"></script>
     {% endblock %}
