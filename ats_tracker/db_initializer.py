@@ -214,6 +214,38 @@ class ATSDatabaseInitializer:
                 FOREIGN KEY (team_id) REFERENCES teams(team_id)
             );
         """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS candidate_activities (
+            activity_id INT AUTO_INCREMENT PRIMARY KEY,
+                candidate_id INT NOT NULL,
+                emp_id INT NOT NULL,
+                activity_type ENUM('screening', 'interview', 'offer', 'rejection', 'onboarding', 'other') DEFAULT 'other',
+                activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                notes TEXT,
+                FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE,
+                FOREIGN KEY (emp_id) REFERENCES hr_team_members(emp_id) ON DELETE CASCADE
+            );
+        """)
+        # Need to work on views for this table
+        self.cursor.execute("""
+                            CREATE TABLE IF NOT EXISTS interviews (
+                                interview_id INT AUTO_INCREMENT PRIMARY KEY,
+                                candidate_id INT NOT NULL,
+                                jd_id VARCHAR(20) NOT NULL,
+                                interview_level ENUM('L1', 'L2', 'L3') NOT NULL,
+                                interviewer_name VARCHAR(100),
+                                interviewer_email VARCHAR(100),
+                                scheduled_date DATETIME,
+                                status ENUM('scheduled', 'completed', 'canceled') DEFAULT 'scheduled',
+                                feedback TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE,
+                                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id) ON DELETE CASCADE
+                            );
+        """)
+
         self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS offer_letters (
                     offer_id INT AUTO_INCREMENT PRIMARY KEY,
