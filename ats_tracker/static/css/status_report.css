@@ -107,19 +107,18 @@
 .candidate-table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
-    border-radius: 0 0 16px 16px;
+    margin-bottom: 12px;
+    background: #f7f8fc;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: none;
-    font-size: 0.97em;
-    margin-bottom: 0;
-    border-top: none;
+    box-shadow: 0 1px 4px #e0e7ff;
 }
 
 .candidate-table th, .candidate-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #e3e7fa;
+    border: none;
+    padding: 12px 16px;
     text-align: left;
+    font-size: 1em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -127,23 +126,21 @@
 }
 
 .candidate-table th {
-    background: #eef2ff;
-    color: #5661d2;
+    background: #5661d2;
+    color: #fff;
     font-weight: 600;
-    font-size: 0.98em;
-    letter-spacing: 0.02em;
-    border-bottom: 2px solid #e3e7fa;
+    letter-spacing: 0.5px;
 }
 
 .candidate-table tr:hover td {
-    background: #f7fafd;
+    background: #eef1fa;
 }
 
 .candidate-table tbody tr:nth-child(even) td {
-    background: #e2e8fb;
+    background: #eef1fa;
 }
 .candidate-table tbody tr:nth-child(odd) td {
-    background: #f5f5f5;
+    background: #fff;
 }
 
 @media (max-width: 900px) {
@@ -222,17 +219,19 @@
     .sr-table {
         width: 100%;
         border-collapse: collapse;
-        background: #fff;
-        border-radius: 12px;
+        margin-bottom: 12px;
+        background: #f7f8fc;
+        border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 2px 12px rgba(100,120,255,0.07);
+        box-shadow: 0 1px 4px #e0e7ff;
         font-size: 0.97em;
     }
 
     .sr-table th, .sr-table td {
-        padding: 8px 10px;
-        border-bottom: 1px solid #e3e7fa;
+        border: none;
+        padding: 12px 16px;
         text-align: left;
+        font-size: 1em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -240,16 +239,16 @@
     }
 
     .sr-table th {
-        background: #f7fafd;
-        color: #5661d2;
+        background: #5661d2;
+        color: #fff;
         font-weight: 600;
-        font-size: 0.98em;
-        letter-spacing: 0.02em;
-        border-bottom: 2px solid #e3e7fa;
+        letter-spacing: 0.5px;
     }
 
     .sr-table tr:hover td {
-        background: #eef2ff;
+        background: #eef1fa;
+    background: #eef1fa;
+    background: #fff;
     }
 
     @media (max-width: 900px) {
