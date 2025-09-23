@@ -1,7 +1,11 @@
-document.getElementById('jdSearch').addEventListener('input', function() {
-    const val = this.value;
-    window.location.href = '?search=' + encodeURIComponent(val);
-});
+
+const jdSearch = document.getElementById('jdSearch');
+if (jdSearch) {
+    jdSearch.addEventListener('input', function() {
+        const val = this.value;
+        window.location.href = '?search=' + encodeURIComponent(val);
+    });
+}
 
 function openJDModal(jd_id) {
     fetch(`/jds/${jd_id}/`)
