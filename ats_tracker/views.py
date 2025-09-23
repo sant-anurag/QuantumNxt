@@ -3217,10 +3217,6 @@ def candidate_suggestions(request):
         return JsonResponse({'results': results})
     return JsonResponse({'results': []})
 
-from django.shortcuts import render
-from django.http import JsonResponse
-import mysql.connector
-from datetime import datetime, timedelta
 
 def dashboard_data(request):
     """
@@ -3364,19 +3360,12 @@ def dashboard_data(request):
         "in_progress_candidates": in_progress_candidates
     })
 
-# Python
-from django.shortcuts import render
-from django.http import JsonResponse
-import json
-
 def offer_letter_page(request):
     """
     View to render the offer letter page.
     """
     name = request.session.get('name', 'Guest')
     return render(request, 'offer_letter.html', {'name': name})
-
-from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def generate_offer_letter(request):
@@ -3459,14 +3448,6 @@ def generate_offer_letter(request):
         return JsonResponse({'success': True, 'offer_html': offer_html})
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
-from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-import mysql.connector
-import csv
-from datetime import datetime, timedelta
-
-
 @role_required(['Admin', 'Team_Lead'], is_api=True)
 def teams_list(request):
     """
@@ -3532,11 +3513,6 @@ def team_reports_page(request):
     """
     name = request.session.get('name', 'Guest')
     return render(request, 'team_reports.html', {'name': name})
-
-
-
-
-
 
 @csrf_exempt
 @role_required(['Admin', 'Team_Lead'], is_api=True)
@@ -3933,10 +3909,7 @@ def team_reports_export(request):
     conn.close()
     return response
 
-import mysql.connector
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
-import csv
+
 
 @role_required(['Admin', 'Team_Lead'])
 def task_progress_reports_page(request):
@@ -4281,11 +4254,6 @@ def team_reports_export(request):
     conn.close()
     return response
 
-import mysql.connector
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
-import csv
-
 @role_required(['Admin', 'Team_Lead'])
 def candidate_conversion_rates_page(request):
     name = request.session.get('name', 'Guest')
@@ -4313,242 +4281,6 @@ def ccr_filters(request):
     cursor.close()
     conn.close()
     return JsonResponse({"jds": jds, "teams": teams})
-
-# @role_required(['Admin', 'Team_Lead'], is_api=True)
-# def ccr_reports_api(request):
-#     """
-#     API endpoint to get candidate conversion reports.
-#     """
-#     role = request.session.get("role", "Guest")
-#     user_id = request.session.get("user_id", None)
-#     jd_id = request.GET.get("jd_id")
-#     team_id = request.GET.get("team_id")
-#     from_date = request.GET.get("from_date")
-#     to_date = request.GET.get("to_date")
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-
-#     # Overall Funnel
-#     funnel_labels = ["Screened", "L1 Cleared", "L2 Cleared", "L3 Cleared", "Final Selected"]
-#     funnel_query = f"""
-#         SELECT
-#             COUNT(*) as total,
-#             SUM(screen_status='selected') as screened,
-#             SUM(screen_status='selected' 
-#                 AND l1_result='selected'
-#             ) as l1,
-#             SUM(screen_status='selected'
-#                 AND l1_result='selected'
-#                 AND l2_result='selected'
-#             ) as l2,
-#             SUM(screen_status='selected'
-#                 AND l1_result='selected'
-#                 AND l2_result='selected'
-#                 AND l3_result='selected') as l3,
-#             SUM(screen_status='selected'
-#                 AND l1_result='selected'
-#                 AND l2_result='selected'
-#                 AND l3_result='selected'
-#                 AND offer_status='accepted') as final_selected
-#         FROM candidates WHERE 1=1
-#     """
-#     params = []
-#     team_ids = []
-#     if role == "Team_Lead":
-#         team_ids = DataOperations.get_team_lead_teams(user_id)
-#         if team_ids:
-#             format_strings = ','.join(['%s'] * len(team_ids))
-#             funnel_query += f" AND team_id IN ({format_strings})"
-#             params.extend(team_ids)
-#         else:
-#             funnel_query += " AND 1=2"  # No teams, force no results
-
-#     if jd_id:
-#         funnel_query += " AND jd_id = %s"
-#         params.append(jd_id)
-#     if team_id:
-#         if team_ids:
-#             if int(team_id) not in team_ids:
-#                 funnel_query += " AND 1=2"  # Team Lead requesting a team they don't lead
-#             else:
-#                 funnel_query += " AND team_id = %s"
-#                 params.append(team_id)
-#     if from_date:
-#         funnel_query += " AND created_at >= %s"
-#         params.append(from_date)
-#     if to_date:
-#         funnel_query += " AND created_at <= %s"
-#         params.append(to_date)
-#     cursor.execute(funnel_query, params)
-#     row = cursor.fetchone()
-#     funnel_data = [row["screened"], row["l1"], row["l2"], row["l3"], row["final_selected"]]
-
-#     # Stage-wise Conversion Rates
-#     stage_labels = ["Screen → L1", "L1 → L2", "L2 → L3", "L3 → Final"]
-#     stage_data = []
-#     total_screened = row["screened"] or 1
-#     total_l1 = row["l1"] or 1
-#     total_l2 = row["l2"] or 1
-#     total_l3 = row["l3"] or 1
-#     stage_data.append(round((int(row["l1"] or 0) / total_screened) * 100, 2))
-#     stage_data.append(round((int(row["l2"] or 0) / (total_l1 or 1)) * 100, 2))
-#     stage_data.append(round((int(row["l3"] or 0) / (total_l2 or 1)) * 100, 2))
-#     stage_data.append(round((int(row["final_selected"] or 0) / (total_l3 or 1)) * 100, 2))
-#         # Trend Analysis
-#     cursor.execute("""
-#         SELECT DATE(created_at) as date,
-#             SUM(screen_status='selected') as screened,
-#             SUM(l1_result='selected') as l1,
-#             SUM(l2_result='selected') as l2,
-#             SUM(l3_result='selected') as l3
-#         FROM candidates
-#         WHERE 1=1
-#         {} {} {} {} {}
-#         GROUP BY DATE(created_at)
-#         ORDER BY date ASC
-#     """.format(
-#         "AND jd_id = %s" if jd_id else "",
-#         "AND team_id = %s" if team_id else "",
-#         "AND team_id IN ({})".format(','.join(['%s'] * len(team_ids))) if role == "Team_Lead" and team_ids else "",
-#         "AND created_at >= %s" if from_date else "",
-#         "AND created_at <= %s" if to_date else ""
-#     ), tuple(filter(None, [jd_id, team_id, *team_ids, from_date, to_date])))
-#     rows = cursor.fetchall()
-#     trend_labels = [str(r["date"]) for r in rows]
-#     trend_datasets = [
-#         {"label": "Screened", "data": [r["screened"] for r in rows], "borderColor": "#2563eb", "fill": False},
-#         {"label": "L1", "data": [r["l1"] for r in rows], "borderColor": "#3b82f6", "fill": False},
-#         {"label": "L2", "data": [r["l2"] for r in rows], "borderColor": "#0ea5e9", "fill": False},
-#         {"label": "L3", "data": [r["l3"] for r in rows], "borderColor": "#16a34a", "fill": False},
-#     ]
-
-#     # JD-wise Conversion Rates
-#     jd_query = """
-#         SELECT jd.jd_id, jd.jd_summary, t.team_name,
-#             COUNT(c.candidate_id) as total,
-#             SUM(c.screen_status='selected') as screened,
-#             SUM(c.l1_result='selected') as l1,
-#             SUM(c.l2_result='selected') as l2,
-#             SUM(c.l3_result='selected') as l3,
-#             SUM(c.l3_result='selected' AND c.screen_status='selected') as final_selected
-#         FROM recruitment_jds jd
-#         LEFT JOIN teams t ON jd.team_id = t.team_id
-#         LEFT JOIN candidates c ON jd.jd_id = c.jd_id
-#         WHERE 1=1
-#     """
-#     jd_params = []
-#     if role == "Team_Lead":
-#         team_ids = DataOperations.get_team_lead_teams(user_id)
-#         if team_ids:
-#             format_strings = ','.join(['%s'] * len(team_ids))
-#             jd_query += f" AND jd.team_id IN ({format_strings})"
-#             jd_params.extend(team_ids)
-#         else:
-#             jd_query += " AND 1=2"  # No teams, force no results
-#     if team_id:
-#         if team_ids:
-#             if int(team_id) not in team_ids:
-#                 jd_query += " AND 1=2"  # Team Lead requesting a team they don't lead
-#             else:
-#                 jd_query += " AND jd.team_id = %s"
-#                 jd_params.append(team_id)
-#     if jd_id:
-#         jd_query += " AND jd.jd_id = %s"
-#         jd_params.append(jd_id)
-#     if from_date:
-#         jd_query += " AND c.created_at >= %s"
-#         jd_params.append(from_date)
-#     if to_date:
-#         jd_query += " AND c.created_at <= %s"
-#         jd_params.append(to_date)
-#     jd_query += " GROUP BY jd.jd_id, jd.jd_summary, t.team_name"
-#     cursor.execute(jd_query, jd_params)
-#     jd_rates = []
-#     for r in cursor.fetchall():
-#         total = r["total"] or 1
-#         final_selected = r["final_selected"] or 0
-#         conversion_pct = round((int(final_selected) / total) * 100, 2) if total else 0
-#         jd_rates.append({
-#             "jd_summary": r["jd_summary"],
-#             "team_name": r["team_name"],
-#             "total": r["total"],
-#             "screened": r["screened"],
-#             "l1": r["l1"],
-#             "l2": r["l2"],
-#             "l3": r["l3"],
-#             "final_selected": r["final_selected"],
-#             "conversion_pct": conversion_pct
-#         })
-
-#     # Team/Member Conversion Performance
-#     cursor.execute("""
-#         SELECT t.team_name, CONCAT(m.first_name, ' ', m.last_name) AS member_name,
-#             COUNT(c.candidate_id) as total,
-#             SUM(c.l3_result='selected' AND c.screen_status='selected') as final_selected
-#         FROM candidates c
-#         LEFT JOIN teams t ON c.team_id = t.team_id
-#         LEFT JOIN hr_team_members m ON c.hr_member_id = m.emp_id
-#         WHERE 1=1
-#         {} {} {} {}
-#         GROUP BY t.team_name, member_name
-#     """.format(
-#         "AND c.jd_id = %s" if jd_id else "",
-#         "AND c.team_id = %s" if team_id else "",
-#         "AND c.created_at >= %s" if from_date else "",
-#         "AND c.created_at <= %s" if to_date else ""
-#     ), tuple(filter(None, [jd_id, team_id, from_date, to_date])))
-#     team_rates = []
-#     for r in cursor.fetchall():
-#         total = r["total"] or 1
-#         conversion_pct = round((r["final_selected"] / total) * 100, 2) if total else 0
-#         team_rates.append({
-#             "team_name": r["team_name"],
-#             "member_name": r["member_name"],
-#             "total": r["total"],
-#             "final_selected": r["final_selected"],
-#             "conversion_pct": conversion_pct
-#         })
-
-#     # Time-to-Conversion Metrics
-#     cursor.execute("""
-#         SELECT jd.jd_summary,
-#             AVG(DATEDIFF(c.l1_date, c.screened_on)) as screen_l1,
-#             AVG(DATEDIFF(c.l2_date, c.l1_date)) as l1_l2,
-#             AVG(DATEDIFF(c.l3_date, c.l2_date)) as l2_l3,
-#             AVG(DATEDIFF(c.updated_at, c.l3_date)) as l3_final
-#         FROM candidates c
-#         LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
-#         WHERE 1=1
-#         {} {} {} {} {}
-#         GROUP BY jd.jd_summary
-#     """.format(
-#         "AND c.jd_id = %s" if jd_id else "",
-#         "AND c.team_id = %s" if team_id else "",
-#         "AND team_id IN ({})".format(','.join(['%s'] * len(team_ids))) if role == "Team_Lead" and team_ids else "",
-#         "AND c.created_at >= %s" if from_date else "",
-#         "AND c.created_at <= %s" if to_date else ""
-#     ), tuple(filter(None, [jd_id, team_id, *team_ids, from_date, to_date])))
-#     time_metrics = []
-#     for r in cursor.fetchall():
-#         time_metrics.append({
-#             "jd_summary": r["jd_summary"],
-#             "screen_l1": round(r["screen_l1"] or 0, 1),
-#             "l1_l2": round(r["l1_l2"] or 0, 1),
-#             "l2_l3": round(r["l2_l3"] or 0, 1),
-#             "l3_final": round(r["l3_final"] or 0, 1)
-#     })
-
-#     cursor.close()
-#     conn.close()
-#     return JsonResponse({
-#         "funnel": {"labels": funnel_labels, "data": funnel_data},
-#         "stage_rates": {"labels": stage_labels, "data": stage_data},
-#         "trend": {"labels": trend_labels, "datasets": trend_datasets},
-#         "jd_rates": jd_rates,
-#         "team_rates": team_rates,
-#         "time_metrics": time_metrics
-#     })
-
 
 def _build_ccr_query_params(request, role, user_id):
     """
@@ -4950,11 +4682,6 @@ def logout_session_api(request):
             return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
-import mysql.connector
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
 
 @login_required
 def access_permissions(request):
@@ -5027,10 +4754,6 @@ def change_role(request):
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
 @role_required(['Admin', 'Team_Lead'])
 def status_report_page(request):
     """
@@ -5075,150 +4798,6 @@ def status_report_page(request):
     cursor.close()
     conn.close()
     return render(request, 'status_report.html', {"teams": teams, "members": members})
-
-# @csrf_exempt
-# @role_required(['Admin', 'Team_Lead'], is_api=True)
-# def generate_status_report(request):
-#     """
-#     API endpoint to generate status reports.
-#     """
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-#     if request.method == "POST":
-#         role = request.session.get("role")
-#         report_type = request.POST.get("report_type")
-#         team_id = request.POST.get("team_id")
-#         member_id = request.POST.get("member_id")
-#         date = request.POST.get("date")
-#         from_date = request.POST.get("from_date")
-#         to_date = request.POST.get("to_date")
-#         # if to_date, increase it to one day, as in between clause, it excludes date same as to_date when there is timestamp associated with it.
-#         to_date = (datetime.strptime(to_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d") if to_date else None
-
-#         if report_type != "custom" and not date:
-#             messages.error(request, "date is required.")
-#             return JsonResponse({"report": [], "message": "date is required."})
-#         if report_type == "custom" and (not from_date or not to_date):
-#             messages.error(request, "From and To dates are required for custom report.")
-#             return JsonResponse({"report": [], "message": "From and To dates are required for custom report."})
-
-#         where = []
-#         params = []
-#         if role == "Team_Lead":
-#             lead_team_ids = DataOperations.get_team_lead_teams(request.session.get("user_id"))
-#             if lead_team_ids:
-#                 format_strings = ','.join(['%s'] * len(lead_team_ids))
-#                 where.append(f"c.team_id IN ({format_strings})")
-#                 params.extend(lead_team_ids)
-#             else:
-#                 return JsonResponse({"report": [], "message": "No teams assigned."})
-#             if team_id and team_id != "all":
-#                 if int(team_id) in lead_team_ids:
-#                     where.append("c.team_id=%s")
-#                     params.append(team_id)
-#                 else:
-#                     return JsonResponse({"report": [], "message": "Unauthorized team access."})
-#         if team_id and team_id != "all":
-#             where.append("c.team_id=%s")
-#             params.append(team_id)
-#         if member_id and member_id != "all":
-#             where.append("c.hr_member_id=%s")
-#             params.append(member_id)
-#         if report_type == "daily" and date:
-#             where.append("DATE(c.shared_on)=%s")
-#             params.append(date)
-#         elif report_type == "weekly" and date:
-#             where.append("YEARWEEK(c.shared_on, 1)=YEARWEEK(%s, 1)")
-#             params.append(date)
-#         elif report_type == "custom" and from_date and to_date:
-#             where.append("DATE(c.shared_on) BETWEEN %s AND %s")
-#             params.extend([from_date, to_date])
-
-#         where_clause = " AND ".join(where) if where else "1=1"
-#         cursor.execute(f"""
-#             SELECT
-#                 cu.company_name,
-#                 j.jd_summary,
-#                 c.jd_id,
-#                 COUNT(c.candidate_id) AS profile_count,
-#                 GROUP_CONCAT(c.screened_remarks SEPARATOR ', ') AS feedback
-#             FROM candidates c
-#             JOIN recruitment_jds j ON c.jd_id = j.jd_id
-#             JOIN customers cu ON j.company_id = cu.company_id
-#             WHERE {where_clause}
-#             GROUP BY cu.company_name, j.jd_summary, c.jd_id, shared_on
-#             ORDER BY shared_on DESC
-#         """, 
-#         tuple(params)
-#         )
-
-#         rows = cursor.fetchall()
-#         report = []
-#         unique_companies = set()
-#         unique_jds = set()
-#         total_profiles = 0
-#         for idx, r in enumerate(rows):
-#             report.append({
-#                 "company_name": r['company_name'],
-#                 "jd_summary": r['jd_summary'],
-#                 "jd_id": r['jd_id'],
-#                 "profile_count": r['profile_count'],
-#                 "feedback": r['feedback'] or ""
-#             })
-#             unique_companies.add(r['company_name'])
-#             unique_jds.add(r['jd_id'])
-#             total_profiles += r['profile_count'] if r['profile_count'] else 0
-#         # Add summary line
-#         report.append({
-#             "company_name": f"Total Unique Companies: {len(unique_companies)}",
-#             "jd_summary": f"Total JDs: {len(unique_jds)}",
-#             "jd_id": "",
-#             "profile_count": f"Total Shared Profiles: {total_profiles}",
-#             "feedback": ""
-#         })
-
-#         # TO DO: Get list of candidates shared on the given date range for feedback details
-#         # list of candidates = [
-#             # {metadata: {company_name, jd_summary, data_or_date_range}, candidates: [{name, email, phone, experience, prev_ctc, expected_ctc, notice_period, prev_job_profile, location, recruiter's comment}, ...]}
-#             # .....
-#         # ]
-#         list_of_candidates = []
-#         date_or_date_range = date if report_type != "custom" else f"{from_date} to {to_date}"
-#         date_filtering_clause = "AND DATE(c.shared_on)=%s" if report_type != "custom" else "AND DATE(c.shared_on) BETWEEN %s AND %s"
-#         date_params = (date,) if report_type != "custom" else (from_date, to_date)
-#         for row in report[:-1]: # Exclude summary row
-#             meta_data = {
-#                 "date_or_date_range": date_or_date_range,
-#                 "company_name": row["company_name"],
-#                 "jd_summary": row["jd_summary"],
-#             }
-#             candidates = []
-#             jd_id = row["jd_id"]
-#             cursor.execute("""
-#                 SELECT 
-#                         candidate_id, name, email, phone, 
-#                         experience, current_ctc as prev_ctc, 
-#                         expected_ctc, notice_period, 
-#                         previous_job_profile as profile, 
-#                         location, recruiter_comments as status
-#                 FROM candidates 
-#                 WHERE jd_id=%s {date_filtering_clause}
-#             """, (jd_id, *date_params))
-#             candidates = cursor.fetchall()
-#             list_of_candidates.append({
-#                 "metadata": meta_data,
-#                 "candidates": candidates
-#             })
-
-#         cursor.close()
-#         conn.close()
-#         return JsonResponse({"report": report, "list_of_candidates": list_of_candidates, "message": "Report generated."})
-#     return JsonResponse({"report": [], "list_of_candidates": [], "message": "Invalid request."})
-
-
-
-# Assuming these are defined elsewhere in your project
-# from .utils import DataOperations, MessageProviders, role_required
 
 def _validate_report_params(request_data, role, user_id):
     """Validates and sanitizes report parameters."""
