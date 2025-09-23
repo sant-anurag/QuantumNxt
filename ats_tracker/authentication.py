@@ -13,7 +13,10 @@ def login_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         # Check for the custom 'authenticated' key in the session.
-        if 'authenticated' in request.session and request.session['authenticated']:
+        session = request.session
+        is_authenticated = session.get('authenticated', False)
+        print("User authentication status:", is_authenticated)
+        if is_authenticated:
             return view_func(request, *args, **kwargs)
         
         # Redirect to the login page if not authenticated.
@@ -36,6 +39,7 @@ def role_required(role_names, is_api=False):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             # First, check if the user is authenticated at all.
+            print("User authentication status in role_required:", request.session.get('authenticated', False))
             if 'authenticated' not in request.session or not request.session['authenticated']:
                 return redirect(settings.LOGIN_URL)
             
@@ -64,7 +68,10 @@ def anonymous_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         # Check for the custom 'authenticated' key in the session.
-        if 'authenticated' in request.session and request.session['authenticated']:
+        session = request.session
+        is_authenticated = session.get('authenticated', False)
+        print("User authentication status:", is_authenticated)
+        if is_authenticated:
             return redirect('home')  # Redirect to home if already logged in.
         
         return view_func(request, *args, **kwargs)
