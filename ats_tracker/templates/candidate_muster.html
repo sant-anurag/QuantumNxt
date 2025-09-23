@@ -1,0 +1,72 @@
+{% extends 'home.html' %}
+
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/candidate_muster.css' %}">
+<div class="glass-card candidate-muster-container">
+
+    <h2 class="cm-title"><i class="fas fa-users"></i> Candidate Muster</h2>
+    <div class="cm-filters">
+        <div class="cm-filter-group">
+            <label for="teamSelect">Team:</label>
+            <select id="teamSelect">
+                <option value="all">All Teams</option>
+                <!-- More options will be populated here -->
+                 {% for team in teams %}
+                    <option value="{{ team.team_id }}">{{ team.team_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="cm-filter-group">
+            <label for="memberSelect">Member:</label>
+            <select id="memberSelect">
+                <option value="all">All Members</option>
+            </select>
+        </div>
+        <div class="cm-filter-group">
+            <label for="fromDateInput">From:</label>
+            <input type="date" id="fromDateInput">
+        </div>
+        <div class="cm-filter-group">
+            <label for="toDateInput">To:</label>
+            <input type="date" id="toDateInput">
+        </div>
+        <!-- Search Candidate filter moved to end for dependency and prominence -->
+        <div class="cm-filter-group">
+            <label for="jdSelect">JD:</label>
+            <select id="jdSelect">
+                <option value="all">All JDs</option>
+                {% if jds %}
+                    {% for jd in jds %}
+                        <option value="{{ jd.jd_id }}">{{ jd.jd_summary }}</option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+        <div class="cm-filter-group" style="flex:1; min-width:320px; position:relative;">
+            <label for="candidateSearchInput">Search Candidate:</label>
+            <input type="text" id="candidateSearchInput" placeholder="Name or Email" autocomplete="off"
+                class="w-full max-w-xl px-4 py-2 rounded-lg border border-blue-200 bg-white text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm">
+            <ul id="candidateSuggestions" class="candidate-suggestions-list absolute left-0 top-full w-full z-10 mt-1 p-0 list-none hidden"></ul>
+        </div>  
+        <button id="filterBtn" class="btn-primary">Filter</button>
+        <button id="exportBtn" class="btn-primary" style="margin-left:10px;">Export to Excel</button>
+</div>
+
+<div id="candidate-table-section" class="mt-8" data-user-role="{{ user_role }}">
+    <div id="candidate-table-container"></div>
+    <div id="candidate-pagination" class="flex justify-center items-center gap-2 mt-4"></div>
+</div>
+
+
+</div>
+
+<div id="candidate-activity-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1000;"></div>
+
+
+<script src="{% static 'js/candidate_muster.js' %}"></script>
+{% if user_role == 'Admin' or user_role == 'Manager' %}
+<script src="{% static 'js/candidate_muster_admin.js' %}"></script>
+{% endif %}
+{% endblock %}

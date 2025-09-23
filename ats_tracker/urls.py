@@ -110,4 +110,14 @@ urlpatterns = [
     # path("settings/email/", views.settings_email_config, name="settings_email_config"),
     path("settings/email/", views.save_email_config, name="save_email_config"),
 
+    path("candidate_musters/", views.candidate_muster_page, name="candidate_muster"),
+    path("get_team_members/<str:team_id>/", views.get_members_from_team_id, name="candidate_muster_data"),
+    path("get_candidate_suggestions/<str:query>/", views.candidate_suggestions_for_muster, name="get_candidate_suggestions_for_muster"),
+    path("get_search_candidates/", views.get_search_candidates, name="get_search_candidates"),
+    path("api/candidate_musters/<int:candidate_id>/", views.get_candidate_muster, name="api_candidate_musters"),
+    path("api/candidate_musters/add_note/", views.add_candidate_activity, name="add_candidate_note"),
+    path("api/candidate_musters/edit_note/", views.update_candidate_activity, name="edit_candidate_note"),
+    path("api/candidate_musters/delete_note/", views.delete_candidate_activity, name="delete_candidate_note"),
+
+
 ]

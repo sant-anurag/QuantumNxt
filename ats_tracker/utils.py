@@ -63,6 +63,16 @@ class DataOperations:
         return result[0] if result else None
     
     @staticmethod
+    def get_emp_id_from_user_id(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s LIMIT 1)", (user_id,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return result[0] if result else None
+    
+    @staticmethod
     def get_team_lead_user_id_from_team_id(team_id):
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -409,6 +419,24 @@ class MessageProviders:
             return False
     
 
+class DataValidators:
+    @staticmethod
+    def is_valid_email(email):
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(email_regex, email) is not None
+
+    @staticmethod
+    def is_valid_mobile_number(mobile):
+        mobile_regex = r'^\+?[0-9\s\-()]{7,15}$'
+        return re.match(mobile_regex, mobile) is not None
+
+    @staticmethod
+    def is_valid_date(date_str):
+        try:
+            datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            return True
+        except ValueError:
+            return False
 
 
 # Valid Fernet key (32 url-safe base64-encoded bytes)
@@ -464,6 +492,8 @@ class Constants:
     NOTIFICATION_TYPES = ['General', 'Task', 'Alert', 'Reminder']
     EMAIL_PROVIDERS = list(MessageProviders.MAIL_SERVICE_PROVIDERS.keys())
     
+    DEFAULT_PASSWORD = "Welcome@123"  # Default password for new users
+
     def validate_role(role):
         return role in Constants.ROLES.keys()
     # Add more constants as needed

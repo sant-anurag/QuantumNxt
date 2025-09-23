@@ -1,6 +1,5 @@
 import os
 import json
-from datetime import datetime
 import mysql.connector
 import textract
 from .parser import ResumeParser
@@ -19,7 +18,8 @@ from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import render_to_string
 
-from .db_initializer import ATSDatabaseInitializer
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 
 import smtplib
 from email.mime.text import MIMEText
@@ -28,11 +28,12 @@ from email.mime.multipart import MIMEMultipart
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
-from .utils import Constants, DataOperations, MessageProviders
 from .authentication import anonymous_required, login_required, role_required
+from .db_initializer import ATSDatabaseInitializer
+from .utils import Constants, DataOperations, MessageProviders
+
+
 
 @anonymous_required
 def login_view(request):
@@ -187,7 +188,8 @@ def add_member(request):
 
                 # Create user login for HR member
                 from django.contrib.auth.hashers import make_password
-                default_password = "Welcome@123"
+                from .utils import Constants
+                default_password = Constants.DEFAULT_PASSWORD
                 password_hash = make_password(default_password)
                 cursor.execute("""
                     INSERT INTO users (username, email, password_hash, role, is_active)
@@ -511,32 +513,9 @@ def create_jd_view(request):
     View to create a new job description.
     """
     print("create_jd -> Request method:", request.method)
-    # search = request.GET.get("search", "")
-    # page = int(request.GET.get("page", 1))
-    # limit = 10
-    # offset = (page - 1) * limit
+
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    # Join with customers to get company name
-    # query = """
-    #     SELECT j.*, c.company_name
-    #     FROM recruitment_jds j
-    #     LEFT JOIN customers c ON j.company_id = c.company_id
-    # """
-    # params = []
-    # if search:
-    #     query += " WHERE j.jd_id LIKE %s OR j.jd_summary LIKE %s"
-    #     params = [f"%{search}%", f"%{search}%"]
-    # query += " ORDER BY j.created_at DESC LIMIT %s OFFSET %s"
-    # params += [limit, offset]
-    # cursor.execute(query, params)
-    # jds = cursor.fetchall()
-    # cursor.execute("SELECT COUNT(*) FROM recruitment_jds" + (" WHERE jd_id LIKE %s OR jd_summary LIKE %s" if search else ""), params[:2] if search else [])
-    # count_row = cursor.fetchone()
-    # total = count_row['COUNT(*)'] if count_row else 0
-    # num_pages = (total // limit) + (1 if total % limit else 0)
-    # page_range = range(1, num_pages + 1)
-    # Fetch companies for dropdown
     cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
     companies = cursor.fetchall()
     conn.close()
@@ -2410,9 +2389,6 @@ def update_candidate_status(request):
         cursor.close()
         conn.close()
 
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 
 def view_finalized_candidates(request):
     """
@@ -2514,6 +2490,560 @@ def candidate_profile(request):
     user_role_ = request.session.get('role', 'Guest')
     """Render the Candidate Profile page."""
     return render(request, 'candidate_profile.html', {'name': name, 'user_role': user_role_})
+
+
+@login_required
+def get_members_from_team_id(request, team_id):
+
+    if request.method != "GET":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    if not team_id:
+        return JsonResponse({'success': False, 'error': 'Team ID required'}, status=400)
+    if team_id != 'all' and not team_id.isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid Team ID'}, status=400)
+
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    user_id = request.session.get("user_id", None)
+
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    # members will have data as [{emp_id, first_name, last_name, email}, ...]
+    members = []
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    query = """
+            SELECT DISTINCT hr.emp_id, hr.first_name, hr.last_name, hr.email
+            FROM hr_team_members hr
+            INNER JOIN team_members tm ON tm.emp_id=hr.emp_id
+        """
+    filter = ""
+    params = [emp_id]
+
+    # Build filter based on role and team_id
+    if team_id != 'all':
+        if user_role == 'Admin':
+            filter = "WHERE tm.team_id=%s"
+            params = (team_id,)
+        elif user_role == 'Team_Lead':
+            # if user is team lead of team provided, select all members
+            leading_teams = DataOperations.is_user_team_lead(user_id)
+            if leading_teams and int(team_id) in leading_teams:
+                filter = " AND tm.team_id=%s"
+                params.append(team_id)
+            else:
+                # if not team lead of the team provided, select only self if he is part of any team member
+                filter = " AND hr.emp_id=%s AND hr.emp_id IN (SELECT emp_id FROM team_members)"
+                params.append(emp_id)
+        elif user_role == 'User':
+            # select only self if he is part of any team member
+            filter = " AND hr.emp_id=%s AND hr.emp_id IN (SELECT emp_id FROM team_members)"
+            params.append(emp_id)
+
+    # Execute query based on role
+    if user_role == 'Admin':
+        params = params if filter else []
+        cursor.execute(f"""
+            {query}
+            {filter}
+            ORDER BY hr.first_name, hr.last_name;
+        """, params)
+    elif user_role == 'Team_Lead':
+        # check if user is team lead of any team
+        leading_teams = DataOperations.is_user_team_lead(user_id)
+        if leading_teams:
+            cursor.execute(f"""
+                {query}
+                INNER JOIN teams t ON t.team_id=tm.team_id
+                WHERE t.lead_emp_id=%s
+                {filter if filter else 'AND hr.emp_id IN (SELECT emp_id FROM team_members)'}
+                ;
+            """, params)
+        else:
+            # if not team lead of any team, select only self if he is part of any team member
+            cursor.execute(f"""
+                {query}
+                WHERE hr.emp_id=%s
+                {filter if filter else 'AND hr.emp_id IN (SELECT emp_id FROM team_members)'}
+            """, params)
+    elif user_role == 'User':
+        # select only self if he is part of any team member
+        cursor.execute(f"""
+            {query}
+            WHERE hr.emp_id=%s
+            {filter if filter else 'AND hr.emp_id IN (SELECT emp_id FROM team_members)'}
+        """, params)
+    members = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'members': members,})
+
+
+def candidate_suggestions_for_muster(request, query):
+    """
+    API endpoint to get candidate suggestions for muster page based on a query.
+    """
+    if request.method != "GET":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    query = query.strip()
+    if not query:
+        return JsonResponse({'success': False, 'error': 'Query parameter is required'}, status=400)
+
+    filter_data = {
+        'team_id': request.GET.get('team_id', 'all'),
+        'jd_id': request.GET.get('jd_id', 'all'),
+        'member_id': request.GET.get('member_id', 'all'),
+    }
+
+    # Where clauses
+    where_clauses = []
+    params = []
+    if filter_data['team_id'] != 'all' and filter_data['team_id'].isdigit():
+        where_clauses.append("c.team_id=%s")
+        params.append(filter_data['team_id'])
+    if filter_data['jd_id'] != 'all' and filter_data['jd_id'].isdigit():
+        where_clauses.append("c.jd_id=%s")
+        params.append(filter_data['jd_id'])
+    if filter_data['member_id'] != 'all' and filter_data['member_id'].isdigit():
+        where_clauses.append("c.hr_member_id=%s")
+        params.append(filter_data['member_id'])
+    
+    if where_clauses:
+        where_statement = " AND " + " AND ".join(where_clauses)
+    else:
+        where_statement = ""
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(f"""
+        SELECT candidate_id, name, email
+        FROM candidates
+        WHERE (name LIKE %s OR email LIKE %s OR phone LIKE %s) {where_statement}
+        ORDER BY name
+        LIMIT 5
+    """, (f"%{query}%", f"%{query}%", f"%{query}%", *params))
+    candidates = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'candidates': candidates})
+
+@login_required
+def get_search_candidates(request):
+    if request.method != "GET":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    query = request.GET.get('query', '').strip()
+
+    filters = {
+        'team_id': request.GET.get('team_id', 'all'),
+        'jd_id': request.GET.get('jd_id', 'all'),
+        'member_id': request.GET.get('member_id', 'all'),
+        'from_date': request.GET.get('from_date', ''),
+        'to_date': request.GET.get('to_date', ''),
+        'search_query': query, 
+    }
+
+    from .utils import DataValidators
+
+    if filters['from_date']:
+        if not DataValidators.is_valid_date(filters['from_date']):
+            return JsonResponse({'success': False, 'error': 'Invalid from_date format. Use YYYY-MM-DD.'}, status=400)
+    else:
+        # select start date of current month
+        filters['from_date'] = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+
+    if filters['to_date']:
+        if not DataValidators.is_valid_date(filters['to_date']):
+            return JsonResponse({'success': False, 'error': 'Invalid to_date format. Use YYYY-MM-DD.'}, status=400)
+    else:
+        filters['to_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    # Build where clauses based on filters and role
+    where_clauses = []
+    params = []
+
+    # if team_id is all, get all team_ids depending upon role of user
+    all_teams = []
+    if role == 'Admin':
+        cursor.execute("SELECT team_id FROM teams")
+    elif role == 'Team_Lead':
+        cursor.execute("SELECT team_id FROM teams WHERE lead_emp_id=%s UNION SELECT team_id FROM team_members WHERE emp_id=%s", (emp_id, emp_id))
+    elif role == 'User':
+        cursor.execute("SELECT team_id FROM team_members WHERE emp_id=%s", (emp_id,))
+
+    all_teams = [row['team_id'] for row in cursor.fetchall()]
+
+    all_jds = []
+    if role == 'Admin':
+        cursor.execute("SELECT jd_id FROM recruitment_jds WHERE jd_status='active'")
+    elif role in ['Team_Lead', 'User']:
+        if all_teams:
+            format_strings = ','.join(['%s'] * len(all_teams))
+            cursor.execute(f"SELECT jd_id FROM recruitment_jds WHERE jd_status='active' AND team_id IN ({format_strings})", tuple(all_teams))
+    all_jds = [row['jd_id'] for row in cursor.fetchall()]
+
+    all_members = []
+    if role == 'Admin':
+        cursor.execute("SELECT emp_id FROM hr_team_members WHERE emp_id IN (SELECT emp_id FROM team_members)")
+    elif role in ['Team_Lead']:
+        if all_teams:
+            format_strings = ','.join(['%s'] * len(all_teams))
+            cursor.execute(f"""
+                SELECT DISTINCT hm.emp_id
+                FROM hr_team_members hm
+                JOIN team_members tm ON hm.emp_id = tm.emp_id
+                WHERE tm.team_id IN ({format_strings})
+            """, tuple(all_teams))
+
+    all_members = [row['emp_id'] for row in cursor.fetchall()]
+    all_members = all_members if all_members else [emp_id]  # Ensure at least self is included for User role
+
+
+    if filters['team_id'] != 'all':
+        if filters['team_id'].isdigit() and int(filters['team_id']) in all_teams:
+            where_clauses.append("c.team_id=%s")
+            params.append(filters['team_id'])
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+    else:
+        if all_teams:
+            format_strings = ','.join(['%s'] * len(all_teams))
+            where_clauses.append(f"c.team_id IN ({format_strings})")
+            params.extend(all_teams)
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+    # get candidate_data
+
+    if filters['jd_id'] != 'all':
+        if filters['jd_id'].isdigit() and int(filters['jd_id']) in all_jds:
+            where_clauses.append("c.jd_id=%s")
+            params.append(filters['jd_id'])
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+    else:
+        if all_jds:
+            format_strings = ','.join(['%s'] * len(all_jds))
+            where_clauses.append(f"c.jd_id IN ({format_strings})")
+            params.extend(all_jds)
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+
+    if filters['member_id'] != 'all':
+        if filters['member_id'].isdigit() and int(filters['member_id']) in all_members:
+            where_clauses.append("c.hr_member_id=%s")
+            params.append(filters['member_id'])
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+    else:
+        if all_members:
+            format_strings = ','.join(['%s'] * len(all_members))
+            where_clauses.append(f"c.hr_member_id IN ({format_strings})")
+            params.extend(all_members)
+        else:
+            return JsonResponse({'success': True, 'candidates': [], 'page': 1, 'num_pages': 0})
+    
+    if filters['search_query']:
+        where_clauses.append("(c.name LIKE %s OR c.email LIKE %s OR c.phone LIKE %s)")
+        params.extend([f"%{filters['search_query']}%"] * 3)
+    
+    if filters['from_date'] and filters['to_date']:
+        where_clauses.append("ca.activity_date BETWEEN %s AND %s")
+        params.append(filters['from_date'])
+        params.append(filters['to_date']) 
+
+    where_statement = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+    # get page number
+    page = int(request.GET.get('page', 1))
+    limit = 10
+    offset = (page - 1) * limit
+
+    cursor.execute(f"""
+        SELECT DISTINCT c.candidate_id, c.name, c.email, c.phone, c.experience, jd.jd_summary, c.updated_at
+        FROM candidates c
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        LEFT JOIN candidate_activities ca ON c.candidate_id = ca.candidate_id
+        WHERE {where_statement}
+        ORDER BY c.updated_at DESC
+        LIMIT %s OFFSET %s
+    """, (*params, limit, offset))
+    candidates = cursor.fetchall()
+    total_count = len(candidates)
+    num_pages = (total_count // limit) + (1 if total_count % limit else 0)
+    DataOperations.close_db_connection(conn, cursor)
+    return JsonResponse({'success': True, 'candidates': candidates, 'page': page, 'num_pages': num_pages})
+        
+    
+@login_required
+def get_candidate_muster(request, candidate_id):
+    """
+    API endpoint to get muster details of a specific candidate.
+    """
+    if request.method != "GET":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    if not candidate_id or not str(candidate_id).isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid candidate ID'}, status=400)
+    candidate_id = int(candidate_id)
+
+    role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    # Get date filters
+    FILTERS = {
+        'from_date': request.GET.get('from_date', ''),
+        'to_date': request.GET.get('to_date', '')
+    }
+
+    if not FILTERS['from_date']:
+        # select start of the month
+        FILTERS['from_date'] = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+
+    if not FILTERS['to_date']:
+        # select today with exact time.
+        FILTERS['to_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+
+    if role in ['Team_Lead', 'User']:
+        cursor.execute("""
+            select candidate_id, team_id from candidates
+            where candidate_id=%s and team_id in (select team_id from team_members where emp_id=%s)
+        """, (candidate_id, emp_id))
+        candidate_row = cursor.fetchone()
+        if not candidate_row:
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Permission denied to access this candidate'}, status=403)
+    
+
+    cursor.execute("""
+        SELECT
+            ca.activity_id,
+            c.candidate_id,
+            c.name AS candidate_name,
+            rj.jd_summary,
+            ca.activity_date,
+            ca.notes,
+            ca.activity_type,
+            CONCAT(htm.first_name, ' ', htm.last_name) AS hr_member_name
+        FROM
+            candidate_activities AS ca
+        JOIN
+            candidates AS c ON ca.candidate_id = c.candidate_id
+        JOIN
+            recruitment_jds AS rj ON c.jd_id = rj.jd_id
+        JOIN
+            hr_team_members AS htm ON ca.emp_id = htm.emp_id
+        JOIN
+            team_members AS tm ON htm.emp_id = tm.emp_id AND c.team_id = tm.team_id
+        WHERE
+            c.candidate_id=%s AND ca.activity_date BETWEEN %s AND %s;
+    """, (candidate_id, FILTERS['from_date'], FILTERS['to_date']))
+    activity_records = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'activity_records': activity_records})
+    
+@login_required
+def add_candidate_activity(request):
+    """
+    API endpoint to add a new activity for a candidate.
+    """
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    data = json.loads(request.body)
+    candidate_id = data.get('candidate_id')
+    activity_type = data.get('activity_type')
+    notes = data.get('notes', '').strip()
+
+    if not candidate_id or not candidate_id.isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid candidate ID'}, status=400)
+    candidate_id = int(candidate_id)
+
+    
+    
+
+    if not activity_type or activity_type not in ['call', 'email', 'interview', 'other']:
+        return JsonResponse({'success': False, 'error': 'Invalid activity type'}, status=400)
+
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    role = request.session.get('role', 'Guest')
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if role in ['Team_Lead', 'User']:
+        cursor.execute("""
+            select candidate_id, team_id from candidates
+            where candidate_id=%s and team_id in (select team_id from team_members where emp_id=%s)
+        """, (candidate_id, emp_id))
+        candidate_row = cursor.fetchone()
+        if not candidate_row:
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Permission denied to access this candidate'}, status=403)
+
+    try:
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, emp_id, activity_type, notes)
+            VALUES (%s, %s, %s, %s)
+        """, (candidate_id, emp_id, activity_type, notes))
+        conn.commit()
+        return JsonResponse({'success': True}, status=201)
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@role_required(['Admin'], is_api=True)
+def update_candidate_activity(request):
+    """
+    API endpoint to update an existing activity for a candidate.
+    """
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    data = json.loads(request.body)
+    activity_id = data.get('activity_id')
+    notes = data.get('notes', '').strip()
+
+    if not activity_id or not str(activity_id).isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid activity ID'}, status=400)
+    activity_id = int(activity_id)
+
+    if not notes:
+        return JsonResponse({'success': False, 'error': 'Notes cannot be empty'}, status=400)
+
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            UPDATE candidate_activities
+            SET notes=%s, updated_at=NOW()
+            WHERE activity_id=%s
+        """, (notes, activity_id))
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Activity not found or no changes made'}, status=404)
+        conn.commit()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+@role_required('Admin', is_api=True)
+def delete_candidate_activity(request):
+    """
+    API endpoint to delete an existing activity for a candidate.
+    """
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    data = json.loads(request.body)
+    activity_id = data.get('activity_id')
+
+    if not activity_id or not str(activity_id).isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid activity ID'}, status=400)
+    activity_id = int(activity_id)
+
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("DELETE FROM candidate_activities WHERE activity_id=%s", (activity_id,))
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Activity not found'}, status=404)
+        conn.commit()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+@login_required
+def candidate_muster_page(request):
+    """
+    View to render the candidate muster page.
+    """
+    name = request.session.get('name', 'Guest')
+    user_id = request.session.get('user_id', None)
+    user_role_ = request.session.get('role', 'Guest')
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    query = "SELECT team_id, team_name FROM teams"
+    params = []
+
+    if user_role_ in ['Team_Lead', 'User']:
+        cursor.execute("SELECT emp_id FROM hr_team_members WHERE email=(SELECT email FROM users WHERE user_id=%s) LIMIT 1", [user_id])
+        emp_row = cursor.fetchone()
+        if emp_row:
+            query += " WHERE lead_emp_id=%s OR team_id IN (SELECT team_id FROM team_members WHERE emp_id=%s)"
+            params = [emp_row['emp_id'], emp_row['emp_id']]
+    
+    query += " ORDER BY team_name"
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
+    teams = cursor.fetchall()
+
+    jds = []
+
+    if user_role_ in ['Team_Lead', 'User']:
+        cursor.execute("""
+            SELECT DISTINCT j.jd_id, j.jd_summary
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE (t.lead_emp_id=%s OR tm.emp_id=%s)
+            AND j.jd_status='active'
+            ORDER BY j.jd_summary
+        """, [emp_row['emp_id'], emp_row['emp_id']])
+    else:
+        cursor.execute("SELECT jd_id, jd_summary FROM recruitment_jds WHERE jd_status='active' ORDER BY jd_summary")
+
+    jds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render(request, 'candidate_muster.html', {'name': name, 'teams': teams, 'user_role': user_role_, 'jds': jds})
+
 
 @csrf_exempt
 def get_candidate_details_profile(request):
@@ -3005,12 +3535,8 @@ def team_reports_page(request):
 
 
 
-import mysql.connector
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime, timedelta, date
-from dateutil.relativedelta import relativedelta
+
+
 
 @csrf_exempt
 @role_required(['Admin', 'Team_Lead'], is_api=True)
@@ -3021,7 +3547,6 @@ def team_report(request):
     print("team_reports_api -> Request method:", request.method)
     if request.method != "POST":
         return JsonResponse({}, status=400)
-
     try:
         params = json.loads(request.body)
         conne = DataOperations.get_db_connection()
