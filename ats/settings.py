@@ -53,7 +53,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'ats.urls'
-SESSION_COOKIE_AGE=7200  # 2 hours in seconds
+SESSION_COOKIE_AGE=32400  # 9 hours in seconds
 SESSION_SAVE_EVERY_REQUEST=True
 TEMPLATES = [
     {
