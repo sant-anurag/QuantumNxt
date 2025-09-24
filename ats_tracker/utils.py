@@ -244,6 +244,19 @@ class DataOperations:
         conn.close()
         return [row['team_id'] for row in results] if results else []
 
+    @staticmethod
+    def get_email_configs(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT email, email_smtp_port, email_smtp_host, email_host_password 
+            FROM email_config
+            WHERE user_id=%s
+        """, (user_id,))
+        config = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return config if config else {}
 
 class MessageProviders:
 
@@ -357,6 +370,7 @@ class MessageProviders:
             cc (str or list, optional): CC email address(es)
             bcc (str or list, optional): BCC email address(es)
             attachments (list, optional): List of file paths to attach
+            in_memory_attachments (list, optional): List of (filename, file_content) tuples
         Returns:
             bool: True if sent, False otherwise
         """
@@ -366,6 +380,7 @@ class MessageProviders:
         cc = kwargs.get('cc', None)
         bcc = kwargs.get('bcc', None)
         attachments = kwargs.get('attachments', None)
+        in_memory_attachments = kwargs.get('in_memory_attachments', None)
 
         # Normalize recipients
         def normalize(emails):
@@ -400,6 +415,16 @@ class MessageProviders:
                 except Exception as e:
                     print(f"send_email -> Failed to attach file {file_path}: {e}")
 
+        if in_memory_attachments:
+            for filename, file_content in in_memory_attachments:
+                try:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(file_content.getvalue())
+                    encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                    msg.attach(part)
+                except Exception as e:
+                    print(f"send_email -> Failed to attach file {filename}: {e}")
         # Combine all recipients for SMTP
         all_recipients = to_emails + cc_emails + bcc_emails
         if not all_recipients:
