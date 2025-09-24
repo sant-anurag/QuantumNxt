@@ -1,5 +1,7 @@
 import os
+import io
 import json
+import csv
 import mysql.connector
 import textract
 from .parser import ResumeParser
@@ -28,10 +30,12 @@ from email.mime.multipart import MIMEMultipart
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl import Workbook
+
 
 from .authentication import anonymous_required, login_required, role_required
 from .db_initializer import ATSDatabaseInitializer
-from .utils import Constants, DataOperations, MessageProviders
+from .utils import Constants, DataOperations, MessageProviders, DataValidators
 
 
 
@@ -113,7 +117,6 @@ def validate_user(username, password):
 
     """
     print("validate_user -> Username:", username)
-    print("validate_user -> Password:", password)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -166,7 +169,7 @@ def add_member(request):
         # Basic in-view validation
         if not first_name or not last_name or not email or not role or not date_joined:
             error = "All fields except phone are required."
-        elif '@' not in email or len(email) > 100:
+        elif '@' not in email or len(email) > 100 or not DataValidators.is_valid_email(email):
             error = "Invalid email address."
         elif len(first_name) > 50 or len(last_name) > 50:
             error = "First and last name should be under 50 characters."
@@ -184,7 +187,6 @@ def add_member(request):
                     (first_name, last_name, email, phone, role, date_joined, status)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, [first_name, last_name, email, phone, role, date_joined, status])
-                connection.commit()
 
                 # Create user login for HR member
                 from django.contrib.auth.hashers import make_password
@@ -195,21 +197,19 @@ def add_member(request):
                     INSERT INTO users (username, email, password_hash, role, is_active)
                     VALUES (%s, %s, %s, %s, %s)
                 """, [email, email, password_hash, "User", True])
-                connection.commit()
-
+                
                 message = f"Member {escape(first_name)} {escape(last_name)} added successfully and login created!"
-
+                connection.commit()
                 # creating login for the new member
             except Exception as e:
+                if connection:
+                    connection.rollback()
                 if 'Duplicate entry' in str(e):
                     error = "A member with this email already exists."
                 else:
                     error = f"Failed to add member: {str(e)}"
             finally:
-                if 'cursor' in locals():
-                    cursor.close()
-                if 'connection' in locals():
-                    connection.close()
+                DataOperations.close_db_connection(connection, cursor)
     name = request.session.get('name', 'Guest')
     return render(request, 'add_member.html', {
         'message': message,
@@ -237,7 +237,7 @@ def create_team(request):
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
         else:
-            # try:
+            try:
                 conn = DataOperations.get_db_connection()
                 cursor = conn.cursor(dictionary=True)
                 # Check for duplicate team name
@@ -249,19 +249,22 @@ def create_team(request):
                 else:
                     cursor.execute("INSERT INTO teams (team_name, lead_emp_id) VALUES (%s, %s)", [team_name, team_lead])
                     team_id = cursor.lastrowid
+
                     for emp_id in selected_members:
                         cursor.execute("INSERT INTO team_members (team_id, emp_id) VALUES (%s, %s)", [team_id, emp_id])
-
-                    conn.commit()
 
                     for emp_id in selected_members:
                         user_id = DataOperations.get_user_id_from_emp_id(emp_id)
                         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
                             MessageProviders.send_notification(user_id, "Team Update", f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
-                    # message = f"Team '{team_name}' created successfully."
-            # except Exception as e:
-            #     error = f"Failed to create team: {str(e)}"
-            # finally:
+                    
+                    message = f"Team '{team_name}' created successfully."
+                    conn.commit()
+            except Exception as e:
+                if conn:
+                    conn.rollback()
+                error = f"Failed to create team: {str(e)}"
+            finally:
                 if 'cursor' in locals():
                     cursor.close()
                 if 'conn' in locals():
@@ -357,7 +360,6 @@ def view_edit_teams(request):
                 """, [emp_id, emp_id])
 
             elif role == 'User':
-
                 cursor.execute("""
                     SELECT t.team_id, t.team_name, t.created_at, COUNT(tm.emp_id) as strength
                     FROM teams t
@@ -366,8 +368,10 @@ def view_edit_teams(request):
                     GROUP BY t.team_id, t.team_name, t.created_at
                     ORDER BY t.created_at DESC;
                 """, [emp_id])
+            
             else:
                 pass
+
             teams = cursor.fetchall()
     finally:
         if 'cursor' in locals():
@@ -442,10 +446,14 @@ def add_member_api(request, team_id):
         team_row = cursor.fetchone()
         team_name = team_row[0] if team_row else None
 
-        conn.commit()
+        
         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(user_id, "Team Update", f"You have been added to the team '{team_name}'", created_by="system", notification_type="Team")
+        
+        conn.commit()
     except Exception as e:
+        if conn:
+            conn.rollback()
         return HttpResponseBadRequest(str(e))
     finally:
         if 'cursor' in locals():
@@ -480,10 +488,12 @@ def remove_member_api(request, team_id):
         cursor.execute("SELECT team_name FROM teams WHERE team_id=%s", [team_id])
         team_row = cursor.fetchone()
         team_name = team_row[0] if team_row else None
-        conn.commit()
         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
             MessageProviders.send_notification(user_id, "Team Update", f"You have been removed from the team '{team_name}'", created_by="system", notification_type="Team")
+        conn.commit()
     except Exception as e:
+        if conn:
+            conn.rollback()
         return HttpResponseBadRequest(str(e))
     finally:
         if 'cursor' in locals():
@@ -513,20 +523,22 @@ def create_jd_view(request):
     View to create a new job description.
     """
     print("create_jd -> Request method:", request.method)
+    companies = []
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
+        companies = cursor.fetchall()
+        
+    except Exception as e:
+        print("create_jd_view -> Error fetching companies:", str(e))
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
 
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT company_id, company_name FROM customers ORDER BY company_name")
-    companies = cursor.fetchall()
-    conn.close()
-    # name = request.session.get('name', 'Guest')
     return render(request, "jd_create.html", {
-        # "jds": jds,
-        # "total": total,
-        # "page": page,
-        # "name": name,
-        # "search": search,
-        # "page_range": page_range,
         "companies": companies
     })
 
@@ -571,10 +583,14 @@ def create_jd(request):
                 jd_status, created_by, budget_ctc, experience_required, 
                 education_required, location
             ))
-            conn.commit()
             message = f"Task {escape(jd_id)} created successfully!"
             messages.success(request, message)
+            conn.commit()
         except Exception as e:
+            print("create_jd -> Error creating JD:", str(e))
+
+            if conn:
+                conn.rollback()
             if "Duplicate entry" in str(e):
                 error = "A JD with this ID already exists."
             else:
@@ -621,26 +637,35 @@ def jd_detail(request, jd_id):
         no_of_positions = int(request.POST.get("no_of_positions", 1))
         jd_status = request.POST.get("jd_status", "active")
         total_profiles = int(request.POST.get("total_profiles", 0))
-        cursor.execute("""
-            UPDATE recruitment_jds SET
-            company_id=%s, jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
-            no_of_positions=%s, jd_status=%s, updated_at=NOW()
-            WHERE jd_id=%s
-        """, (company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, jd_id))
-        # get emp_ids of all users who are part of team of given jd
-        cursor.execute("""
-            SELECT DISTINCT tm.emp_id
-            FROM team_members tm
-            JOIN recruitment_jds j ON tm.team_id = j.assigned_team_id
-            WHERE j.jd_id = %s
-        """, [jd_id])
-        emp_ids = [row['emp_id'] for row in cursor.fetchall()]
-        for emp_id in emp_ids:
-            user_id = DataOperations.get_user_id_from_emp_id(emp_id)
-            if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
-                MessageProviders.send_notification(user_id, "JD Update", f"The job description '{jd_id}' has been updated.", created_by="system", notification_type="JD")
-        conn.commit()
-        conn.close()
+        try:
+            cursor.execute("""
+                UPDATE recruitment_jds SET
+                company_id=%s, jd_summary=%s, jd_description=%s, must_have_skills=%s, good_to_have_skills=%s,
+                no_of_positions=%s, jd_status=%s, updated_at=NOW()
+                WHERE jd_id=%s
+            """, (company_id, jd_summary, jd_description, must_have_skills, good_to_have_skills, no_of_positions, total_profiles, jd_status, jd_id))
+            # get emp_ids of all users who are part of team of given jd
+            cursor.execute("""
+                SELECT DISTINCT tm.emp_id
+                FROM team_members tm
+                JOIN recruitment_jds j ON tm.team_id = j.assigned_team_id
+                WHERE j.jd_id = %s
+            """, [jd_id])
+            emp_ids = [row['emp_id'] for row in cursor.fetchall()]
+            for emp_id in emp_ids:
+                user_id = DataOperations.get_user_id_from_emp_id(emp_id)
+                if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
+                    MessageProviders.send_notification(user_id, "JD Update", f"The job description '{jd_id}' has been updated.", created_by="system", notification_type="JD")
+            conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            return JsonResponse({"error": f"Failed to update JD: {str(e)}"}, status=500)
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
         return JsonResponse({"success": True})
 
 
@@ -673,14 +698,24 @@ def create_customer(request):
                     INSERT INTO customers (company_name, contact_person_name, contact_email, contact_phone)
                     VALUES (%s, %s, %s, %s)
                 """, [company_name, contact_person_name, contact_email, contact_phone])
-                conn.commit()
                 message = f"Customer '{escape(company_name)}' created successfully!"
+                conn.commit()
             except Exception as e:
+                if conn:
+                    conn.rollback()
                 if 'Duplicate entry' in str(e):
                     error = "A customer with this company name or email/phone already exists."
             else:
                 # If search is blank, show first 10 companies ordered by created_at
-                cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers ORDER BY created_at DESC LIMIT 10")
+                cursor.execute("""
+                    SELECT 
+                        company_id, company_name, contact_person_name, 
+                        contact_email, contact_phone, created_at, note 
+                    FROM 
+                        customers 
+                    ORDER BY 
+                        created_at DESC LIMIT 10
+                """)
                 customer_list = cursor.fetchall()
                 customer_list = [dict(customer, created_at=customer['created_at'].date()) for customer in customer_list]
 
@@ -852,10 +887,12 @@ def view_edit_jds(request):
 
     """
     user_role_ = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
 
     print("view_edit_jds -> Request method:", request.method)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
     if user_role_ == 'Admin':
         cursor.execute("""
             SELECT 
@@ -865,14 +902,7 @@ def view_edit_jds(request):
             ORDER BY created_at DESC
         """)
     elif user_role_ == 'Team_Lead':
-        user_id = request.session.get('user_id', None)
-        cursor.execute("""
-            SELECT emp_id FROM hr_team_members
-                    WHERE email=(SELECT email from users WHERE user_id=%s)
-                    LIMIT 1;
-        """, [user_id])
-        row = cursor.fetchone()
-        emp_id=row['emp_id']
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
 
         cursor.execute("""
             SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
@@ -883,15 +913,7 @@ def view_edit_jds(request):
             ORDER BY j.created_at DESC
         """, [emp_id, emp_id])
     elif user_role_ == 'User':
-        user_id = request.session.get('user_id', None)
-        cursor.execute("""
-            SELECT emp_id FROM hr_team_members
-                    WHERE email=(SELECT email from users WHERE user_id=%s)
-                    LIMIT 1;
-        """, [user_id])
-        row = cursor.fetchone()
-        emp_id=row['emp_id']
-
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
         cursor.execute("""
             SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
             FROM recruitment_jds j
@@ -904,7 +926,7 @@ def view_edit_jds(request):
         cursor.execute("""
             SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
             FROM recruitment_jds
-           
+            WHERE 1=2
             ORDER BY created_at DESC
         """)
 
@@ -924,7 +946,17 @@ def view_edit_jds(request):
     # Fetch companies and teams for dropdowns
     cursor.execute("SELECT company_id, company_name FROM customers")
     companies = cursor.fetchall()
-    cursor.execute("SELECT team_id, team_name FROM teams")
+    if user_role_ == 'Admin':
+        cursor.execute("SELECT team_id, team_name FROM teams")
+    else:
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        cursor.execute("""
+            SELECT DISTINCT t.team_id, t.team_name
+            FROM teams t
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+        """, [emp_id, emp_id])
+
     teams = cursor.fetchall()
     name = request.session.get('name', 'Guest')
     return render(request, 'view_edit_jds.html', {
@@ -986,58 +1018,66 @@ def update_jd(request, jd_id):
 
         team_id = data['team_id'] if data['team_id'] not in ('', None) else None
         company_id = data['company_id'] if data['company_id'] not in ('', None) else None
-
-        cursor.execute("""
-            UPDATE recruitment_jds SET
-                jd_summary=%s,
-                jd_description=%s,
-                must_have_skills=%s,
-                good_to_have_skills=%s,
-                experience_required=%s,
-                education_required=%s,
-                budget_ctc=%s,
-                location=%s,
-                no_of_positions=%s,
-                jd_status=%s,
-                company_id=%s,
-                team_id=%s,
-                closure_date=%s
-            WHERE jd_id=%s
-        """, [
-            data['jd_summary'],
-            data['jd_description'],
-            data['must_have_skills'],
-            data['good_to_have_skills'],
-            data['experience_required'],
-            data['education_required'],
-            data['budget_ctc'],
-            data['location'],
-            data['no_of_positions'],
-            data['jd_status'],
-            company_id,
-            team_id,
-            data['closure_date'] if data['closure_date'] else None,
-            jd_id
-        ])
-        conn.commit()
+        try:
+            cursor.execute("""
+                UPDATE recruitment_jds SET
+                    jd_summary=%s,
+                    jd_description=%s,
+                    must_have_skills=%s,
+                    good_to_have_skills=%s,
+                    experience_required=%s,
+                    education_required=%s,
+                    budget_ctc=%s,
+                    location=%s,
+                    no_of_positions=%s,
+                    jd_status=%s,
+                    company_id=%s,
+                    team_id=%s,
+                    closure_date=%s
+                WHERE jd_id=%s
+            """, [
+                data['jd_summary'],
+                data['jd_description'],
+                data['must_have_skills'],
+                data['good_to_have_skills'],
+                data['experience_required'],
+                data['education_required'],
+                data['budget_ctc'],
+                data['location'],
+                data['no_of_positions'],
+                data['jd_status'],
+                company_id,
+                team_id,
+                data['closure_date'] if data['closure_date'] else None,
+                jd_id
+            ])
+            
+            conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            return JsonResponse({'error': f'Failed to update JD: {str(e)}'}, status=500)
 
         # Send notification to the members of team if jd is allocated to a team.
-        cursor.execute("""
-            SELECT user_id from users 
-                WHERE email IN (
-                       SELECT email FROM hr_team_members 
-                       WHERE emp_id IN ( 
-                       SELECT emp_id FROM team_members WHERE team_id=%s
-                       )
+        try:
+            cursor.execute("""
+                SELECT user_id FROM users 
+                    WHERE email IN (
+                        SELECT email FROM hr_team_members 
+                        WHERE emp_id IN ( 
+                            SELECT emp_id FROM team_members WHERE team_id=%s
+                        )
                     );
-        """, [team_id])
-        users = cursor.fetchall()
-        for user in users:
-            if DataOperations.get_user_settings(user['user_id']).get('notifications_enabled', False):
-                MessageProviders.send_notification(user['user_id'], "JD Update", f"JD '{jd_id}' has been updated.", created_by="system", notification_type="Job")
-
-        cursor.close()
-        conn.close()
+            """, [team_id])
+            users = cursor.fetchall()
+            for user in users:
+                if DataOperations.get_user_settings(user['user_id']).get('notifications_enabled', False):
+                    MessageProviders.send_notification(user['user_id'], "JD Update", f"JD '{jd_id}' has been updated.", created_by="system", notification_type="Job")
+        except Exception as e:
+            print("update_jd -> Error sending notifications:", str(e))
+        finally:
+            cursor.close()
+            conn.close()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
@@ -1208,7 +1248,6 @@ def employee_view_data(request):
                             T4.email = %s AND T1.status = 'active'
                         ORDER BY T1.first_name, T1.last_name;
             """, [user_email])
-
     elif user_role == 'User':
         cursor.execute("""
                        SELECT emp_id, first_name, last_name, email, role, status
@@ -1224,7 +1263,9 @@ def employee_view_data(request):
             WHERE status='active'
             ORDER BY first_name, last_name
         """)
+    
     members = cursor.fetchall()
+    cursor.close()
     conn.close()
     return JsonResponse({"members": members})
 
@@ -1274,6 +1315,8 @@ def employee_view_report(request):
             ORDER BY j.jd_status, j.created_at DESC
         """, [team['team_id']])
         team['jds'] = cursor.fetchall()
+
+    cursor.close()
     conn.close()
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
 
@@ -1371,7 +1414,7 @@ def upload_resume(request):
                 INSERT INTO resumes (jd_id, file_name, file_path, status, customer_id)
                 VALUES (%s, %s, %s, %s, %s)
             """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
-            conn.commit()
+
             resume_id = cursor.lastrowid
             # inclease the total_profiles count for the JD
             cursor.execute("""
@@ -1383,8 +1426,12 @@ def upload_resume(request):
             return JsonResponse({'success': True, 'resume_id': resume_id})
 
         except mysql.connector.Error as db_error:
+            print("upload_resume -> Database error:", str(db_error))
+            conn.rollback()
             return JsonResponse({'success': False, 'error': f'Database error: {str(db_error)}'}, status=500)
         except Exception as e:
+            print("upload_resume -> Unexpected error:", str(e))
+            conn.rollback()
             return JsonResponse({'success': False, 'error': f'Unexpected error: {str(e)}'}, status=500)
         finally:
             if 'cursor' in locals():
@@ -1546,16 +1593,17 @@ def update_resume_status(request):
             return JsonResponse({'success': False, 'error': 'Invalid input'}, status=400)
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE resumes SET status=%s WHERE resume_id=%s", (status, resume_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return JsonResponse({'success': True})
+        try:
+            cursor.execute("UPDATE resumes SET status=%s WHERE resume_id=%s", (status, resume_id))
+            conn.commit()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': f'Failed to update status: {str(e)}'}, status=500)
+        finally:
+            DataOperations.close_db_connection(conn, cursor)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
-import openpyxl
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
 
 def export_resumes_excel(request):
     """
@@ -1827,6 +1875,8 @@ def save_candidate_details(request):
 
             return JsonResponse(response)
         except Exception as e:
+            conn.rollback()
+            print("save_candidate_details -> Error:", str(e))
             response = {'success': False, 'error': str(e)}
             return JsonResponse(response, status=500)
         finally:
@@ -2195,14 +2245,15 @@ def submit_interview_result(request):
             "l2_result": previous_candidate_data['l2_result'] if level != 'l2' else result,
             "l3_result": previous_candidate_data['l3_result'] if level != 'l3' else result,
         }
-
+        check = None
         if current_candidate_data:
             # Step 4: Call the function to update recruitment_jds based on the change
             check = DataOperations.update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data)
             if not check:
                 conn.rollback()
                 return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
-        conn.commit()
+        if check:
+            conn.commit()
         # TO DO: If necessary, need to send notification to team leads.
         cursor.execute("SELECT team_id FROM candidates WHERE candidate_id=%s", (candidate_id,))
         team_row = cursor.fetchone()
@@ -2225,8 +2276,6 @@ def submit_interview_result(request):
 
     return JsonResponse({'success': True})
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 
 def manage_candidate_status_page(request):
     """
@@ -3949,8 +3998,6 @@ def team_report_filters(request):
     return JsonResponse({"teams": teams})
 
 
-
-
 @csrf_exempt
 @role_required(['Admin', 'Team_Lead'], is_api=True)
 def team_reports_api(request):
@@ -4614,18 +4661,18 @@ def user_profile(request):
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT
-                t.emp_id,
-                CONCAT(t.first_name, ' ', t.last_name) AS name,
-                t.email,
-                t.phone,
-                t.role,
-                t.date_joined,
-                tm.team_id,
-                teams.team_name
-            FROM hr_team_members t
-            JOIN team_members tm ON t.emp_id = tm.emp_id
-            JOIN teams ON tm.team_id = teams.team_id
-            WHERE t.email = %s
+                htm.emp_id,
+                CONCAT(htm.first_name, ' ', htm.last_name) AS name,
+                htm.email,
+                htm.phone,
+                htm.role,
+                htm.date_joined,
+                GROUP_CONCAT(tm.team_id SEPARATOR ', ') AS team_ids,
+                GROUP_CONCAT(t.team_name SEPARATOR ', ') AS team_names
+            FROM hr_team_members htm
+            LEFT JOIN team_members tm ON htm.emp_id = tm.emp_id
+            LEFT JOIN teams t ON tm.team_id = t.team_id
+            WHERE htm.email = %s
             LIMIT 1
         """, (email,))
         userDetails = cursor.fetchone() or {}
@@ -5240,9 +5287,6 @@ def toggle_notification(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
-
-
-
 @login_required
 def save_email_config(request):
     session = request.session
@@ -5295,17 +5339,23 @@ def save_email_config(request):
         # Encrypt the password before saving
         encrypted_password = encrypt_password(email_host_password)
 
-        conn = DataOperations.get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        # Upsert into email_config table (user_id, email, email_host_password)
-        cursor.execute("""
-            INSERT INTO email_config (user_id, email, email_smtp_host, email_smtp_port, email_host_password)
-            VALUES (%s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE email=%s, email_smtp_host=%s, email_smtp_port=%s, email_host_password=%s
-        """, (user_id, email, smtp_host, smtp_port, encrypted_password, email, smtp_host, smtp_port, encrypted_password))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        try:
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            # Upsert into email_config table (user_id, email, email_host_password)
+            cursor.execute("""
+                INSERT INTO email_config (user_id, email, email_smtp_host, email_smtp_port, email_host_password)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE email=%s, email_smtp_host=%s, email_smtp_port=%s, email_host_password=%s
+            """, (user_id, email, smtp_host, smtp_port, encrypted_password, email, smtp_host, smtp_port, encrypted_password))
+            conn.commit()
+        except Exception as e:
+            print("save_email_config -> Error saving email config:", str(e))
+            messages.error(request, "Error saving email configuration. Please try again.")
+            return redirect('save_email_config')
+        finally:
+            cursor.close()
+            conn.close()
 
         messages.success(request, "Email configuration successful!")
         return redirect('save_email_config')
@@ -5325,3 +5375,478 @@ def get_email_configs(user_id):
     cursor.close()
     conn.close()
     return email_configs
+
+
+def generate_daily_report(report_type, user_id, **kwargs):
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        print("Employee ID not found for user ID:", user_id)
+        return None
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    # get team ids for emp_id
+    cursor.execute("""
+        SELECT t.team_id, t.team_name FROM teams t
+        left join team_members tm on tm.team_id=t.team_id
+        WHERE emp_id=%s""", [emp_id])
+    team_ids = cursor.fetchall()
+
+    if report_type not in ["daily", "weekly", "monthly"]:
+        print("Invalid report type:", report_type)
+        return None
+
+    if report_type == "daily":
+        date = datetime.now().strftime("%Y-%m-%d")
+        from_date = datetime.now().replace(hour=6, minute=0, second=0)
+        to_date = datetime.now().replace(hour=23, minute=59, second=59)
+    
+    elif report_type == "weekly":
+        # from date will be start date of ongoing week (Monday)
+        date = datetime.now().strftime("%Y-%m-%d")
+        from_date = datetime.now() - timedelta(days=datetime.now().weekday())
+        to_date = (from_date + timedelta(days=6)).replace(hour=23, minute=59, second=59)
+
+    elif report_type == "monthly":
+        # from date will be start date of ongoing month (1st)
+        date = datetime.now().strftime("%Y-%m-%d")
+        from_date = datetime.now().replace(day=1, hour=0, minute=0, second=0)
+        next_month = from_date.replace(day=28) + timedelta(days=4)  # this will never fail
+        to_date = (next_month - timedelta(days=next_month.day)).replace(hour=23, minute=59, second=59)
+
+    elif report_type == "custom":
+        from_date_str = kwargs.get("from_date")
+        to_date_str = kwargs.get("to_date")
+        if not from_date_str or not to_date_str:
+            print("From date and To date are required for custom report.")
+            return None
+        try:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except ValueError:
+            print("Invalid date format for custom report. Use YYYY-MM-DD.")
+            return None
+
+    request_data = {
+                "report_type": 'custom',
+                "team_id": None,
+                "member_id": emp_id,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "from_date": from_date.strftime("%Y-%m-%d"),
+                "to_date": to_date.strftime("%Y-%m-%d"),
+                "lead_team_ids": None
+        }
+    
+    all_teams_data = []
+
+    for team in team_ids:
+        request_data['team_id'] = team['team_id']
+        where_clause, sql_params = _build_where_clause(request_data)
+        report_summary = _get_report_summary(cursor, where_clause, sql_params)
+        detailed_candidates = _get_detailed_candidate_list(cursor, report_summary, request_data)
+        all_teams_data.append({
+            "team_name": team['team_name'],
+            "report_summary": report_summary,
+            "detailed_candidates": detailed_candidates
+        })
+
+    return all_teams_data
+
+
+# def generate_recruitment_report_excel(data):
+#     """
+#     Generates an Excel file from a recruitment report data structure.
+
+#     Args:
+#         data (list): A list of dictionaries containing recruitment report data.
+
+#     Returns:
+#         HttpResponse: A Django HTTP response containing the Excel file.
+#     """
+#     # Create an in-memory byte stream to store the Excel file
+#     output = io.BytesIO()
+#     workbook = Workbook()
+
+#     # Define common styles
+#     header_font = Font(bold=True)
+#     title_font = Font(bold=True, size=14)
+#     border = Border(left=Side(style='thin'), 
+#                     right=Side(style='thin'), 
+#                     top=Side(style='thin'), 
+#                     bottom=Side(style='thin'))
+
+#     # --- Create 'Report Summary' Sheet ---
+#     summary_sheet = workbook.active
+#     summary_sheet.title = "Report Summary"
+
+#     # Define summary sheet headers
+#     summary_headers = ['Company Name', 'JD Summary', 'JD ID', 'Profile Count', 'Feedback']
+#     summary_sheet.append(summary_headers)
+
+#     for cell in summary_sheet[1]:
+#         cell.font = header_font
+#         cell.alignment = Alignment(horizontal='center')
+#         cell.border = border
+
+#     current_row = 2
+#     for team_report in data:
+#         team_name = team_report.get('team_name', 'Unnamed Team')
+#         summary_sheet.cell(row=current_row, column=1, value=f"Team: {team_name}").font = title_font
+#         summary_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(summary_headers))
+#         current_row += 1
+        
+#         for summary_row in team_report.get('report_summary', []):
+#             row_data = [
+#                 summary_row.get('company_name', ''),
+#                 summary_row.get('jd_summary', ''),
+#                 summary_row.get('jd_id', ''),
+#                 summary_row.get('profile_count', ''),
+#                 summary_row.get('feedback', '')
+#             ]
+#             summary_sheet.append(row_data)
+#             for cell in summary_sheet[current_row]:
+#                 cell.border = border
+#             current_row += 1
+        
+#         # Add a blank row for separation
+#         current_row += 1
+
+#     # Autofit columns
+#     for column in summary_sheet.columns:
+#         max_length = 0
+#         column = [cell for cell in column]
+#         for cell in column:
+#             try:
+#                 if len(str(cell.value)) > max_length:
+#                     max_length = len(cell.value)
+#             except:
+#                 pass
+#         adjusted_width = (max_length + 2)
+#         summary_sheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
+
+#     # --- Create 'Detailed Candidates' Sheet ---
+#     detailed_sheet = workbook.create_sheet("Detailed Candidates")
+    
+#     # Define detailed sheet headers
+#     detailed_headers = [
+#         'Candidate ID', 'Name', 'Email', 'Phone', 'Experience',
+#         'Current CTC', 'Expected CTC', 'Notice Period', 'Profile',
+#         'Location', 'Recruiter Comments'
+#     ]
+
+#     current_row = 1
+#     for team_report in data:
+#         team_name = team_report.get('team_name', 'Unnamed Team')
+#         detailed_sheet.cell(row=current_row, column=1, value=f"Team: {team_name}").font = title_font
+#         detailed_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(detailed_headers))
+#         current_row += 2
+        
+#         for detailed_report in team_report.get('detailed_candidates', []):
+#             metadata = detailed_report.get('metadata', {})
+#             company_name = metadata.get('company_name', '')
+#             jd_summary = metadata.get('jd_summary', '')
+            
+#             # Add JD header row
+#             detailed_sheet.cell(row=current_row, column=1, value=f"JD: {jd_summary} for {company_name}").font = header_font
+#             detailed_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(detailed_headers))
+#             current_row += 1
+            
+#             # Add detailed candidate headers
+#             detailed_sheet.append(detailed_headers)
+#             for cell in detailed_sheet[current_row]:
+#                 cell.font = header_font
+#                 cell.alignment = Alignment(horizontal='center')
+#                 cell.border = border
+#             current_row += 1
+
+#             for candidate in detailed_report.get('candidates', []):
+#                 candidate_data = [
+#                     candidate.get('candidate_id', ''),
+#                     candidate.get('name', ''),
+#                     candidate.get('email', ''),
+#                     candidate.get('phone', ''),
+#                     candidate.get('experience', ''),
+#                     candidate.get('current_ctc', ''),
+#                     candidate.get('expected_ctc', ''),
+#                     candidate.get('notice_period', ''),
+#                     candidate.get('profile', ''),
+#                     candidate.get('location', ''),
+#                     candidate.get('recruiter_comments', '')
+#                 ]
+#                 detailed_sheet.append(candidate_data)
+#                 for cell in detailed_sheet[current_row]:
+#                     cell.border = border
+#                 current_row += 1
+            
+#             # Add a blank row for separation
+#             current_row += 1
+
+#     # Autofit columns
+#     for column in detailed_sheet.columns:
+#         max_length = 0
+#         column = [cell for cell in column]
+#         for cell in column:
+#             try:
+#                 if len(str(cell.value)) > max_length:
+#                     max_length = len(cell.value)
+#             except:
+#                 pass
+#         adjusted_width = (max_length + 2)
+#         detailed_sheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
+
+#     # Save the workbook to the in-memory stream
+#     workbook.save(output)
+#     output.seek(0)
+
+#     # Prepare the Django HttpResponse
+#     response = HttpResponse(
+#         output.getvalue(),
+#         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+#     )
+#     response['Content-Disposition'] = 'attachment; filename=recruitment_report.xlsx'
+    
+#     return response
+
+def generate_recruitment_report_excel(data):
+    """
+    Generates a single-sheet Excel file from a recruitment report data structure.
+
+    The sheet contains a summary table followed by individual tables for detailed
+    candidate data, with metadata for each table.
+
+    Args:
+        data (list): A list of dictionaries containing recruitment report data.
+
+    Returns:
+        HttpResponse: A Django HTTP response containing the Excel file.
+    """
+    # Create an in-memory byte stream to store the Excel file
+    output = io.BytesIO()
+    workbook = Workbook()
+    main_sheet = workbook.active
+    main_sheet.title = "Recruitment Report"
+
+    # Define common styles
+    header_font = Font(bold=True)
+    title_font = Font(bold=True, size=14)
+    subtitle_font = Font(bold=True, size=12)
+    border = Border(left=Side(style='thin'), 
+                    right=Side(style='thin'), 
+                    top=Side(style='thin'), 
+                    bottom=Side(style='thin'))
+
+    current_row = 1
+
+    # --- Create the Summary Table ---
+    main_sheet.cell(row=current_row, column=1, value="Report Summary").font = title_font
+    current_row += 2
+
+    summary_headers = ['Company Name', 'JD Summary', 'JD ID', 'Profile Count', 'Feedback']
+    main_sheet.append(summary_headers)
+    for cell in main_sheet[current_row]:
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = border
+    current_row += 1
+
+    for team_report in data:
+        for summary_row in team_report.get('report_summary', []):
+            row_data = [
+                summary_row.get('company_name', ''),
+                summary_row.get('jd_summary', ''),
+                summary_row.get('jd_id', ''),
+                summary_row.get('profile_count', ''),
+                summary_row.get('feedback', '')
+            ]
+            main_sheet.append(row_data)
+            for cell in main_sheet[current_row]:
+                cell.border = border
+            current_row += 1
+
+    # Add a blank row for separation
+    current_row += 2
+    
+    # --- Create Detailed Candidate Tables ---
+    main_sheet.cell(row=current_row, column=1, value="Detailed Candidates").font = title_font
+    current_row += 2
+
+    for team_report in data:
+        team_name = team_report.get('team_name', 'Unnamed Team')
+        main_sheet.cell(row=current_row, column=1, value=f"Team: {team_name}").font = subtitle_font
+        main_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=11)
+        current_row += 2
+        
+        for detailed_report in team_report.get('detailed_candidates', []):
+            metadata = detailed_report.get('metadata', {})
+            company_name = metadata.get('company_name', '')
+            jd_summary = metadata.get('jd_summary', '')
+            date_range = metadata.get('date_or_date_range', '')
+            
+            # Metadata row with larger font
+            main_sheet.cell(row=current_row, column=1, value=f"JD: {jd_summary} for {company_name} ({date_range})").font = subtitle_font
+            main_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=11)
+            current_row += 1
+            
+            # Detailed candidate headers
+            detailed_headers = [
+                'Candidate ID', 'Name', 'Email', 'Phone', 'Experience',
+                'Current CTC', 'Expected CTC', 'Notice Period', 'Profile',
+                'Location', 'Recruiter Comments'
+            ]
+            main_sheet.append(detailed_headers)
+            for cell in main_sheet[current_row]:
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+                cell.border = border
+            current_row += 1
+
+            for candidate in detailed_report.get('candidates', []):
+                candidate_data = [
+                    candidate.get('candidate_id', ''),
+                    candidate.get('name', ''),
+                    candidate.get('email', ''),
+                    candidate.get('phone', ''),
+                    candidate.get('experience', ''),
+                    candidate.get('current_ctc', ''),
+                    candidate.get('expected_ctc', ''),
+                    candidate.get('notice_period', ''),
+                    candidate.get('profile', ''),
+                    candidate.get('location', ''),
+                    candidate.get('recruiter_comments', '')
+                ]
+                main_sheet.append(candidate_data)
+                for cell in main_sheet[current_row]:
+                    cell.border = border
+                current_row += 1
+            
+            # Add a blank row for separation
+            current_row += 1
+
+    # Autofit columns
+    for column in main_sheet.columns:
+        max_length = 0
+        column = [cell for cell in column]
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        if adjusted_width > 50:
+            adjusted_width = 50
+        main_sheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
+
+    # Save the workbook to the in-memory stream
+    workbook.save(output)
+    output.seek(0)
+
+    # Prepare the Django HttpResponse
+    
+    return output
+
+
+@login_required
+def generate_export_report(request):
+    """
+    API endpoint to generate and export the recruitment report as an Excel file.
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method."}, status=405)
+
+    user_id = request.session.get("user_id")
+    report_type = request.GET.get("report_type", "daily")
+    print(f"Generating export report for user ID: {user_id} with report type: {report_type}")
+
+    report_data = generate_daily_report(report_type, user_id)
+    if report_data is None:
+        return JsonResponse({"error": "Could not generate report data."}, status=500)
+
+    # Generate the Excel file in memory
+    excel_file = generate_recruitment_report_excel(report_data)
+
+    # Prepare the Django HttpResponse to serve the file for download
+    response = HttpResponse(
+        excel_file.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=recruitment_report.xlsx'
+    
+    return response
+
+@login_required
+def report_and_logout(request):
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method."}, status=405)
+    print("Report and logout initiated for user:", request.session.get('username'))
+    post_data = request.POST
+    mail_list = post_data.getlist("emails[]")
+    user_id = request.session.get("user_id")
+
+    if mail_list:
+        email_list = [email.strip() for email in mail_list if email.strip()]
+    else:
+        messages.error(request, "Please provide at least one email address.")
+        return redirect("prelogout")
+    
+    report_type = "daily"
+    report_data = generate_daily_report(report_type, user_id)
+
+    
+    excel_file = generate_recruitment_report_excel(report_data)
+    email_configs = DataOperations.get_email_configs(user_id)
+    if not email_configs:
+        messages.error(request, "Email configuration not found. Please set up your email configuration.")
+        return redirect("prelogout")
+
+    from .utils import decrypt_password
+
+    from_email = email_configs['email']
+    app_password = decrypt_password(email_configs['email_host_password'])
+    smtp_host = email_configs.get('email_smtp_host', 'smtp.gmail.com')
+    smtp_port = email_configs.get('email_smtp_port', 587)
+    subject = "Recruitment Report"
+    html_body = "Hi,<br><br>Please find the attached Daily recruitment report for your review.<br><br>Thanks."
+    email_sent = MessageProviders.send_email(
+        from_email=from_email,
+        app_password=app_password,
+        to_email=email_list,
+        subject=subject,
+        html_body=html_body,
+        in_memory_attachments=[("recruitment_report.xlsx", excel_file)],
+        smtp_host=smtp_host,
+        smtp_port=smtp_port
+    )
+
+    if email_sent:
+        messages.success(request, "Recruitment report sent successfully.")
+        return redirect("logout")
+    else:
+        messages.error(request, "Failed to send recruitment report.")
+    return redirect("prelogout")
+
+@login_required
+def prelogout_page(request):
+    """
+    View to render the pre-logout page.
+    """
+    # get email ids of all admins and self team lead if exists
+    user_id = request.session.get("user_id")
+    admin_and_teamlead_emails = []
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+           SELECT email FROM users WHERE role='Admin';
+        """)
+        emails = [row['email'] for row in cursor.fetchall()]
+        admin_and_teamlead_emails.extend(emails)
+    except Exception as e:
+        print("Error fetching admin emails:", e)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    return render(request, "prelogout.html", {"email_list": admin_and_teamlead_emails})

@@ -1,0 +1,59 @@
+{% extends "home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/prelogout.css' %}">
+<!-- Add Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<div class="prelogout-container">
+    <div class="prelogout-main">
+        <h2>Log Out</h2>
+        <form method="post" action="{% url 'report_and_logout' %}">
+            {% csrf_token %}
+            <div>
+                <label for="email-select" style="font-weight:600;">Send report to:</label>
+                <select 
+                    id="email-select" 
+                    name="emails[]" 
+                    multiple="multiple" 
+                    title="Recipient email addresses" 
+                    aria-label="Recipient email addresses"
+                    class="email-select form-control w-full py-2"
+                    required
+                >
+                    {% for email in email_list %}
+                        <option value="{{ email }}">{{ email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Error Message -->
+            {% if messages %}
+                <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                        <p class="{% if 'error' in message.tags %}text-red-600{% elif 'success' in message.tags %}text-green-600{% endif %} mb-4">{{ message }}</p>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+            <button type="submit" class="report-logout button">Send Report and Logout</button>
+        </form>
+        <div class="py-2 text-center fz-16">
+            OR
+        </div>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="button" type="submit">Log Out</button>
+        </form>
+        <a class="cancel-btn button" href="{% url 'home' %}">Cancel</a>
+    </div>
+</div>
+
+<!-- Add jQuery and Select2 JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'js/prelogout.js' %}"></script>
+<script>
+
+</script>
+{% endblock %}

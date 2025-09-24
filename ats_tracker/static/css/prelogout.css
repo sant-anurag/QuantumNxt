@@ -1,0 +1,168 @@
+
+.prelogout-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+}
+
+.prelogout-main {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Heading styling */
+h2 {
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 24px;
+}
+
+/* Form and button styling */
+form {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #555;
+    text-align: left;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+
+
+.button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.report-logout {
+    margin-top: 20px;
+}
+
+/* Specific button styles */
+button[type="submit"] {
+    background: linear-gradient(90deg, #5661d2 0%, #38a169 100%);
+    color: #fff;
+}
+
+button[type="submit"]:hover {
+    background: linear-gradient(90deg, #5661d2 0%, #7a83e3 100%);
+}
+
+/* 'OR' divider */
+.py-2 {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.fz-16 {
+    font-size: 16px;
+    color: #777;
+}
+
+/* Cancel link styling */
+.cancel-btn {
+    display: block;
+    margin-top: 20px;
+    color: #007bff;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s ease;
+}
+
+.cancel-btn:hover {
+    color: #0056b3;
+}
+
+/* Select2 customization */
+.select2-container .select2-selection--multiple {
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    min-height: 40px !important;
+}
+
+.select2-container--default .select2-selection--multiple {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    min-height: 40px !important;
+    align-items: center;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #ccc #f9f9f9; /* Firefox */
+}
+
+.select2-container--default .select2-selection--multiple::-webkit-scrollbar {
+    height: 6px;
+    background: #f9f9f9;
+}
+.select2-container--default .select2-selection--multiple::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #e4e4e4;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #80bdff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.select2-container--default .select2-search--inline .select2-search__field {
+    font-size: 14px;
+}
+
+
+/* Keep choices inline and prevent wrapping */
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Prevent tags from wrapping */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    margin-right: 6px;
+    margin-top: 0;
+    white-space: nowrap;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

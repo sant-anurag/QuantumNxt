@@ -119,5 +119,10 @@ urlpatterns = [
     path("api/candidate_musters/edit_note/", views.update_candidate_activity, name="edit_candidate_note"),
     path("api/candidate_musters/delete_note/", views.delete_candidate_activity, name="delete_candidate_note"),
 
-
+    # prelogout urls
+    path("prelogout/", views.prelogout_page, name="prelogout"),
+    path("reportnlogout/", views.report_and_logout, name="report_and_logout"),
+    
+    # trial urls
+    path("generate_export_report/", views.generate_export_report, name="generate_export_report"),
 ]
