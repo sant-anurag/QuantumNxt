@@ -23,26 +23,26 @@ body {
     backdrop-filter: blur(12px) saturate(180%);
 
 
-.qnxt-aura {
-    position: relative;
-    background: transparent;
-    border-radius: 8px;
-}
-.sidebar-emp-name {
-    font-family: Arial, 'Times New Roman', Times, serif;
-    font-size: 1.8em;
-    color: #4f8cff;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    display: inline-block;
-    margin-top: 4px;
-}
-color: #fff; /* White font color */
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-    border-right: 1px solid rgba(255, 255, 255, 0.18);
-    transition: width 0.3s cubic-bezier(.68,-0.55,.27,1.55);
-    overflow-y: auto;
-    z-index: 1000;
+    .qnxt-aura {
+        position: relative;
+        background: transparent;
+        border-radius: 8px;
+    }
+    .sidebar-emp-name {
+        font-family: Arial, 'Times New Roman', Times, serif;
+        font-size: 1.8em;
+        color: #4f8cff;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        margin-top: 4px;
+    }
+    color: #fff; /* White font color */
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border-right: 1px solid rgba(255, 255, 255, 0.18);
+        transition: width 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+        overflow-y: auto;
+        z-index: 1000;
 }
 
 .sidebar-header {
