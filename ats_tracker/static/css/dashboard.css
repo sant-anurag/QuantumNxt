@@ -35,6 +35,7 @@
     align-items: center;
     gap: 12px;
 }
+
 .shortcut-btn i {
     font-size: 1.4em;
 }
@@ -47,6 +48,8 @@
     display: flex;
     gap: 32px;
     margin-top: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
 }
 .dashboard-left, .dashboard-right {
     flex: 1;
@@ -54,6 +57,22 @@
     flex-direction: column;
     gap: 32px;
 }
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: rgba(111, 124, 194, 0.38);
+    border-radius: 8px;
+}
+
+
 .dashboard-card {
     background: linear-gradient(120deg, #eef2f7 0%, #dbe6ff 100%);
     border-radius: 16px;
