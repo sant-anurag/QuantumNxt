@@ -38,21 +38,24 @@ function closeJDModal() {
     document.getElementById('jdModal').style.display = 'none';
 }
 
-document.getElementById('jdEditForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const form = e.target;
-    const jd_id = form.jd_id.value;
-    const data = new FormData(form);
-    fetch(`/jds/${jd_id}/`, {
-        method: 'POST',
-        body: data,
-        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}
-    })
-    .then(res => res.json())
-    .then(resp => {
-        if (resp.success) {
-            alert('JD updated successfully!');
-            window.location.reload();
-        }
+jd_edit_form = document.getElementById('jdEditForm');
+if (jd_edit_form) {
+    jd_edit_form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const jd_id = form.jd_id.value;
+        const data = new FormData(form);
+        fetch(`/jds/${jd_id}/`, {
+            method: 'POST',
+            body: data,
+            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (resp.success) {
+                alert('JD updated successfully!');
+                window.location.reload();
+            }
+        });
     });
-});
+}

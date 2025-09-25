@@ -31,7 +31,7 @@
         <ul class="messages">
             {% for message in messages %}
                 <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
-                    <p class="alert success {% if 'error' in message.tags %}text-red-600{% elif 'success' in message.tags %}text-green-600{% endif %} mb-4">{{ message }}</p>
+                    <p class="alert {% if 'error' in message.tags %}text-red-600 error{% elif 'success' in message.tags %}text-green-600 success{% endif %} mb-4">{{ message }}</p>
                 </li>
             {% endfor %}
         </ul>
