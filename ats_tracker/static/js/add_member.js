@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('addMemberForm');
 
+
+    const dateInput = document.getElementById('date_joined');
+    const today = new Date().toISOString().split('T')[0];
+    const fixedMinDate = '2020-01-01';
+
+    if (dateInput) {
+        dateInput.setAttribute('min', fixedMinDate);
+        dateInput.setAttribute('max', today);
+    }
+
     if (!form) return;
 
     form.addEventListener('submit', function(e) {

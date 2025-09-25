@@ -1,4 +1,26 @@
 /* --- Create JD Form Card --- */
+
+/* --- Button --- */
+.btn-primary {
+    background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 12px 32px;
+    font-size: 1.13em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s;
+    box-shadow: 0 2px 8px rgba(60, 120, 255, 0.08);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(90deg, #11b7ee 0%, #4e54c8 100%);
+}
+
+
+
+/* --- Create JD Form Card --- */
 .jd-form-outer {
     background: #fff;
     border: 1.5px solid #e0e6ef;
@@ -6,8 +28,8 @@
     box-shadow: 0 6px 32px rgba(60, 120, 255, 0.07);
     padding: 38px 48px 32px 48px;
     margin: 2em auto 1.25em auto;
-    max-width: 900px;
-    width: 90%;
+    max-width: 800px;
+    width: 80%;
     font-family: 'Segoe UI', Arial, sans-serif;
     color: #2a3a5a;
 }
@@ -28,22 +50,24 @@
     -webkit-text-fill-color: transparent;
 }
 
-/* --- JD Form Grid Layout --- */
+/* --- JD Form Flexbox Layout for wrapping inputs --- */
 .jd-grid-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 22px 36px;
-    align-items: end;
+    align-items: flex-end;
 }
 
 .jd-grid-form .form-group {
     display: flex;
     flex-direction: column;
     margin-bottom: 0;
+    flex-grow: 1; /* Allow items to grow to fill space */
+    min-width: 250px; /* Minimum width before wrapping */
 }
 
 .jd-grid-form .form-group-full {
-    grid-column: 1 / span 2;
+    flex-basis: 100%; /* Take up the full width */
 }
 
 .jd-grid-form .form-group label {
@@ -80,6 +104,7 @@
 }
 
 .jd-grid-form .form-actions {
+    flex-basis: 100%; /* Take up the full width */
     text-align: right;
     margin-top: 10px;
 }
@@ -216,8 +241,7 @@
 
 /* --- Responsive --- */
 @media (max-width: 1200px) {
-    .jd-list-section, .jd-form-outer { min-width: unset; max-width: unset; width: 98%; }
-    .jd-grid-form { grid-template-columns: 1fr; gap: 18px 0; }
+    .jd-list-section, .jd-form-outer { min-width: unset; max-width: unset; width: 90%; }
     .jd-list-header { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 
