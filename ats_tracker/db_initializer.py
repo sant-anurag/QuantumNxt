@@ -1,12 +1,9 @@
 import mysql.connector
+from ats_tracker.utils import DataOperations
 
 class ATSDatabaseInitializer:
     def __init__(self):
-        self.conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="root"
-        )
+        self.conn = DataOperations.get_db_connection()
         self.cursor = self.conn.cursor()
 
     # python
