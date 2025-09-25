@@ -110,3 +110,63 @@ form.onsubmit = function(e) {
         editBtn.style.display = 'none';
     });
 };
+
+// phone number validation on input
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.querySelector('input[name="contact_phone"]');
+    const form = document.getElementById('customerForm');
+    
+    // Phone number validation pattern: numbers, spaces, +, -, (, )
+    const phonePattern = /^[\d\s\+\-\(\)]+$/;
+    
+    // Real-time validation
+    phoneInput.addEventListener('input', function(e) {
+        const value = e.target.value;
+        
+        // Remove existing error styling
+        e.target.classList.remove('error');
+        
+        // Check if input contains invalid characters
+        if (value && !phonePattern.test(value)) {
+            e.target.classList.add('error');
+            showPhoneError('Phone number can only contain numbers, spaces, +, -, (, )');
+        } else {
+            hidePhoneError();
+        }
+    });
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        const phoneValue = phoneInput.value.trim();
+        
+        if (phoneValue && !phonePattern.test(phoneValue)) {
+            e.preventDefault();
+            phoneInput.classList.add('error');
+            showPhoneError('Please enter a valid phone number');
+            phoneInput.focus();
+        }
+    });
+    
+    function showPhoneError(message) {
+        // Remove existing error message
+        hidePhoneError();
+        
+        // Create error message element
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'phone-error';
+        errorDiv.textContent = message;
+        errorDiv.style.color = '#e74c3c';
+        errorDiv.style.fontSize = '12px';
+        errorDiv.style.marginTop = '4px';
+        
+        // Insert after phone input
+        phoneInput.parentNode.appendChild(errorDiv);
+    }
+    
+    function hidePhoneError() {
+        const existingError = phoneInput.parentNode.querySelector('.phone-error');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+});

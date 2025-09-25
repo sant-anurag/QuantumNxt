@@ -452,7 +452,8 @@ class DataValidators:
 
     @staticmethod
     def is_valid_mobile_number(mobile):
-        mobile_regex = r'^\+?[0-9\s\-()]{7,15}$'
+        # mobile_regex = r'^\+?[0-9\s\-()]{7,15}$'
+        mobile_regex = r'^\+?[0-9\s\-()]{10,15}$'
         return re.match(mobile_regex, mobile) is not None
 
     @staticmethod
@@ -462,6 +463,43 @@ class DataValidators:
             return True
         except ValueError:
             return False
+    
+    @staticmethod
+    def validate_password_strength(password):
+        """
+        Validates the strength of a password.
+        A strong password must be at least 8 characters long and include at least one uppercase letter,
+        one lowercase letter, one digit, and one special character.
+
+        Args:
+            password (str): The password to validate.
+        Returns:
+            bool: True if the password is strong, False otherwise.
+        """
+        if len(password) < 8:
+            return False
+        if not re.search(r'[A-Z]', password):
+            return False
+        if not re.search(r'[a-z]', password):
+            return False
+        if not re.search(r'\d', password):
+            return False
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return False
+        return True
+    
+    def validate_names(name):
+        """
+        Validates that a name contains only alphabetic characters and spaces.
+        
+        Args:
+            name (str): The name to validate.
+
+        Returns:
+            bool: True if the name is valid, False otherwise.
+        """
+        name_regex = r'^[a-zA-Z\s.-]+$'
+        return re.match(name_regex, name) is not None
 
 
 # Valid Fernet key (32 url-safe base64-encoded bytes)

@@ -169,6 +169,8 @@ def add_member(request):
         # Basic in-view validation
         if not first_name or not last_name or not email or not role or not date_joined:
             error = "All fields except phone are required."
+        elif not DataValidators.validate_names(first_name) or not DataValidators.validate_names(last_name):
+            error = "Names can only contain letters, spaces, and hyphens."
         elif '@' not in email or len(email) > 100 or not DataValidators.is_valid_email(email):
             error = "Invalid email address."
         elif len(first_name) > 50 or len(last_name) > 50:
@@ -234,6 +236,9 @@ def create_team(request):
         team_lead = request.POST.get("team_lead", "").strip()
         # Deduplicate member IDs
         selected_members = list(set(selected_members))
+        if team_lead not in selected_members:
+            selected_members.append(team_lead)
+        
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
         else:
@@ -686,12 +691,13 @@ def create_customer(request):
         # Basic validation
         if not company_name or not contact_person_name or not contact_email or not contact_phone:
             error = "All fields are required."
-        elif '@' not in contact_email or len(contact_email) > 100:
+        elif '@' not in contact_email or len(contact_email) > 100 or not DataValidators.is_valid_email(contact_email):
             error = "Invalid email address."
         elif len(company_name) > 255 or len(contact_person_name) > 100:
             error = "Company or contact name too long."
-        elif len(contact_phone) > 20:
-            error = "Phone number too long."
+
+        elif not DataValidators.is_valid_mobile_number(contact_phone):
+            error = "Invalid phone number."
         else:
             try:
                 cursor.execute("""
@@ -776,12 +782,12 @@ def update_customer(request, company_id):
         # Basic validation
         if not company_name or not contact_person_name or not contact_email or not contact_phone:
             return JsonResponse({"error": "All fields are required."}, status=400)
-        elif '@' not in contact_email or len(contact_email) > 100:
+        elif '@' not in contact_email or len(contact_email) > 100 or not DataValidators.is_valid_email(contact_email):
             return JsonResponse({"error": "Invalid email address."}, status=400)
         elif len(company_name) > 255 or len(contact_person_name) > 100:
             return JsonResponse({"error": "Company or contact name too long."}, status=400)
-        elif len(contact_phone) > 20:
-            return JsonResponse({"error": "Phone number too long."}, status=400)
+        elif len(contact_phone) > 20 or not DataValidators.is_valid_mobile_number(contact_phone):
+            return JsonResponse({"error": "Invalid phone number."}, status=400)
         
         try:
             conn = DataOperations.get_db_connection()
@@ -5308,6 +5314,10 @@ def save_email_config(request):
         if not email:
             messages.error(request, "Email should not be blank.")
             return redirect('save_email_config')
+        elif DataOperations.is_valid_email(email) is False:
+            messages.error(request, "Invalid email format.")
+            return redirect('save_email_config')
+        
         if not email_host_password:
             messages.error(request, "Host Password should not be blank.")
             return redirect('save_email_config')
@@ -5755,9 +5765,16 @@ def generate_export_report(request):
 
     user_id = request.session.get("user_id")
     report_type = request.GET.get("report_type", "daily")
+    from_date = None
+    to_date = None
+    if report_type == "custom":
+        from_date = request.GET.get("from_date")
+        to_date = request.GET.get("to_date")
+        if not from_date or not to_date:
+            return JsonResponse({"error": "From date and To date are required for custom report."}, status=400)
     print(f"Generating export report for user ID: {user_id} with report type: {report_type}")
 
-    report_data = generate_daily_report(report_type, user_id)
+    report_data = generate_daily_report(report_type, user_id, from_date=from_date, to_date=to_date)
     if report_data is None:
         return JsonResponse({"error": "Could not generate report data."}, status=500)
 
@@ -5819,7 +5836,6 @@ def report_and_logout(request):
     )
 
     if email_sent:
-        messages.success(request, "Recruitment report sent successfully.")
         return redirect("logout")
     else:
         messages.error(request, "Failed to send recruitment report.")
