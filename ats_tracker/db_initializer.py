@@ -138,7 +138,7 @@ class ATSDatabaseInitializer:
                 profiles_rejected INT DEFAULT 0,
                 profiles_on_hold INT DEFAULT 0,
                 jd_status ENUM('active', 'closed', 'on hold') DEFAULT 'active',
-                company_id INT,
+                company_id INT NOT NULL,
                 team_id INT,
                 created_by INT,
                 closure_date DATE NULL,
