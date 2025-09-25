@@ -179,6 +179,11 @@ def add_member(request):
             error = "Invalid status."
         elif phone and (not phone.isdigit() or len(phone) > 20):
             error = "Phone must be numeric and under 20 digits."
+        # if date is too old, it should not accept
+        elif date_joined > str(date.today()):
+            error = "Date joined cannot be in the future."
+        elif date_joined < '2020-01-01':
+            error = "Date joined cannot be before 2020-01-01."
         else:
             try:
                 # Add HR team member
@@ -565,10 +570,15 @@ def create_jd(request):
         no_of_positions = int(request.POST.get("no_of_positions", 1))
         jd_status = request.POST.get("jd_status", "active")
         created_by = request.session.get("user_id", None)
-        budget_ctc = request.POST.get("budget_ctc", 0)
+        budget_ctc = request.POST.get("budget_ctc")
         experience_required = request.POST.get("experience_required", "")
         education_required = request.POST.get("education_required", "")
         location = request.POST.get("location", "")
+
+        required_fields = [jd_id, jd_summary, jd_description, must_have_skills, company_id, no_of_positions, budget_ctc]
+        if not all(required_fields):
+            messages.error(request, "All required fields must be filled.")
+            return redirect('jd_create')
 
         try:
             conn = DataOperations.get_db_connection()
@@ -588,9 +598,10 @@ def create_jd(request):
                 jd_status, created_by, budget_ctc, experience_required, 
                 education_required, location
             ))
+            conn.commit()
+
             message = f"Task {escape(jd_id)} created successfully!"
             messages.success(request, message)
-            conn.commit()
         except Exception as e:
             print("create_jd -> Error creating JD:", str(e))
 
@@ -5314,7 +5325,7 @@ def save_email_config(request):
         if not email:
             messages.error(request, "Email should not be blank.")
             return redirect('save_email_config')
-        elif DataOperations.is_valid_email(email) is False:
+        elif DataValidators.is_valid_email(email) is False:
             messages.error(request, "Invalid email format.")
             return redirect('save_email_config')
         
@@ -5342,8 +5353,9 @@ def save_email_config(request):
             smtp_host=smtp_host,
             smtp_port=smtp_port
         )
+        
         if not test_result:
-            messages.error(request, "Could not send test email. Please check your email address and password.")
+            messages.error(request, "Could not send test email. Please check your email address and app password.")
             return redirect('save_email_config')
 
         # Encrypt the password before saving
