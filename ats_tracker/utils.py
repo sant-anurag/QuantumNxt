@@ -17,6 +17,10 @@ from email.mime.text import MIMEText
 from django.conf import settings
 import smtplib
 
+import environ
+
+env = environ.Env()
+environ.Env.read_env()
 
 
 class DataOperations:
@@ -32,10 +36,10 @@ class DataOperations:
         """
         try:
             return mysql.connector.connect(
-                host='localhost',
-                user='root',
-                password='root',
-                database='ats',
+                host=env('DATABASE_HOST', default='localhost'),
+                user=env('DATABASE_USER', default='your_username'),
+                password=env('DATABASE_PASSWORD', default='your_password'),
+                database=env('DATABASE_NAME', default='your_database'),
                 charset='utf8mb4'
             )
         except mysql.connector.Error as e:
@@ -503,7 +507,7 @@ class DataValidators:
 
 
 # Valid Fernet key (32 url-safe base64-encoded bytes)
-FERNET_KEY = b'1cLjiFtjouXMiGiZ75eRUKkWo2MYpYqlguFRXQgv2wQ='
+FERNET_KEY = env('FERNET_KEY', default='1cLjiFtjouXMiGiZ75eRUKkWo2MYpYqlguFRXQgv2wQ=')  # Replace with your actual key or load from env
 
 def encrypt_password(password):
     f = Fernet(FERNET_KEY)
