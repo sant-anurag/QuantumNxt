@@ -4,23 +4,7 @@
 <link rel="stylesheet" href="{% static 'css/jd.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
-    .alert {
-        padding: 12px 18px;
-        border-radius: 7px;
-        margin-bottom: 18px;
-        font-size: 1.08em;
-        font-weight: 500;
-    }
-    .alert.success {
-        background: #e6f9f0;
-        color: #1a7f4c;
-        border: 1.2px solid #b2e5d0;
-    }
-    .alert.error {
-        background: #fff0f0;
-        color: #c0392b;
-        border: 1.2px solid #f5b7b1;
-    }
+    
 </style>
 <div class="jd-form-outer">
 <div style="display: flex; align-items: center; margin-bottom: 12px;">
@@ -40,53 +24,64 @@
     <form id="jdForm" method="post" action="{% url 'create_jd' %}" class="jd-grid-form">
         {% csrf_token %}
         <div class="form-group">
-            <label>JD Summary</label>
-            <input type="text" name="jd_summary" required maxlength="100" placeholder="Brief summary of the job description (max 100 characters)">
+            <label for="jd_summary">Job Title/ JD Summary</label>
+            <input 
+                type="text" 
+                id="jd_summary" 
+                name="jd_summary" 
+                required 
+                maxlength="100"
+                placeholder="Brief summary of the job description (max 100 characters)"
+                title="Enter a brief summary of the job description (max 100 characters)">
         </div>
         <div class="form-group">
-            <label>Company</label>
-            <select name="company_id" required>
-                <option value="">Select Company</option>
-                {% for company in companies %}
-                    <option value="{{ company.company_id }}">{{ company.company_name }}</option>
-                {% endfor %}
-            </select>
+            <label for="companySearch">Company</label>
+            <div class="searchable-select">
+                <input type="text" id="companySearch" placeholder="Search and select company..." autocomplete="off" required>
+                <input type="hidden" name="company_id" id="companyId" required>
+                <div class="dropdown-arrow">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-options" id="companyDropdown">
+                    {% for company in companies %}<div class="dropdown-option" data-value="{{ company.company_id }}" data-text="{{ company.company_name }}">{{ company.company_name }}</div>{% endfor %}
+                </div>
+            </div>
         </div>
         <div class="form-group form-group-full">
-            <label>JD Description</label>
-            <textarea name="jd_description" required rows="4"></textarea>
+            <label for="jd_description">JD Description</label>
+            <textarea name="jd_description" id="jd_description" required rows="4"></textarea>
         </div>
         <div class="form-group">
-            <label>Must Have Skills</label>
-            <input type="text" name="must_have_skills" required>
+            <label for="must_have_skills">Must Have Skills</label>
+            <input type="text" name="must_have_skills" id="must_have_skills" required>
         </div>
         <div class="form-group">
-            <label>Good to Have Skills</label>
-            <input type="text" name="good_to_have_skills">
+            <label for="good_to_have_skills">Good to Have Skills</label>
+            <input type="text" name="good_to_have_skills" id="good_to_have_skills">
         </div>
         <div class="form-group">
-            <label>Budget/CTC</label>
-            <input type="text" name="budget_ctc" maxlength="50" placeholder="e.g., Market Standard, 10 LPA" required>
+            <label for="budget_ctc">Budget/CTC</label>
+            <input type="text" name="budget_ctc" id="budget_ctc" maxlength="50" placeholder="e.g., Market Standard, 10 LPA" required>
         </div>
         <div class="form-group">
-            <label>Experience Required</label>
-            <input type="text" name="experience_required" maxlength="50" placeholder="e.g., 3-5 years">
+            <label for="experience_required">Experience Required</label>
+            <input type="text" name="experience_required" id="experience_required" maxlength="50" placeholder="e.g., 3-5 years">
         </div>
         <div class="form-group">
-            <label>Education Required</label>
-            <input type="text" name="education_required" maxlength="255" placeholder="e.g., Bachelor's in Computer Science">
+            <label for="education_required">Education Required</label>
+            <input type="text" name="education_required" id="education_required" maxlength="255" placeholder="e.g., Bachelor's in Computer Science">
         </div>
         <div class="form-group">
-            <label>Location</label>
-            <input type="text" name="location" maxlength="255" placeholder="e.g., New York, Remote" required>
+            <label for="location">Location</label>
+            <input type="text" name="location" id="location" maxlength="255" placeholder="e.g., New York, Remote" required>
         </div>
         <div class="form-group">
-            <label>No. of Positions</label>
-            <input type="number" name="no_of_positions" min="1" value="1" required>
+            <label for="no_of_positions">No. of Positions</label>
+            <input type="number" name="no_of_positions" id="no_of_positions" min="1" value="1" required>
         </div>
         <div class="form-group">
-            <label>Status</label>
-            <select name="jd_status">
+            <label for="jd_status">Status</label>
+            <select name="jd_status" id="jd_status">
                 <option value="active">Active</option>
                 <option value="closed">Closed</option>
                 <option value="on hold">On Hold</option>
@@ -98,4 +93,5 @@
     </form>
 </div>
 <script src="{% static 'js/jd.js' %}"></script>
+
 {% endblock %}
