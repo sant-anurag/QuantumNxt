@@ -16,7 +16,7 @@ class ATSDatabaseInitializer:
                         username VARCHAR(50) NOT NULL UNIQUE,
                         email VARCHAR(100) NOT NULL UNIQUE,
                         password_hash VARCHAR(255) NOT NULL,
-                        role ENUM('Admin', 'User', 'Team_Lead') NOT NULL DEFAULT 'User',
+                        role ENUM('SuperUser', 'Admin', 'User', 'Team_Lead') NOT NULL DEFAULT 'User',
                         is_active BOOLEAN DEFAULT TRUE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
@@ -141,7 +141,7 @@ class ATSDatabaseInitializer:
                 closure_date DATE NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (company_id) REFERENCES customers(company_id),
+                FOREIGN KEY (company_id) REFERENCES customers(company_id) ON DELETE CASCADE,
                 FOREIGN KEY (team_id) REFERENCES teams(team_id),
                 FOREIGN KEY (created_by) REFERENCES users(user_id)
             );
@@ -156,8 +156,8 @@ class ATSDatabaseInitializer:
                 status ENUM('toBeScreened', 'selected', 'rejected', 'onHold') DEFAULT 'toBeScreened',
                 uploaded_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 customer_id INT,
-                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id),
-                FOREIGN KEY (customer_id) REFERENCES customers(company_id)
+                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id) ON DELETE CASCADE,
+                FOREIGN KEY (customer_id) REFERENCES customers(company_id) ON DELETE CASCADE
             );
         """)
 
@@ -205,8 +205,8 @@ class ATSDatabaseInitializer:
                 UNIQUE KEY unique_jd_email (jd_id, email),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id),
-                FOREIGN KEY (resume_id) REFERENCES resumes(resume_id),
+                FOREIGN KEY (jd_id) REFERENCES recruitment_jds(jd_id) ON DELETE CASCADE,
+                FOREIGN KEY (resume_id) REFERENCES resumes(resume_id) ON DELETE CASCADE,
                 FOREIGN KEY (hr_member_id) REFERENCES hr_team_members(emp_id),
                 FOREIGN KEY (team_id) REFERENCES teams(team_id)
             );
@@ -255,7 +255,8 @@ class ATSDatabaseInitializer:
                     bonus DECIMAL(10,2),
                     other DECIMAL(10,2),
                     total_ctc DECIMAL(10,2),
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE
                 )
             """)
         self.conn.commit()
