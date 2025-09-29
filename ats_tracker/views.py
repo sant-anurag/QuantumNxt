@@ -155,6 +155,7 @@ def add_member(request):
 
     """
     print("add_member -> Request method:", request.method)
+    from .utils import Constants
     message = ''
     error = ''
     if request.method == 'POST':
@@ -177,13 +178,13 @@ def add_member(request):
             error = "First and last name should be under 50 characters."
         elif status not in ('active', 'inactive', 'on_leave'):
             error = "Invalid status."
-        elif phone and (not phone.isdigit() or len(phone) > 20):
-            error = "Phone must be numeric and under 20 digits."
+        elif phone and (len(phone) > 20) or not DataValidators.is_valid_mobile_number(phone):
+            error = "Please Enter a valid phone number."
         # if date is too old, it should not accept
         elif date_joined > str(date.today()):
             error = "Date joined cannot be in the future."
-        elif date_joined < '2020-01-01':
-            error = "Date joined cannot be before 2020-01-01."
+        elif date_joined < Constants.MIN_JOIN_DATE:
+            error = f"Date joined cannot be before {Constants.MIN_JOIN_DATE}."
         else:
             try:
                 # Add HR team member
@@ -685,6 +686,78 @@ def jd_detail(request, jd_id):
         return JsonResponse({"success": True})
 
 
+def get_customer_list_optimized(request):
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # --- Pagination and Search Setup ---
+    search = request.GET.get('search', '').strip()
+    page = int(request.GET.get('page', 1))
+    per_page = 5
+    offset = (page - 1) * per_page
+    
+    # --- SQL Query Construction ---
+    base_select = """
+        SELECT 
+            company_id, company_name, contact_person_name,
+            contact_email, contact_phone, created_at, note 
+        FROM 
+            customers
+    """
+    
+    base_count = "SELECT COUNT(*) as total FROM customers"
+    
+    where_clause = ""
+    sql_params = []
+    
+    if search:
+        # Search parameters
+        search_query = "%" + search + "%"
+        search_fields = ["company_name", "contact_person_name", "contact_email", "contact_phone"]
+        
+        # Build the WHERE clause dynamically
+        where_clause = " WHERE " + " OR ".join([f"{field} LIKE %s" for field in search_fields])
+        
+        # Add search_query four times for the 4 placeholders in COUNT query
+        sql_params.extend([search_query] * 4)
+
+    # --- 1. Get Total Count ---
+    cursor.execute(base_count + where_clause, sql_params)
+    total = cursor.fetchone()['total']
+    
+    # --- 2. Calculate Pagination ---
+    num_pages = (total + per_page - 1) // per_page  # Optimized ceiling division
+    page_range = range(1, num_pages + 1)
+    
+    # --- 3. Get Paginated Customer Data ---
+    order_limit_offset = " ORDER BY company_name LIMIT %s OFFSET %s"
+    
+    # Add LIMIT and OFFSET parameters
+    sql_params.extend([per_page, offset])
+
+    # Execute the final query
+    cursor.execute(base_select + where_clause + order_limit_offset, sql_params)
+    customer_list = cursor.fetchall()
+
+    # --- Cleanup and Final Formatting ---
+    cursor.close()
+    conn.close()
+
+    # Optimized list comprehension for date conversion
+    customer_list = [
+        dict(customer, created_at=customer['created_at'].date()) 
+        for customer in customer_list
+    ]
+
+    # The final output structure remains the same as implied by the original code
+    return {
+        'customer_list': customer_list,
+        'total': total,
+        'num_pages': num_pages,
+        'page_range': page_range,
+        # ... any other context variables
+    }
+
 @role_required('Admin')
 def create_customer(request):
     """
@@ -746,28 +819,14 @@ def create_customer(request):
                 if 'conn' in locals():
                     conn.close()
     
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    search = request.GET.get('search', '').strip()
+    # GET: Show customer list with pagination and search
+    result = get_customer_list_optimized(request)
+    customer_list = result['customer_list']
     page = int(request.GET.get('page', 1))
-    per_page = 5
-    customer_list = []
-    num_pages = 1
-    total = 0
-    page_range = range(1, 2)
-    if search:
-        # Search by company name, contact person, email, or phone
-        search_query = "%" + search + "%"
-        cursor.execute("SELECT COUNT(*) as total FROM customers WHERE company_name LIKE %s OR contact_person_name LIKE %s OR contact_email LIKE %s OR contact_phone LIKE %s", [search_query]*4)
-        total = cursor.fetchone()['total']
-        num_pages = (total // per_page) + (1 if total % per_page else 0)
-        offset = (page - 1) * per_page
-        cursor.execute("SELECT company_id, company_name, contact_person_name, contact_email, contact_phone, created_at, note FROM customers WHERE company_name LIKE %s OR contact_person_name LIKE %s OR contact_email LIKE %s OR contact_phone LIKE %s ORDER BY company_name LIMIT %s OFFSET %s", [search_query]*4 + [per_page, offset])
-        customer_list = cursor.fetchall()
-        customer_list = [dict(customer, created_at=customer['created_at'].date()) for customer in customer_list]
-        page_range = range(1, num_pages + 1)
-    cursor.close()
-    conn.close()
+    num_pages = result['num_pages']
+    total = result['total']
+    page_range = result['page_range']
+    search = request.GET.get('search', '').strip()
 
     return render(request, "create_customer.html", {
         "customer_list": customer_list,
@@ -4818,6 +4877,32 @@ def change_role(request):
         return JsonResponse({"success": True, "message": "Role updated successfully."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 
+@role_required(['Admin'], is_api=True)
+def change_user_status(request, user_id, action):
+    """
+    View to activate or deactivate a user.
+    """
+    if action not in ['activate', 'deactivate']:
+        return HttpResponse("Invalid action.", status=400)
+    try:
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        is_active = 1 if action == 'activate' else 0
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET is_active=%s WHERE user_id=%s", (is_active, user_id))
+        if not is_active and emp_id:
+            cursor.execute("UPDATE hr_team_members SET status='inactive' WHERE emp_id=%s", (emp_id,))
+        conn.commit()
+    except:
+        conn.rollback()
+        return HttpResponse("Error updating user status.", status=500)
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'conn' in locals() and conn:
+            conn.close()
+    return JsonResponse({"success": True, "message": f"User {'activated' if is_active else 'deactivated'} successfully."})
+
 @role_required(['Admin', 'Team_Lead'])
 def status_report_page(request):
     """
@@ -5474,159 +5559,6 @@ def generate_daily_report(report_type, user_id, **kwargs):
     return all_teams_data
 
 
-# def generate_recruitment_report_excel(data):
-#     """
-#     Generates an Excel file from a recruitment report data structure.
-
-#     Args:
-#         data (list): A list of dictionaries containing recruitment report data.
-
-#     Returns:
-#         HttpResponse: A Django HTTP response containing the Excel file.
-#     """
-#     # Create an in-memory byte stream to store the Excel file
-#     output = io.BytesIO()
-#     workbook = Workbook()
-
-#     # Define common styles
-#     header_font = Font(bold=True)
-#     title_font = Font(bold=True, size=14)
-#     border = Border(left=Side(style='thin'), 
-#                     right=Side(style='thin'), 
-#                     top=Side(style='thin'), 
-#                     bottom=Side(style='thin'))
-
-#     # --- Create 'Report Summary' Sheet ---
-#     summary_sheet = workbook.active
-#     summary_sheet.title = "Report Summary"
-
-#     # Define summary sheet headers
-#     summary_headers = ['Company Name', 'JD Summary', 'JD ID', 'Profile Count', 'Feedback']
-#     summary_sheet.append(summary_headers)
-
-#     for cell in summary_sheet[1]:
-#         cell.font = header_font
-#         cell.alignment = Alignment(horizontal='center')
-#         cell.border = border
-
-#     current_row = 2
-#     for team_report in data:
-#         team_name = team_report.get('team_name', 'Unnamed Team')
-#         summary_sheet.cell(row=current_row, column=1, value=f"Team: {team_name}").font = title_font
-#         summary_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(summary_headers))
-#         current_row += 1
-        
-#         for summary_row in team_report.get('report_summary', []):
-#             row_data = [
-#                 summary_row.get('company_name', ''),
-#                 summary_row.get('jd_summary', ''),
-#                 summary_row.get('jd_id', ''),
-#                 summary_row.get('profile_count', ''),
-#                 summary_row.get('feedback', '')
-#             ]
-#             summary_sheet.append(row_data)
-#             for cell in summary_sheet[current_row]:
-#                 cell.border = border
-#             current_row += 1
-        
-#         # Add a blank row for separation
-#         current_row += 1
-
-#     # Autofit columns
-#     for column in summary_sheet.columns:
-#         max_length = 0
-#         column = [cell for cell in column]
-#         for cell in column:
-#             try:
-#                 if len(str(cell.value)) > max_length:
-#                     max_length = len(cell.value)
-#             except:
-#                 pass
-#         adjusted_width = (max_length + 2)
-#         summary_sheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
-
-#     # --- Create 'Detailed Candidates' Sheet ---
-#     detailed_sheet = workbook.create_sheet("Detailed Candidates")
-    
-#     # Define detailed sheet headers
-#     detailed_headers = [
-#         'Candidate ID', 'Name', 'Email', 'Phone', 'Experience',
-#         'Current CTC', 'Expected CTC', 'Notice Period', 'Profile',
-#         'Location', 'Recruiter Comments'
-#     ]
-
-#     current_row = 1
-#     for team_report in data:
-#         team_name = team_report.get('team_name', 'Unnamed Team')
-#         detailed_sheet.cell(row=current_row, column=1, value=f"Team: {team_name}").font = title_font
-#         detailed_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(detailed_headers))
-#         current_row += 2
-        
-#         for detailed_report in team_report.get('detailed_candidates', []):
-#             metadata = detailed_report.get('metadata', {})
-#             company_name = metadata.get('company_name', '')
-#             jd_summary = metadata.get('jd_summary', '')
-            
-#             # Add JD header row
-#             detailed_sheet.cell(row=current_row, column=1, value=f"JD: {jd_summary} for {company_name}").font = header_font
-#             detailed_sheet.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=len(detailed_headers))
-#             current_row += 1
-            
-#             # Add detailed candidate headers
-#             detailed_sheet.append(detailed_headers)
-#             for cell in detailed_sheet[current_row]:
-#                 cell.font = header_font
-#                 cell.alignment = Alignment(horizontal='center')
-#                 cell.border = border
-#             current_row += 1
-
-#             for candidate in detailed_report.get('candidates', []):
-#                 candidate_data = [
-#                     candidate.get('candidate_id', ''),
-#                     candidate.get('name', ''),
-#                     candidate.get('email', ''),
-#                     candidate.get('phone', ''),
-#                     candidate.get('experience', ''),
-#                     candidate.get('current_ctc', ''),
-#                     candidate.get('expected_ctc', ''),
-#                     candidate.get('notice_period', ''),
-#                     candidate.get('profile', ''),
-#                     candidate.get('location', ''),
-#                     candidate.get('recruiter_comments', '')
-#                 ]
-#                 detailed_sheet.append(candidate_data)
-#                 for cell in detailed_sheet[current_row]:
-#                     cell.border = border
-#                 current_row += 1
-            
-#             # Add a blank row for separation
-#             current_row += 1
-
-#     # Autofit columns
-#     for column in detailed_sheet.columns:
-#         max_length = 0
-#         column = [cell for cell in column]
-#         for cell in column:
-#             try:
-#                 if len(str(cell.value)) > max_length:
-#                     max_length = len(cell.value)
-#             except:
-#                 pass
-#         adjusted_width = (max_length + 2)
-#         detailed_sheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
-
-#     # Save the workbook to the in-memory stream
-#     workbook.save(output)
-#     output.seek(0)
-
-#     # Prepare the Django HttpResponse
-#     response = HttpResponse(
-#         output.getvalue(),
-#         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-#     )
-#     response['Content-Disposition'] = 'attachment; filename=recruitment_report.xlsx'
-    
-#     return response
 
 def generate_recruitment_report_excel(data):
     """
@@ -5864,9 +5796,31 @@ def prelogout_page(request):
     try:
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
         cursor.execute("""
-           SELECT email FROM users WHERE role='Admin';
-        """)
+            SELECT
+                u.email
+            FROM
+                users u
+            WHERE
+                u.role = 'Admin'
+
+            UNION
+
+            SELECT
+                u_lead.email
+            FROM
+                hr_team_members htm_lead
+            INNER JOIN
+                teams t ON htm_lead.emp_id = t.lead_emp_id
+            INNER JOIN
+                team_members tm_current ON t.team_id = tm_current.team_id
+            INNER JOIN
+                users u_lead ON htm_lead.email = u_lead.email
+            WHERE
+                tm_current.emp_id = %s;
+        """, (emp_id,))
+        
         emails = [row['email'] for row in cursor.fetchall()]
         admin_and_teamlead_emails.extend(emails)
     except Exception as e:
