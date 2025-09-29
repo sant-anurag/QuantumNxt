@@ -64,6 +64,24 @@
         font-weight: 500;
     }
 
+    .ap-table-container {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+    }
+
+    .ap-table-container::-webkit-scrollbar {
+        height: 5px;
+    }
+    .ap-table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    .ap-table-container::-webkit-scrollbar-thumb {
+        background: #c1c7e3;
+        border-radius: 4px;
+    }
+
     .ap-table {
         width: 100%;
         border-collapse: collapse;
@@ -118,6 +136,31 @@
     #userTablePagination button:hover {
         background: #5661d2;
         color: #fff;
+    }
+
+    .btn-status-toggle {
+        border: none;
+        border-radius: 6px;
+        padding: 4px 14px;
+        font-size: 0.97em;
+        font-weight: 500;
+        cursor: pointer;
+        margin-left: 10px;
+        transition: background 0.18s, color 0.18s;
+    }
+    .btn-status-toggle[data-action="deactivate"] {
+        background: #e53e3e;
+        color: #fff;
+    }
+    .btn-status-toggle[data-action="deactivate"]:hover {
+        background: #c53030;
+    }
+    .btn-status-toggle[data-action="activate"] {
+        background: #38a169;
+        color: #fff;
+    }
+    .btn-status-toggle[data-action="activate"]:hover {
+        background: #2f855a;
     }
 
     @media (max-width: 900px) {

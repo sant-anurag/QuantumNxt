@@ -38,21 +38,23 @@
 
             <div class="ap-section">
                 <h3>View User Permissions</h3>
-                <table class="ap-table">
-                    <thead>
-                        <tr>
-                            <th>User ID</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userTableBody">
-                        <!-- Table rows rendered by JS -->
-                    </tbody>
-                </table>
+                <div class="ap-table-container">
+                    <table class="ap-table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <!-- Table rows rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
                 <div id="userTablePagination"></div>
             </div>
         {% endif %}
@@ -61,11 +63,11 @@
         window.usersData = [];
         {% for user in users %}
         window.usersData.push({
-            user_id: {{ user.user_id }},
+            user_id: "{{ user.user_id }}",
             username: "{{ user.username|escapejs }}",
             email: "{{ user.email|escapejs }}",
             role: "{{ user.role|escapejs }}",
-            is_active: {{ user.is_active|yesno:"true,false" }},
+            is_active: "{{ user.is_active|yesno:'true,false' }}",
             created_at: "{{ user.created_at|escapejs }}"
         });
         {% endfor %}

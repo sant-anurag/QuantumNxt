@@ -42,10 +42,48 @@ function renderTable(page) {
             <td>${user.username}</td>
             <td>${user.email}</td>
             <td>${user.role}</td>
-            <td>${user.is_active ? 'Active' : 'Inactive'}</td>
+            <td>${user.is_active === 'true' ? 'Active' : 'Inactive'}
+                <button class="btn-status-toggle ${user.is_active === 'true' ? 'deactivate' : 'activate'}" data-user-id="${user.user_id}" data-action="${user.is_active === 'true' ? 'deactivate' : 'activate'}" style="margin-left:10px;padding:3px 10px;font-size:0.95em;">${user.is_active === 'true' ? 'Deactivate' : 'Activate'}</button>
+            </td>
             <td>${user.created_at}</td>
         `;
         tbody.appendChild(tr);
+    });
+    // Attach event listeners for status toggle buttons
+    tbody.querySelectorAll('.btn-status-toggle').forEach(btn => {
+        btn.onclick = function() {
+            const userId = btn.getAttribute('data-user-id');
+            const action = btn.getAttribute('data-action');
+            console.log(`Changing status for user ${userId} to ${action}`);
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            fetch(`/access_permissions/change_active_status/${userId}/${action}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update usersData for this user
+                    const userObj = users.find(u => u.user_id == userId);
+                    if (userObj) {
+                        userObj.is_active = action === 'activate' ? 'true' : 'false';
+                    }
+                    // Re-render table and pagination to reflect change
+                    renderTable(currentPage);
+                    renderPagination();
+                } else {
+                    btn.textContent = 'Error';
+                    setTimeout(() => { btn.disabled = false; btn.textContent = action === 'activate' ? 'Deactivate' : 'Activate'; }, 1200);
+                }
+            })
+            .catch(() => {
+                btn.textContent = 'Network Error';
+                setTimeout(() => { btn.disabled = false; btn.textContent = action === 'activate' ? 'Deactivate' : 'Activate'; }, 1200);
+            });
+        };
     });
 }
 
