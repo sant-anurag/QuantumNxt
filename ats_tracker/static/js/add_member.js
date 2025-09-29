@@ -36,8 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
             messages.push("Names should be under 50 characters.");
             valid = false;
         }
-        if (phone && (!/^[0-9]+$/.test(phone) || phone.length > 20)) {
-            messages.push("Phone must be numeric and under 20 digits.");
+        if (phone && (!/^\+?[0-9\s-]{10,20}$/.test(phone) || phone.length > 20)) {
+            messages.push("Phone number should be numeric and can include +, spaces, or dashes (10-20 chars).");
             valid = false;
         }
 
