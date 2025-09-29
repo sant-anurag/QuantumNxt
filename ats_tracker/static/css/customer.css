@@ -144,6 +144,32 @@
     font-size: 1.07em;
     text-align: left;
     border-bottom: 1px solid #e0e6ef;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Tooltip for full text on hover */
+.customer-list-table td:hover::after {
+    content: attr(data-fulltext);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    min-width: 220px;
+    background: #233a63;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-size: 1em;
+    white-space: pre-line;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(60,120,255,0.12);
+    pointer-events: none;
+    margin-top: 2px;
+    opacity: 1;
 }
 .customer-list-table th {
     background: #f8fbff;
@@ -202,6 +228,7 @@ font-family: 'Segoe UI', Arial, sans-serif;
     text-align: left;
     line-height: 1.2;
     background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }

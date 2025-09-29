@@ -45,7 +45,6 @@
         <table class="customer-list-table" style="width:100%;border-collapse:collapse;">
             <thead>
                 <tr style="background:#f8fbff;border-bottom:1.5px solid #e0e6ef;">
-                    <th style="padding:10px 8px;text-align:left;">ID</th>
                     <th style="padding:10px 8px;text-align:left;">Company Name</th>
                     <th style="padding:10px 8px;text-align:left;">Contact Person</th>
                     <th style="padding:10px 8px;text-align:left;">Email</th>
@@ -54,14 +53,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% if search %}
+                {% if customer_list %}
                     {% for customer in customer_list %}
                     <tr style="border-bottom:1px solid #e0e6ef;" data-created-at="{{ customer.created_at|date:'Y-m-d' }}" data-note="{{ customer.note|default_if_none:''|escape|linebreaksbr|safe }}">
-                        <td style="padding:8px 6px;">{{ customer.company_id }}</td>
-                        <td style="padding:8px 6px;">{{ customer.company_name }}</td>
-                        <td style="padding:8px 6px;">{{ customer.contact_person_name }}</td>
-                        <td style="padding:8px 6px;">{{ customer.contact_email }}</td>
-                        <td style="padding:8px 6px;">{{ customer.contact_phone }}</td>
+                        <td style="padding:8px 6px;" data-fulltext="{{ customer.company_name }}">{{ customer.company_name }}</td>
+                        <td style="padding:8px 6px;" data-fulltext="{{ customer.contact_person_name }}">{{ customer.contact_person_name }}</td>
+                        <td style="padding:8px 6px;" data-fulltext="{{ customer.contact_email }}">{{ customer.contact_email }}</td>
+                        <td style="padding:8px 6px;" data-fulltext="{{ customer.contact_phone }}">{{ customer.contact_phone }}</td>
                         <td style="padding:8px 6px;">
                             <button class="btn-primary btn-view-edit" data-customer-id="{{ customer.company_id }}" style="padding:7px 18px;font-size:0.98em;">View/Edit</button>
                         </td>
@@ -142,6 +140,52 @@
     </div>
     <script src="{% static 'js/customer.js' %}"></script>
     <script>
-    
+    // Floating tooltip for customer-list-table
+    (function() {
+        const table = document.querySelector('.customer-list-table');
+        if (!table) return;
+        let tooltip = document.createElement('div');
+        tooltip.style.position = 'fixed';
+        tooltip.style.background = '#233a63';
+        tooltip.style.color = '#fff';
+        tooltip.style.padding = '8px 14px';
+        tooltip.style.borderRadius = '7px';
+        tooltip.style.fontSize = '1em';
+        tooltip.style.whiteSpace = 'pre-line';
+        tooltip.style.zIndex = '99999';
+        tooltip.style.boxShadow = '0 2px 8px rgba(60,120,255,0.12)';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.opacity = '0';
+        tooltip.style.transition = 'opacity 0.15s';
+        document.body.appendChild(tooltip);
+
+        table.addEventListener('mouseover', function(e) {
+            const td = e.target.closest('td[data-fulltext]');
+            if (td) {
+                tooltip.textContent = td.getAttribute('data-fulltext');
+                tooltip.style.opacity = '1';
+            }
+        });
+        table.addEventListener('mousemove', function(e) {
+            const td = e.target.closest('td[data-fulltext]');
+            if (td) {
+                // Position tooltip near mouse, but not off screen
+                let x = e.clientX + 16;
+                let y = e.clientY + 16;
+                const rect = tooltip.getBoundingClientRect();
+                if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 8;
+                if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 8;
+                tooltip.style.left = x + 'px';
+                tooltip.style.top = y + 'px';
+            }
+        });
+        table.addEventListener('mouseout', function(e) {
+            const td = e.target.closest('td[data-fulltext]');
+            if (td) {
+                tooltip.style.opacity = '0';
+            }
+        });
+    })();
     </script>
     {% endblock %}
+    
