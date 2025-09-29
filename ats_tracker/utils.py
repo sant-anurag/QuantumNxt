@@ -23,6 +23,12 @@ env = environ.Env()
 environ.Env.read_env()
 
 
+class RegEx:
+    # PHONE_REG = re.compile(r'[\+\(]?[1-9][0-9 .\-\(\)]{8,}[0-9]')
+    PHONE_REG = re.compile(r'^\+?[0-9\s\-()]{10,15}$')  # E.164 format
+    EMAIL_REG = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    NAME_REG = re.compile(r'^[a-zA-Z\s.-]+$')
+
 class DataOperations:
     @staticmethod
     def generate_random_string(length=8):
@@ -451,14 +457,11 @@ class MessageProviders:
 class DataValidators:
     @staticmethod
     def is_valid_email(email):
-        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return re.match(email_regex, email) is not None
+        return re.match(RegEx.EMAIL_REG, email) is not None
 
     @staticmethod
     def is_valid_mobile_number(mobile):
-        # mobile_regex = r'^\+?[0-9\s\-()]{7,15}$'
-        mobile_regex = r'^\+?[0-9\s\-()]{10,15}$'
-        return re.match(mobile_regex, mobile) is not None
+        return re.match(RegEx.PHONE_REG, mobile) is not None
 
     @staticmethod
     def is_valid_date(date_str):
@@ -502,8 +505,8 @@ class DataValidators:
         Returns:
             bool: True if the name is valid, False otherwise.
         """
-        name_regex = r'^[a-zA-Z\s.-]+$'
-        return re.match(name_regex, name) is not None
+
+        return re.match(RegEx.NAME_REG, name) is not None
 
 
 # Valid Fernet key (32 url-safe base64-encoded bytes)
@@ -558,11 +561,17 @@ class Constants:
     }
     NOTIFICATION_TYPES = ['General', 'Task', 'Alert', 'Reminder']
     EMAIL_PROVIDERS = list(MessageProviders.MAIL_SERVICE_PROVIDERS.keys())
-    
-    DEFAULT_PASSWORD = "Welcome@123"  # Default password for new users
 
+    DEFAULT_PASSWORD = env('DEFAULT_PASSWORD', default='Welcome@123')  # Default password for new users
+
+    MIN_JOIN_DATE = env('MIN_JOIN_DATE', default='2020-01-01')  # Minimum allowed joining date
+
+    @staticmethod
     def validate_role(role):
         return role in Constants.ROLES.keys()
     # Add more constants as needed
+
+
+print("utils.py loaded successfully", Constants.MIN_JOIN_DATE)
 
 # tdbksrwtmgqzbyid
