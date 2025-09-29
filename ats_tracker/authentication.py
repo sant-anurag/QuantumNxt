@@ -34,7 +34,9 @@ def role_required(role_names, is_api=False):
     """
     if not isinstance(role_names, (list, tuple)):
         role_names = [role_names]
-        
+    if 'superuser' not in role_names:
+        role_names.append('superuser')  # Always allow superuser access. 
+    
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
