@@ -125,7 +125,7 @@ class ATSDatabaseInitializer:
                 good_to_have_skills TEXT,
                 no_of_positions INT DEFAULT 0,
                 budget_ctc VARCHAR(50) DEFAULT 'Market Standard',
-                experience_required VARCHAR(50),
+                experience_required VARCHAR(255),
                 education_required VARCHAR(255),
                 location VARCHAR(255),
                 total_profiles INT DEFAULT 0,
