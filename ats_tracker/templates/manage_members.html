@@ -1,0 +1,112 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/manage_members.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .error {
+        color: red;
+    }
+    .success {
+        color: green;
+    }
+</style>
+<div class="manage-members-outer">
+    <div class="header flex align-center mb-4 text-3xl font-semibold">
+        <i class="fas fa-users-cog mr-4" style="color:#5661d2;"></i>
+        <h2 style="margin: 0;">Manage Team Members</h2>
+    </div>
+
+    <div class="controls-container">
+        <form method="get" action="{% url 'manage_members' %}" class="search-form">
+            <input type="text" name="q" placeholder="Search by name or email..." value="{{ search_query }}">
+            <button type="submit"><i class="fas fa-search"></i></button>
+        </form>
+    </div>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    <p class="alert {% if 'error' in message.tags %}text-red-600 error{% elif 'success' in message.tags %}text-green-600 success{% endif %} mb-4">{{ message }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <!-- table for displaying members -->
+    <div class="members-table-container">
+        <table class="members-table">
+            <thead>
+                <tr>
+                    <th class="index-column">#</th>
+                    <th class="sortable-header" onclick="window.location.href='?sort=full_name&dir={{ next_sort_dir }}&q={{ search_query }}'">
+                        Member Name
+                        {% if sort_by == 'full_name' %}
+                            <i class="fas fa-sort-{{ sort_dir }} active-sort"></i>
+                        {% else %}
+                            <i class="fas fa-sort sort-icon"></i>
+                        {% endif %}
+                    </th>
+                    <th class="sortable-header" onclick="window.location.href='?sort=email&dir={{ next_sort_dir }}&q={{ search_query }}'">
+                        Email
+                        {% if sort_by == 'email' %}
+                            <i class="fas fa-sort-{{ sort_dir }} active-sort"></i>
+                        {% else %}
+                            <i class="fas fa-sort sort-icon"></i>
+                        {% endif %}
+                    </th>
+                    <th class="sortable-header" onclick="window.location.href='?sort=role&dir={{ next_sort_dir }}&q={{ search_query }}'">
+                        Role
+                        {% if sort_by == 'role' %}
+                            <i class="fas fa-sort-{{ sort_dir }} active-sort"></i>
+                        {% else %}
+                            <i class="fas fa-sort sort-icon"></i>
+                        {% endif %}
+                    </th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="membersTableBody">
+                {% for member in members %}
+                <tr data-member-id="{{ member.emp_id }}">
+                    <td class="index-column">{{ members.start_index|add:forloop.counter0 }}</td>
+                    <td class="ellipsis-cell" title="{{ member.full_name }}">{{ member.full_name }}</td>
+                    <td class="ellipsis-cell" title="{{ member.email }}">{{ member.email }}</td>
+                    <td class="ellipsis-cell" title="{{ member.role }}">{{ member.role }}</td>
+                    <td>
+                        <select class="user-status-select" data-member-id="{{ member.emp_id }}">
+                            <option value="active" {% if member.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="on_leave" {% if member.status == 'on_leave' %}selected{% endif %}>On Leave</option>
+                            <option value="inactive" {% if member.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No members found for '{{ search_query }}'.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        <span class="step-links">
+            {% if members.has_previous %}
+                <a href="?page=1&q={{ search_query }}&sort={{ sort_by }}&dir={{ sort_dir }}">&laquo; first</a>
+                <a href="?page={{ members.previous_page_number }}&q={{ search_query }}&sort={{ sort_by }}&dir={{ sort_dir }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ members.number }} of {{ members.paginator.num_pages }}.
+            </span>
+
+            {% if members.has_next %}
+                <a href="?page={{ members.next_page_number }}&q={{ search_query }}&sort={{ sort_by }}&dir={{ sort_dir }}">next</a>
+                <a href="?page={{ members.paginator.num_pages }}&q={{ search_query }}&sort={{ sort_by }}&dir={{ sort_dir }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<script src="{% static 'js/manage_members.js' %}"></script>
+{% endblock %}
