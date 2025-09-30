@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth import logout
+from django.core.paginator import Paginator
 from django.db import connection
 from django.http import (
     JsonResponse, HttpResponseBadRequest, FileResponse, Http404, HttpResponse
@@ -225,6 +226,161 @@ def add_member(request):
         'error': error
     })
 
+@role_required(['Admin', 'Team_Lead'])
+def manage_members(request):
+    """
+    View to manage HR team members with searching and sorting.
+    """
+    members_list = []
+    error = ''
+    
+    # Get search and sort parameters
+    search_query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'full_name')
+    sort_dir = request.GET.get('dir', 'asc')
+
+    # Validate sort_by to prevent SQL injection
+    valid_sort_columns = ['full_name', 'email', 'role']
+    if sort_by not in valid_sort_columns:
+        sort_by = 'full_name'
+    
+    # Validate sort_dir
+    if sort_dir not in ['asc', 'desc']:
+        sort_dir = 'asc'
+
+    try:
+        role = request.session.get('role', 'Guest')
+        user_id = request.session.get('user_id', None)
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        sql_query = """
+            SELECT DISTINCT
+                htm.emp_id,
+                CONCAT(htm.first_name, ' ', htm.last_name) AS full_name,
+                htm.email,
+                htm.role,
+                htm.status
+            FROM
+                hr_team_members htm
+            INNER JOIN users u ON htm.email = u.email AND u.is_active = TRUE
+        """
+        params = []
+
+        if role == 'Team_Lead':
+            emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+            sql_query += """
+                INNER JOIN
+                    team_members tm ON htm.emp_id = tm.emp_id
+                INNER JOIN
+                    teams t ON tm.team_id = t.team_id
+                WHERE
+                    t.lead_emp_id = %s
+            """
+            params.append(emp_id)
+        
+        if search_query:
+            search_term = f"%{search_query}%"
+            if role == 'Team_Lead':
+                sql_query += " AND (CONCAT(htm.first_name, ' ', htm.last_name) LIKE %s OR htm.email LIKE %s)"
+            else:
+                sql_query += " WHERE (CONCAT(htm.first_name, ' ', htm.last_name) LIKE %s OR htm.email LIKE %s)"
+            params.extend([search_term, search_term])
+
+        sql_query += f" ORDER BY {sort_by} {sort_dir.upper()};"
+        
+        cursor.execute(sql_query, params)
+        members_list = cursor.fetchall()
+
+    except Exception as e:
+        error = f"Failed to fetch members: {str(e)}"
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+    paginator = Paginator(members_list, 10)  # Show 10 members per page.
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    name = request.session.get('name', 'Guest')
+    if error:
+        messages.error(request, error)
+    
+    return render(request, 'manage_members.html', {
+        'members': page_obj,
+        'name': name,
+        'error': error,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'sort_dir': sort_dir,
+        'next_sort_dir': 'desc' if sort_dir == 'asc' else 'asc'
+    })
+
+@role_required(['Admin', 'Team_Lead'])
+def change_member_status(request):
+    """
+    API endpoint to change the status of a team member.
+
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method.'}, status=400)
+
+    member_id = request.POST.get('member_id')
+    new_status = request.POST.get('new_status')
+
+    if not member_id or not new_status:
+        return JsonResponse({'error': 'Member ID and new status are required.'}, status=400)
+    
+    if new_status not in ('active', 'on_leave'):
+        return JsonResponse({'error': 'Invalid status value.'}, status=400)
+    elif new_status == 'inactive':
+        return JsonResponse({'error': 'Cannot set status to inactive via this endpoint.'}, status=400)
+
+    # if user is team lead, then check emp_id is belong to the team where user is lead of
+    role = request.session.get('role', 'Guest')
+    if role == 'Team_Lead':
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM hr_team_members htm
+            INNER JOIN team_members tm ON htm.emp_id = tm.emp_id
+            INNER JOIN teams t ON tm.team_id = t.team_id
+            WHERE t.lead_emp_id = %s AND htm.emp_id = %s
+        """, [emp_id, member_id])
+        row = cursor.fetchone()
+        if row['count'] == 0:
+            cursor.close()
+            conn.close()
+            return JsonResponse({'error': 'You do not have permission to change this member\'s status.'}, status=403)
+        cursor.close()
+        conn.close()
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("UPDATE hr_team_members SET status=%s WHERE emp_id=%s", [new_status, member_id])
+        if cursor.rowcount == 0:
+            return JsonResponse({'error': 'Member not found.'}, status=404)
+        conn.commit()
+        cursor.execute("SELECT first_name, last_name FROM hr_team_members WHERE emp_id=%s", [member_id])
+        row = cursor.fetchone()
+        if row:
+            messages.success(request, f"Member status updated successfully: {row['first_name']} {row['last_name']}")
+        return JsonResponse({'message': 'Member status updated successfully.'})
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        messages.error(request, f"Failed to update status: {str(e)}")
+        return JsonResponse({'error': f'Failed to update status: {str(e)}'}, status=500)
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
 
 @role_required('Admin')
 def create_team(request):
@@ -247,6 +403,8 @@ def create_team(request):
         
         if not team_name or not selected_members:
             error = "Team name and at least one member are required."
+        elif not team_lead:
+            error = "Team lead must be selected."
         else:
             try:
                 conn = DataOperations.get_db_connection()
@@ -601,7 +759,7 @@ def create_jd(request):
             ))
             conn.commit()
 
-            message = f"Task {escape(jd_id)} created successfully!"
+            message = f"Task {escape(jd_id)} {escape(jd_summary)} created successfully!"
             messages.success(request, message)
         except Exception as e:
             print("create_jd -> Error creating JD:", str(e))
@@ -1257,7 +1415,7 @@ def assign_jd(request):
     for member in members:
         user_id = DataOperations.get_user_id_from_emp_id(member['emp_id'])
         if user_id and DataOperations.get_user_settings(user_id).get('notifications_enabled', False):
-            MessageProviders.send_notification(user_id, "JD Assignment", f"A new JD has been assigned to your team: {jd['jd_summary']}", created_by="system", notification_type="JD Assignment")
+            MessageProviders.send_notification(user_id, "JD Assignment", f"A new JD has been assigned to your team: {jd['jd_summary']}", created_by="system", notification_type="Job")
 
     conn.close()
     return JsonResponse({"success": True, "jd": jd, "team": team, "members": members})
@@ -1814,6 +1972,7 @@ def save_candidate_details(request):
 
             current_ctc = None if current_ctc in ('', None) else current_ctc
             expected_ctc = None if expected_ctc in ('', None) else expected_ctc
+            screened_on = None if screened_on in ('', None) else screened_on
             notice_period = None if notice_period in ('', None) else notice_period
 
 
@@ -1930,7 +2089,7 @@ def save_candidate_details(request):
                                 education, experience, previous_job_profile, 
                                 current_ctc, expected_ctc, notice_period, 
                                 location, screened_on, screen_status, screened_remarks, recruiter_comments)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
                     email, skills, education, experience,
@@ -1955,8 +2114,8 @@ def save_candidate_details(request):
             print("save_candidate_details -> Error:", str(e))
             response = {'success': False, 'error': str(e)}
             return JsonResponse(response, status=500)
-        finally:
-            DataOperations.close_db_connection(conn, cursor)
+        # finally:
+        #     DataOperations.close_db_connection(conn, cursor)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
@@ -5286,7 +5445,7 @@ def notification_settings(request):
    # python
     cursor.execute("SELECT notifications_enabled FROM user_settings WHERE user_id=%s", [user_id])
     row = cursor.fetchone()
-    notifications_enabled = row["notifications_enabled"] if row else True
+    notifications_enabled = row["notifications_enabled"] if row else False
     print(f"User {username} notifications enabled: {notifications_enabled}")
 
     # get all notifications for user
