@@ -6,8 +6,29 @@ document.addEventListener('DOMContentLoaded', function() {
     let hidePanelTimeout = null;
     const notificationBadge = document.getElementById('notification-badge');
     const notificationList = document.getElementById('notification-list');
+    const notificationSound = new Audio('/static/sounds/notification-ping.mp3'); //ats_tracker\static\sounds\
     const MAX_NOTIFICATIONS = 5;
     let notifications = [];
+
+    function requestNotificationPermission() {
+        // Check if the browser supports notifications
+        if (!("Notification" in window)) {
+            console.log("This browser does not support desktop notification.");
+        } 
+        // If permission has not been granted yet, ask the user
+        else if (Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("Desktop notification permission granted.");
+                } else {
+                    console.log("Desktop notification permission denied.");
+                }
+            });
+        }
+    }
+
+    // Call this function once the DOM is ready to prompt the user
+    requestNotificationPermission();
 
     function updateBadgeCount(count) {
         if (notificationBadge) {
@@ -85,13 +106,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = JSON.parse(e.data);
         console.log('Received real-time notification:', data);
 
+        try {
+            notificationSound.play();
+        } catch (error) {
+            console.error('Error playing notification sound:', error);
+        }
+
+        // --- NEW: 2. Trigger Native Desktop Notification (Only if the tab is not active) ---
+        // document.hidden is true when the tab is not in the foreground
+        if (document.hidden && Notification.permission === "granted") {
+            const notificationTitle = data['created-by'] || 'System Alert';
+            const notificationBody = `${data.notification_type || 'Message'}: ${data.message || 'New activity.'}`;
+            
+            const nativeNotification = new Notification(notificationTitle, {
+                body: notificationBody,
+                // Add an icon for better visibility (you must provide this file)
+                icon: '/static/images/app-icon.png' 
+            });
+
+            // Optional: Auto-close the notification after 5 seconds
+            setTimeout(() => nativeNotification.close(), 5000); 
+
+            // Optional: Focus the application window when the notification is clicked
+            nativeNotification.onclick = function() {
+                window.focus(); 
+                this.close(); // Close the notification upon click
+            };
+        }
+
         // Add new notification to the front, keep only last MAX_NOTIFICATIONS
         notifications.unshift(data);
         if (notifications.length > MAX_NOTIFICATIONS) {
             notifications = notifications.slice(0, MAX_NOTIFICATIONS);
         }
-        renderNotifications();
 
+        renderNotifications();
+        
         // Show notification panel and hide bell
         if (notificationPanel) {
             notificationPanel.classList.add('visible');
