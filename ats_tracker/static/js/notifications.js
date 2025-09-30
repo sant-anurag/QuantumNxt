@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/notifications/');
 
+    console.log('WebSocket URL:', wsScheme + '://' + window.location.host + '/ws/notifications/');
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         console.log('Received real-time notification:', data);
@@ -115,17 +116,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // --- NEW: 2. Trigger Native Desktop Notification (Only if the tab is not active) ---
         // document.hidden is true when the tab is not in the foreground
         if (document.hidden && Notification.permission === "granted") {
-            const notificationTitle = data['created-by'] || 'System Alert';
+            const notificationTitle = data['title'] || 'System Alert';
             const notificationBody = `${data.notification_type || 'Message'}: ${data.message || 'New activity.'}`;
-            
+            const notificationIcon = data['icon'] || '/static/images/app-icon.png';
             const nativeNotification = new Notification(notificationTitle, {
                 body: notificationBody,
                 // Add an icon for better visibility (you must provide this file)
-                icon: '/static/images/app-icon.png' 
+                icon: notificationIcon
             });
 
-            // Optional: Auto-close the notification after 5 seconds
-            setTimeout(() => nativeNotification.close(), 5000); 
+            // Optional: Auto-close the notification after 20 seconds
+            setTimeout(() => nativeNotification.close(), 20000);
 
             // Optional: Focus the application window when the notification is clicked
             nativeNotification.onclick = function() {
