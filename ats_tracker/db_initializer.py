@@ -142,7 +142,7 @@ class ATSDatabaseInitializer:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (company_id) REFERENCES customers(company_id) ON DELETE CASCADE,
-                FOREIGN KEY (team_id) REFERENCES teams(team_id),
+                FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE SET NULL,
                 FOREIGN KEY (created_by) REFERENCES users(user_id)
             );
         """)
