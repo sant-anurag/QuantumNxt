@@ -103,14 +103,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/notifications/');
 
     console.log('WebSocket URL:', wsScheme + '://' + window.location.host + '/ws/notifications/');
+    // Flag to track if user has interacted with the page
+    let userInteracted = false;
+    
+    // Add event listeners to track user interaction
+    document.addEventListener('click', function() {
+        userInteracted = true;
+    });
+    
+    document.addEventListener('keydown', function() {
+        userInteracted = true;
+    });
+    
+    // Pre-load the sound to prepare it
+    notificationSound.load();
+    
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         console.log('Received real-time notification:', data);
 
-        try {
-            notificationSound.play();
-        } catch (error) {
-            console.error('Error playing notification sound:', error);
+        // Only try to play sound if user has interacted with the page
+        if (userInteracted) {
+            notificationSound.play().catch(error => {
+                console.log('Could not play notification sound:', error.message);
+            });
         }
 
         // --- NEW: 2. Trigger Native Desktop Notification (Only if the tab is not active) ---
@@ -125,8 +141,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 icon: notificationIcon
             });
 
-            // Optional: Auto-close the notification after 20 seconds
-            setTimeout(() => nativeNotification.close(), 20000);
+            // Optional: Auto-close the notification after 24000 milliseconds (24 seconds)
+            setTimeout(() => nativeNotification.close(), 24000);
 
             // Optional: Focus the application window when the notification is clicked
             nativeNotification.onclick = function() {
@@ -142,6 +158,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         renderNotifications();
+        
+        // Add animation to the notification bell to catch attention even without sound
+        if (notificationBell) {
+            // Add animation class
+            notificationBell.classList.add('notification-bell-animate');
+            // Remove the animation class after the animation completes
+            setTimeout(() => {
+                notificationBell.classList.remove('notification-bell-animate');
+            }, 2000);
+        }
         
         // Show notification panel and hide bell
         if (notificationPanel) {
