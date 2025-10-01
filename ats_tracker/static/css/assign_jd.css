@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap');
 
 .assign-jd-main {
-    max-width: 700px;
+    max-width: 900px;
     margin: 40px auto 32px auto;
     background: #f5f8fc;
     border-radius: 18px;
@@ -30,6 +30,7 @@
     justify-content: flex-start;
     line-height: 1.2;
     background: linear-gradient(90deg, #4e54c8 0%, #11b7ee 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -148,7 +149,224 @@
     color: #174ea6;
     font-weight: 500;
 }
+
+/* Assignment Table Styles */
+.assingment-table {
+    margin-top: 32px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(80,170,255,0.09);
+    padding: 18px;
+    overflow: hidden;
+}
+
+.assingment-table h3 {
+    color: #666de7;
+    font-size: 1.15em;
+    font-weight: 700;
+    margin-top: 0;
+}
+
+.assignments-table-container {
+    overflow-x: auto;
+    margin-top: 12px;
+}
+
+.assignments-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.95em;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.assignments-table th {
+    background: linear-gradient(180deg, #f3f6fa 0%, #e5e8ff 100%);
+    color: #174ea6;
+    font-weight: 600;
+    padding: 14px 15px;
+    text-align: left;
+    border-bottom: 2px solid #dde6ee;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.assignments-table tbody tr {
+    border-bottom: 1px solid #e9f0f8;
+    transition: all 0.2s ease;
+}
+
+.assignments-table tbody tr:hover {
+    background-color: #f7fbff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 109, 231, 0.08);
+    z-index: 1;
+    position: relative;
+}
+
+.assignments-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.assignments-table td {
+    padding: 14px 15px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    transition: all 0.2s ease;
+}
+
+/* Column widths */
+.assignments-table th:nth-child(1),
+.assignments-table td:nth-child(1) {
+    width: 40px;
+    text-align: center;
+    font-weight: 600;
+    color: #666de7;
+}
+
+.assignments-table th:nth-child(2),
+.assignments-table td:nth-child(2) {
+    width: 80px;
+    font-weight: 500;
+    color: #174ea6;
+}
+
+.assignments-table th:nth-child(3),
+.assignments-table td:nth-child(3) {
+    width: 220px;
+    font-weight: 500;
+}
+
+.assignments-table th:nth-child(4),
+.assignments-table td:nth-child(4) {
+    width: 100px;
+    text-align: center;
+    font-weight: 600;
+    color: #174ea6;
+}
+
+.assignments-table th:nth-child(5),
+.assignments-table td:nth-child(5) {
+    width: 180px;
+    color: #233243;
+}
+
+.assignments-table th:nth-child(6),
+.assignments-table td:nth-child(6) {
+    width: 150px;
+    color: #233243;
+}
+
+/* Tooltip for truncated text */
+.assignments-table td[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    z-index: 10;
+    white-space: normal;
+    max-width: 300px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    font-size: 0.95em;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+/* Arrow for tooltip */
+.assignments-table td[title]:hover::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    bottom: 100%;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.85) transparent;
+    margin-bottom: -2px;
+    z-index: 11;
+}
+
+/* Pagination Styles */
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.pagination-btn {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    background-color: #f3f6fa;
+    color: #174ea6;
+    border: 1px solid #dde6ee;
+}
+
+.pagination-btn:hover {
+    background-color: #e5e8ff;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pagination-info {
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #dde6ee;
+    color: #666de7;
+    font-weight: 600;
+}
+
+.no-records {
+    text-align: center;
+    padding: 20px;
+    color: #8891b1;
+    font-style: italic;
+}
+
 @media (max-width: 900px) {
-    .assign-jd-main { margin: 12px auto 12px auto; }
+    .assign-jd-main { margin: 12px auto 12px auto; max-width: 95%; }
     .assign-jd-form { flex-direction: column; gap: 18px; }
+    .assignments-table { font-size: 0.9em; }
+    .assignments-table th, .assignments-table td {
+        padding: 10px 8px;
+    }
+    .assingment-table {
+        padding: 12px;
+    }
+    .pagination-btn {
+        padding: 6px 10px;
+        font-size: 0.85em;
+    }
+    .pagination-controls {
+        gap: 4px;
+    }
 }

@@ -28,6 +28,65 @@
         </div>
     </div>
     <div id="assign-jd-result" class="assign-jd-result" style="display:none;"></div>
+
+    <div class="assingment-table">
+        <h3>Recent JD Assignments</h3>
+        <div class="assignments-table-container">
+            <table class="assignments-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>JD ID</th>
+                        <th>JD Summary</th>
+                        <th>No. of Positions</th>
+                        <th>Company Name</th>
+                        <th>Team Name</th>
+                    </tr>
+                </thead>
+                <tbody id="assignments-tbody">
+                    {% for assignment in jds %}
+                    <tr>
+                        <td>{{ forloop.counter|add:pagination.offset }}</td>
+                        <td>{{ assignment.jd_id }}</td>
+                        <td title="{{ assignment.jd_summary }}">{{ assignment.jd_summary }}</td>
+                        <td>{{ assignment.no_of_positions }}</td>
+                        <td title="{{ assignment.company_name }}">{{ assignment.company_name }}</td>
+                        <td title="{{ assignment.team_name }}">{{ assignment.team_name }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="no-records">No JD assignments found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="assignments-pagination" class="pagination">
+            {% if pagination.num_pages > 1 %}
+                <div class="pagination-controls">
+                    {% if pagination.has_previous %}
+                        <a href="?page=1" class="pagination-btn first">&laquo; First</a>
+                        <a href="?page={{ pagination.previous_page }}" class="pagination-btn prev">Previous</a>
+                    {% else %}
+                        <span class="pagination-btn disabled">&laquo; First</span>
+                        <span class="pagination-btn disabled">Previous</span>
+                    {% endif %}
+                    
+                    <span class="pagination-info">
+                        Page {{ pagination.current_page }} of {{ pagination.num_pages }}
+                    </span>
+                    
+                    {% if pagination.has_next %}
+                        <a href="?page={{ pagination.next_page }}" class="pagination-btn next">Next</a>
+                        <a href="?page={{ pagination.num_pages }}" class="pagination-btn last">Last &raquo;</a>
+                    {% else %}
+                        <span class="pagination-btn disabled">Next</span>
+                        <span class="pagination-btn disabled">Last &raquo;</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 <script src="{% static 'js/assign_jd.js' %}"></script>
 {% endblock %}
