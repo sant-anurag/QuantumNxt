@@ -1242,7 +1242,7 @@ def get_all_jds(request):
             FROM recruitment_jds j
             LEFT JOIN customers c ON j.company_id = c.company_id
             LEFT JOIN teams t ON j.team_id = t.team_id
-            ORDER BY j.updated_at DESC
+            ORDER BY j.jd_status, j.updated_at DESC
         """)
     elif user_role_ == 'Team_Lead':
         emp_id = DataOperations.get_emp_id_from_user_id(user_id)
@@ -1306,7 +1306,7 @@ def get_all_jds(request):
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
             LEFT JOIN customers c ON j.company_id = c.company_id
-            WHERE tm.emp_id=%s
+            WHERE tm.emp_id=%s AND j.jd_status='active'
             ORDER BY j.updated_at DESC
         """, [emp_id])
     else:
@@ -1456,7 +1456,11 @@ def update_jd(request, jd_id):
 
         team_id = data['team_id'] if data['team_id'] not in ('', None) else None
         company_id = data['company_id'] if data['company_id'] not in ('', None) else None
+
+        print("update_jd -> job description:", data['jd_description'])
         try:
+            # make firstly job description as free from risk as it contains html tags
+            data['jd_description'] = DataValidators.sanitize_html(data['jd_description'])
             cursor.execute("""
                 UPDATE recruitment_jds SET
                     jd_summary=%s,

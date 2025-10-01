@@ -201,4 +201,80 @@ document.addEventListener('DOMContentLoaded', function() {
             notificationBell.style.display = '';
         }
     }
+
+
+    const bell = document.getElementById('notification-bell');
+    const panel = document.querySelector('.notifications-panel');
+    let hideTimeout = null;
+    let mouseOverPanel = false;
+
+    // Show panel on bell click with dissolve and pop-in
+    if (bell && panel) {
+        bell.addEventListener('click', function() {
+            // Dissolve bell
+            bell.classList.add('dissolving');
+            setTimeout(() => {
+                bell.style.display = 'none';
+                // Pop-in panel
+                panel.classList.add('popin');
+                panel.classList.add('visible');
+                setTimeout(() => {
+                    panel.classList.remove('popin');
+                }, 500);
+            }, 500);
+            if (hideTimeout) clearTimeout(hideTimeout);
+            if (!mouseOverPanel) {
+                hideTimeout = setTimeout(() => {
+                    if (!mouseOverPanel) {
+                        panel.classList.remove('visible');
+                        // Show bell again
+                        bell.classList.remove('dissolving');
+                        bell.style.display = '';
+                    }
+                }, 10000);
+            }
+        });
+    }
+
+    // Manual close button for notification panel
+    const closeBtn = document.getElementById('notification-panel-close');
+    if (closeBtn && panel) {
+        closeBtn.addEventListener('click', function() {
+            panel.classList.remove('visible');
+            if (bell) {
+                bell.classList.remove('dissolving');
+                bell.style.display = '';
+            }
+        });
+    }
+
+    // Keep panel open if mouse is over it
+    if (panel) {
+        panel.addEventListener('mouseenter', function() {
+            mouseOverPanel = true;
+            if (hideTimeout) clearTimeout(hideTimeout);
+        });
+        panel.addEventListener('mouseleave', function() {
+            mouseOverPanel = false;
+            hideTimeout = setTimeout(() => {
+                if (!mouseOverPanel) {
+                    panel.classList.remove('visible');
+                    // Show bell again
+                    if (bell) {
+                        bell.classList.remove('dissolving');
+                        bell.style.display = '';
+                    }
+                }
+            }, 10000);
+        });
+        // Also, when panel is hidden by any means, show bell
+        panel.addEventListener('transitionend', function(e) {
+            if (!panel.classList.contains('visible')) {
+                if (bell) {
+                    bell.classList.remove('dissolving');
+                    bell.style.display = '';
+                }
+            }
+        });
+    }
 });

@@ -1,5 +1,7 @@
 import re
 # ...existing code...
+import bleach
+from bleach.css_sanitizer import CSSSanitizer
 
 import os
 from cryptography.fernet import Fernet
@@ -21,6 +23,9 @@ import environ
 
 env = environ.Env()
 environ.Env.read_env()
+
+
+
 
 
 class RegEx:
@@ -508,6 +513,46 @@ class DataValidators:
 
         return re.match(RegEx.NAME_REG, name) is not None
 
+    @staticmethod
+    def sanitize_html(html_content):
+        """
+        Sanitizes HTML content to prevent XSS attacks by removing potentially dangerous tags and attributes.
+
+        Args:
+            html_content (str): The HTML content to sanitize.
+        Returns:
+            str: The sanitized HTML content.
+        """
+        css_sanitizer = CSSSanitizer(allowed_css_properties=Constants.ALLOWED_STYLES)
+        if not html_content:
+            return ""
+        
+        # --- 2. Initial Cleaning and Stripping ---
+        cleaned_html = bleach.clean(
+            html_content,
+            tags=Constants.ALLOWED_TAGS,
+            attributes=Constants.ALLOWED_ATTRIBUTES,
+            styles=Constants.ALLOWED_STYLES,
+            css_sanitizer=css_sanitizer, # Strips all non-allowed styles
+            strip=True,                  # Strip disallowed tags entirely
+            strip_comments=True
+        )
+        
+        # --- 3. Linkification and Security ---
+        
+        # Safely convert plain text URLs into links, and enforce security attributes 
+        # on ALL links (new or existing).
+        cleaned_html = bleach.linkify(
+            cleaned_html,
+            # Force these security attributes on all links
+            rel=['nofollow', 'noopener', 'noreferrer'],
+            # Don't try to make links out of text inside a pre or code block 
+            skip_tags=['pre', 'code'], 
+        )
+        
+        return cleaned_html
+
+
 
 # Valid Fernet key (32 url-safe base64-encoded bytes)
 FERNET_KEY = env('FERNET_KEY', default='1cLjiFtjouXMiGiZ75eRUKkWo2MYpYqlguFRXQgv2wQ=')  # Replace with your actual key or load from env
@@ -553,6 +598,7 @@ def compare_mobile_numbers(num1, num2):
 
     return normalize(num1) == normalize(num2)
 
+
 class Constants:
     ROLES = {
         'Admin': 'Admin',
@@ -566,11 +612,23 @@ class Constants:
 
     MIN_JOIN_DATE = env('MIN_JOIN_DATE', default='2020-01-01')  # Minimum allowed joining date
 
+    ALLOWED_TAGS = {
+        'p', 'div', 'h2', 'h3', 'ul', 'ol', 'li', 'br',
+        'strong', 'b', 'em', 'i', 'a', 
+    }
+    ALLOWED_ATTRIBUTES = {
+        'a': ['href', 'title', 'target', 'rel'],
+        '*': ['class', 'style'], 
+    }
+    ALLOWED_STYLES = [
+        'text-align', 
+        'list-style-type', # for list styling
+    ]
+
     @staticmethod
     def validate_role(role):
         return role in Constants.ROLES.keys()
     # Add more constants as needed
-
 
 print("utils.py loaded successfully", Constants.MIN_JOIN_DATE)
 

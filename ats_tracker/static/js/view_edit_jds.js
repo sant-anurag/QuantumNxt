@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const user_role = page_container.getAttribute("data-user-role");
     console.log("User Role:", user_role);
 
+    // Initialize Quill editor (make it globally accessible)
+    window.quill = null;
+    
     // Elements
     const tableBody = document.getElementById("jd-table-body");
     const cardList = document.getElementById("jd-card-view");
@@ -19,6 +22,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const closeModalBtn = document.getElementById("jd-close-modal");
     const jdEditForm = document.getElementById("jd-edit-form");
     const closeBtn = document.getElementById("jd-close-btn");
+    cards_per_page = 6;
+    table_rows_per_page = 10;
 
     // Initialize empty JDs array - will be filled from API
     let allJDs = [];
@@ -72,10 +77,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function renderCards(jds) {
-        // Create a container for the cards with proper grid styling - always 2 cards per row
+        // Create a container for the cards with responsive grid styling
+        // 1 card per row on small screens, 2 cards on medium screens, 3 cards on large screens
         const cardContainer = document.createElement("div");
         cardContainer.id = "job-cards-container";
-        cardContainer.className = "grid grid-cols-1 md:grid-cols-2 gap-8 mb-10";
+        cardContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-10";
         
         // Clear the card list and add the container
         cardList.innerHTML = "";
@@ -263,8 +269,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="tooltip-text">${jd.company_name}</span>
                 </td>
                 <td class="">
-                    <span class="text-ellipsis" style="max-width: 150px; display: inline-block;" title="${jd.team_name}">${jd.team_name}</span>
-                    <span class="tooltip-text">${jd.team_name}</span>
+                    <span class="text-ellipsis" style="max-width: 150px; display: inline-block;" title="${jd.team_name || ''}">${jd.team_name || 'N/A'}</span>
+                    <span class="tooltip-text">${jd.team_name || ''}</span>
                 </td>
                 <td>${jd.closure_date || 'N/A'}</td>
                 <td>
@@ -424,9 +430,9 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         
         if (cardList.style.display === "none") {
-            renderTable(filtered, 1, 10);
+            renderTable(filtered, 1, table_rows_per_page);
         } else {
-            renderCardPaginated(filtered, 1, 4);
+            renderCardPaginated(filtered, 1, cards_per_page);
         }
     }
 
@@ -441,7 +447,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 resultsCounter.textContent = `Showing ${jds.length} of ${jds.length} JDs`;
             }
             
-            renderTable(jds, 1, 10);
+            renderTable(jds, 1, table_rows_per_page);
         } catch (error) {
             console.error("Error during initial load:", error);
             tableBody.innerHTML = '<tr><td colspan="8" class="jd-no-data">Error loading JDs. Please try again.</td></tr>';
@@ -475,7 +481,7 @@ document.addEventListener("DOMContentLoaded", function() {
             toggleViewBtn.querySelector("i").className = "fas fa-table";
             
             // Use already loaded JD data for cards
-            renderCardPaginated(filtered, 1, 4);
+            renderCardPaginated(filtered, 1, cards_per_page);
             tablePagination.style.display = "none";
         } else {
             // Switch to table view
@@ -483,7 +489,7 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("jd-table-view").style.display = "block";
             toggleLabel.textContent = "Cards";
             toggleViewBtn.querySelector("i").className = "fas fa-th-large";
-            renderTable(filtered, 1, 10);
+            renderTable(filtered, 1, table_rows_per_page);
             cardPagination.style.display = "none";
             tablePagination.style.display = "flex";
         }
@@ -499,6 +505,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 el.disabled = true; // always disabled for non-admins
             }
         });
+        
+        // Handle Quill editor (always disabled for non-admins)
+        if (window.quill) {
+            window.quill.enable(false);
+        }
     }
 
     function showModalLoading() {
@@ -529,7 +540,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function showModal(jd) {
         document.getElementById("jd_id").value = jd.jd_id || "";
         document.getElementById("jd_summary").value = jd.jd_summary || "";
-        document.getElementById("jd_description").value = jd.jd_description || "";
         document.getElementById("must_have_skills").value = jd.must_have_skills || "";
         document.getElementById("good_to_have_skills").value = jd.good_to_have_skills || "";
         document.getElementById("experience").value = jd.experience_required || "";
@@ -541,6 +551,33 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("company_id").value = jd.company_id || "";
         document.getElementById("team_id").value = jd.team_id || "";
         document.getElementById("closure_date").value = jd.closure_date || "";
+        
+        // Initialize Quill editor if not already initialized
+        if (!window.quill) {
+            window.quill = new Quill('#jd_description_editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['link'],
+                        ['clean']
+                    ]
+                },
+                placeholder: 'Enter job description...'
+            });
+            
+            // Update hidden input when Quill content changes
+            quill.on('text-change', function() {
+                document.getElementById("jd_description").value = quill.root.innerHTML;
+            });
+        }
+        
+        // Set Quill content from JD description
+        window.quill.root.innerHTML = jd.jd_description || "";
+        document.getElementById("jd_description").value = jd.jd_description || "";
         
         // Hide loading indicator if it exists
         hideModalLoading();

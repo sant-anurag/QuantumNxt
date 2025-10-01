@@ -5,6 +5,11 @@ document.addEventListener("DOMContentLoaded", function() {
     const editBtn = document.getElementById("jd-edit-btn");
     const saveBtn = document.getElementById("jd-save-btn");
     const modalOverlay = document.getElementById("jd-modal-overlay");
+    
+    // Make quill globally accessible for admin functions
+    if (window.quill) {
+        window.quill = quill;
+    }
 
     if (!jdEditForm || !editBtn || !saveBtn || !modalOverlay) return;
 
@@ -17,6 +22,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 el.disabled = disabled;
             }
         });
+        
+        // Handle Quill editor - enable/disable based on admin actions
+        const quill = window.quill;
+        if (quill) {
+            quill.enable(!disabled);
+        }
+        
         saveBtn.disabled = disabled;
     }
 
@@ -45,6 +57,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Save button submits changes
     jdEditForm.onsubmit = function(e) {
         e.preventDefault();
+        
+        // Make sure to update the hidden field with the latest Quill editor content
+        if (window.quill) {
+            document.getElementById("jd_description").value = window.quill.root.innerHTML;
+        }
+        
         const jd_id = document.getElementById("jd_id").value;
         const data = {
             jd_summary: document.getElementById("jd_summary").value,

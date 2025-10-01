@@ -14,3 +14,4 @@ pip install python-docx
 pip install pdfplumber==0.10.2
 pip install channels channels_redis
 python -m pip install daphne
+pip install bleach 'bleach[css]'
