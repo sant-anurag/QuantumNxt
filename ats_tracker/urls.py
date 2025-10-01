@@ -22,6 +22,7 @@ urlpatterns = [
     path('delete_customer/<int:company_id>/', views.delete_customer, name='delete_customer'),
     path('customer_details/', views.customer_details, name='customer_details'),
     path('view_edit_jds/', views.view_edit_jds, name='view_edit_jds'),
+    path('get_jds/', views.get_all_jds, name='get_all_jds'),
     path('get_jd/<str:jd_id>/', views.get_jd, name='get_jd'),
     path('update_jd/<str:jd_id>/', views.update_jd, name='update_jd'),
     path('assign_jd/', views.assign_jd, name='assign_jd'),

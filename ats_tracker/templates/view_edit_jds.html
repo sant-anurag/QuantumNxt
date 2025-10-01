@@ -10,84 +10,41 @@
                 <input type="text" id="jd-search" class="jd-search-box" placeholder="Search by JD ID, Team, or Summary...">
                 <button id="jd-search-btn" class="jd-search-btn">Search</button>
             </div>
-            <div class="jd-toggle">
-                <button id="toggle-view" class="jd-btn-toggle" title="Switch View">
-                    <i class="fas fa-table"></i> <span id="toggle-view-label">Table</span>
-                </button>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="showing-results" class="jd-results-counter" style="font-size: 0.9rem; color: #666;">
+                    Loading JDs...
+                </div>
+                <div class="jd-toggle">
+                    <button id="toggle-view" class="jd-btn-toggle" title="Switch View">
+                        <i class="fas fa-th-large"></i> <span id="toggle-view-label">Cards</span>
+                    </button>
+                </div>
             </div>
         </header>
         <div id="jd-table-view" class="jd-table-container">
-            <table class="jd-table">
-                <thead>
-                    <tr>
-                        <th>JD ID</th>
-                        <th>Summary</th>
-                        <th>Status</th>
-                        <th>Positions</th>
-                        <th>Company</th>
-                        <th>Team</th>
-                        <th>Created</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="jd-table-body">
-                    {% for jd in jds %}
-                    <tr>
-                        <td>{{ jd.jd_id }}</td>
-                        <td>{{ jd.jd_summary }}</td>
-                        <td>{{ jd.jd_status }}</td>
-                        <td>{{ jd.no_of_positions }}</td>
-                        <td>
-                            {% for c in companies %}
-                                {% if c.company_id == jd.company_id %}{{ c.company_name }}{% endif %}
-                            {% endfor %}
-                        </td>
-                        <td>
-                            {% for t in teams %}
-                                {% if t.team_id == jd.team_id %}{{ t.team_name }}{% endif %}
-                            {% endfor %}
-                        </td>
-                        <td>{{ jd.created_at }}</td>
-                        <td>
-                            <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="jd-no-data">No JDs found.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-container-jd">
+                <table class="jd-table">
+                    <thead>
+                        <tr>
+                            <th>JD ID</th>
+                            <th>Summary</th>
+                            <th>Status</th>
+                            <th>Positions</th>
+                            <th>Company</th>
+                            <th>Team</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jd-table-body">
+                        <!-- JDs will be dynamically inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
             <div id="jd-table-pagination" class="jd-pagination"></div>
         </div>
-        <div id="jd-card-view" class="jd-card-list" style="display:none;" >
-            {% for jd in jds %}
-            <div class="jd-card">
-                <div class="jd-card-header">
-                    <span class="jd-id">{{ jd.jd_id }}</span>
-                    <span class="jd-status {{ jd.jd_status|lower }}">{{ jd.jd_status }}</span>
-                </div>
-                <div class="jd-card-body">
-                    <h3>{{ jd.jd_summary }}</h3>
-                    <p><b>Positions:</b> {{ jd.no_of_positions }}</p>
-                    <p><b>Company:</b>
-                        {% for c in companies %}
-                            {% if c.company_id == jd.company_id %}{{ c.company_name }}{% endif %}
-                        {% endfor %}
-                    </p>
-                    <p><b>Team:</b>
-                        {% for t in teams %}
-                            {% if t.team_id == jd.team_id %}{{ t.team_name }}{% endif %}
-                        {% endfor %}
-                    </p>
-                    <p><b>Created:</b> {{ jd.created_at|date:"Y-m-d" }}</p>
-                </div>
-                <div class="jd-card-actions">
-                    <button class="jd-btn-view" data-jd="{{ jd.jd_id }}"><i class="fas fa-eye"></i> View/Edit</button>
-                </div>
-            </div>
-            {% empty %}
-            <div class="jd-no-data">No JDs found.</div>
-            {% endfor %}
+        <div id="jd-card-view" class="jd-card-list" style="display:none;">
+            <!-- Cards will be dynamically inserted here by JavaScript -->
         </div>
         <div id="jd-card-pagination" class="jd-pagination" style="display:none;"></div>
     </div>

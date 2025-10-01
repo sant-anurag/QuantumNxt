@@ -1130,38 +1130,44 @@ def view_edit_jds(request):
     if user_role_ == 'Admin':
         cursor.execute("""
             SELECT 
-                    jd_id, jd_summary, jd_status, no_of_positions, 
-                    company_id, team_id, created_at
-            FROM recruitment_jds
-            ORDER BY created_at DESC
+                    jd.jd_id, jd.jd_summary, jd.jd_status, jd.no_of_positions, 
+                    c.company_name, t.team_name, jd.created_at
+            FROM recruitment_jds jd
+            LEFT JOIN customers c ON jd.company_id = c.company_id
+            LEFT JOIN teams t ON jd.team_id = t.team_id
+            ORDER BY jd.created_at DESC
         """)
     elif user_role_ == 'Team_Lead':
         emp_id = DataOperations.get_emp_id_from_user_id(user_id)
 
         cursor.execute("""
-            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, c.company_name, t.team_name, j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
-            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            WHERE (t.lead_emp_id=%s OR tm.emp_id=%s)
             ORDER BY j.created_at DESC
         """, [emp_id, emp_id])
     elif user_role_ == 'User':
         emp_id = DataOperations.get_emp_id_from_user_id(user_id)
         cursor.execute("""
-            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, j.company_id, j.team_id, j.created_at
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, c.company_name, j.team_id, j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            LEFT JOIN customers c ON j.company_id = c.company_id
             WHERE tm.emp_id=%s
             ORDER BY j.created_at DESC
         """, [emp_id])
     else:
         cursor.execute("""
-            SELECT jd_id, jd_summary, jd_status, no_of_positions, company_id, team_id, created_at
-            FROM recruitment_jds
+            SELECT jd_id, jd_summary, jd_status, no_of_positions, c.company_name, t.team_name, created_at
+            FROM recruitment_jds jd
+            LEFT JOIN customers c ON jd.company_id = c.company_id
+            LEFT JOIN teams t ON jd.team_id = t.team_id
             WHERE 1=2
-            ORDER BY created_at DESC
+            ORDER BY jd.created_at DESC
         """)
 
 
@@ -1171,8 +1177,8 @@ def view_edit_jds(request):
             'jd_summary': row['jd_summary'],
             'jd_status': row['jd_status'],
             'no_of_positions': row['no_of_positions'],
-            'company_id': row['company_id'],
-            'team_id': row['team_id'],
+            'company_name': row['company_name'],
+            'team_name': row['team_name'],
             'created_at': row['created_at'].strftime('%Y-%m-%d'),
         }
         for row in cursor.fetchall()
@@ -1201,40 +1207,238 @@ def view_edit_jds(request):
         'user_role': user_role_
     })
 
+def get_all_jds(request):
+    user_role_ = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+
+    print("get_all_jds -> Request method:", request.method)
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if user_role_ == 'Admin':
+        cursor.execute("""
+            SELECT DISTINCT
+                j.jd_id,
+                j.jd_summary,
+                j.jd_description,
+                j.must_have_skills,
+                j.good_to_have_skills,
+                j.no_of_positions,
+                j.jd_status,
+                c.company_name,
+                t.team_name,
+                j.budget_ctc,
+                j.location,
+                j.experience_required,
+                j.education_required,
+                j.closure_date,
+                j.total_profiles,
+                j.profiles_completed,
+                j.profiles_in_progress,
+                j.profiles_rejected,
+                j.profiles_selected,
+                j.profiles_on_hold,
+                j.updated_at
+            FROM recruitment_jds j
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            ORDER BY j.updated_at DESC
+        """)
+    elif user_role_ == 'Team_Lead':
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+
+        cursor.execute("""
+            SELECT DISTINCT
+                j.jd_id,
+                j.jd_summary,
+                j.jd_description,
+                j.must_have_skills,
+                j.good_to_have_skills,
+                j.no_of_positions,
+                j.jd_status,
+                c.company_name,
+                t.team_name,
+                j.budget_ctc,
+                j.location,
+                j.experience_required,
+                j.education_required,
+                j.closure_date,
+                j.total_profiles,
+                j.profiles_completed,
+                j.profiles_in_progress,
+                j.profiles_rejected,
+                j.profiles_selected,
+                j.profiles_on_hold,
+                j.updated_at
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            WHERE (t.lead_emp_id=%s OR tm.emp_id=%s)
+            ORDER BY j.updated_at DESC
+        """, [emp_id, emp_id])
+    elif user_role_ == 'User':
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        cursor.execute("""
+            SELECT DISTINCT
+                j.jd_id,
+                j.jd_summary,
+                j.jd_description,
+                j.must_have_skills,
+                j.good_to_have_skills,
+                j.no_of_positions,
+                j.jd_status,
+                c.company_name,
+                t.team_name,
+                j.budget_ctc,
+                j.location,
+                j.experience_required,
+                j.education_required,
+                j.closure_date,
+                j.total_profiles,
+                j.profiles_completed,
+                j.profiles_in_progress,
+                j.profiles_rejected,
+                j.profiles_selected,
+                j.profiles_on_hold,
+                j.updated_at
+            FROM recruitment_jds j
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            WHERE tm.emp_id=%s
+            ORDER BY j.updated_at DESC
+        """, [emp_id])
+    else:
+        cursor.execute("""
+            SELECT DISTINCT
+                j.jd_id,
+                j.jd_summary,
+                j.jd_description,
+                j.must_have_skills,
+                j.good_to_have_skills,
+                j.no_of_positions,
+                j.jd_status,
+                c.company_name,
+                t.team_name,
+                j.budget_ctc,
+                j.location,
+                j.experience_required,
+                j.education_required,
+                j.closure_date,
+                j.total_profiles,
+                j.profiles_completed,
+                j.profiles_in_progress,
+                j.profiles_rejected,
+                j.profiles_selected,
+                j.profiles_on_hold,
+                j.updated_at
+            FROM recruitment_jds j
+            LEFT JOIN customers c ON j.company_id = c.company_id
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            WHERE 1=2
+            ORDER BY j.updated_at DESC
+        """)
+
+    all_rows = cursor.fetchall()
+    jds = []
+    for row in all_rows:
+        jd = {
+            'jd_id': row['jd_id'],
+            'jd_summary': row['jd_summary'],
+            'jd_description': row['jd_description'],
+            'must_have_skills': row['must_have_skills'],
+            'good_to_have_skills': row['good_to_have_skills'],
+            'no_of_positions': row['no_of_positions'],
+            'total_profiles': row['total_profiles'],
+            'profiles_completed': row['profiles_completed'],
+            'profiles_in_progress': row['profiles_in_progress'],
+            'profiles_rejected': row['profiles_rejected'],
+            'profiles_selected': row['profiles_selected'],
+            'profiles_on_hold': row['profiles_on_hold'],
+            'jd_status': row['jd_status'],
+            'company_name': row['company_name'],
+            'team_name': row['team_name'],
+            'budget_ctc': row['budget_ctc'],
+            'location': row['location'],
+            'experience_required': row['experience_required'],
+            'education_required': row['education_required'],
+            'closure_date': row['closure_date'].isoformat() if row['closure_date'] else ''
+        }
+        jds.append(jd)
+
+    return JsonResponse({'jds': jds})
+
+
 def get_jd(request, jd_id):
     """
     View to get details of a specific job description.
     """
 
     print("get_jd details-> Request method:", request.method)
+    print("get_jd details-> JD ID:", jd_id)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT jd_id, jd_summary, jd_description, must_have_skills, good_to_have_skills,
-               no_of_positions, jd_status, company_id, team_id, budget_ctc, location, 
-               experience_required, education_required, closure_date
-        FROM recruitment_jds WHERE jd_id=%s
+        SELECT
+            j.jd_id,
+            j.jd_summary,
+            j.jd_description,
+            j.must_have_skills,
+            j.good_to_have_skills,
+            j.no_of_positions,
+            j.jd_status,
+            j.company_id,
+            c.company_name,
+            j.team_id,
+            t.team_name,
+            j.budget_ctc,
+            j.location,
+            j.experience_required,
+            j.education_required,
+            j.closure_date,
+            j.total_profiles,
+            j.profiles_completed,
+            j.profiles_in_progress,
+            j.profiles_rejected,
+            j.profiles_selected,
+            j.profiles_on_hold
+        FROM
+            recruitment_jds j
+        LEFT JOIN
+            customers c ON j.company_id = c.company_id
+        LEFT JOIN
+            teams t ON j.team_id = t.team_id
+        WHERE
+            j.jd_id = %s;
     """, [jd_id])
     row = cursor.fetchone()
     if not row:
         return JsonResponse({'error': 'JD not found'}, status=404)
-    jd = {
-        'jd_id': row['jd_id'],
-        'jd_summary': row['jd_summary'],
-        'jd_description': row['jd_description'],
-        'must_have_skills': row['must_have_skills'],
-        'good_to_have_skills': row['good_to_have_skills'],
-        'no_of_positions': row['no_of_positions'],
-        'jd_status': row['jd_status'],
-        'company_id': row['company_id'],
-        'team_id': row['team_id'],
-        'budget_ctc': row['budget_ctc'],
-        'location': row['location'],
-        'experience_required': row['experience_required'],
-        'education_required': row['education_required'],
-        'closure_date': row['closure_date'].isoformat() if row['closure_date'] else ''
-    }
-    return JsonResponse({'jd': jd})
+    # jd = {
+    #     'jd_id': row['jd_id'],
+    #     'jd_summary': row['jd_summary'],
+    #     'jd_description': row['jd_description'],
+    #     'must_have_skills': row['must_have_skills'],
+    #     'good_to_have_skills': row['good_to_have_skills'],
+    #     'no_of_positions': row['no_of_positions'],
+    #     'total_profiles': row['total_profiles'],
+    #     'profiles_completed': row['profiles_completed'],
+    #     'profiles_in_progress': row['profiles_in_progress'],
+    #     'profiles_rejected': row['profiles_rejected'],
+    #     'profiles_selected': row['profiles_selected'],
+    #     'profiles_on_hold': row['profiles_on_hold'],
+    #     'jd_status': row['jd_status'],
+    #     'company_id': row['company_id'],
+    #     'company_name': row['company_name'],
+    #     'team_name': row['team_name'],
+    #     'budget_ctc': row['budget_ctc'],
+    #     'location': row['location'],
+    #     'experience_required': row['experience_required'],
+    #     'education_required': row['education_required'],
+    #     'closure_date': row['closure_date'].isoformat() if row['closure_date'] else ''
+    # }
+    return JsonResponse({'jd': row})
 
 @csrf_exempt
 @login_required
@@ -1427,7 +1631,65 @@ def assign_jd_page(request):
     """
 
     name = request.session.get('name', 'Guest')
-    return render(request, "assign_jd.html",{'name': name})
+    # Get JD assignments with pagination
+    try:
+        page = int(request.GET.get('page', 1))
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+        
+    page_size = 5
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Count total JDs for pagination
+    cursor.execute("""
+        SELECT COUNT(*) as total
+        FROM recruitment_jds rjd
+        WHERE jd_status='active'
+    """)
+    total_jds = cursor.fetchone()['total']
+    
+    # Calculate pagination values
+    num_pages = (total_jds + page_size - 1) // page_size
+    if page > num_pages and num_pages > 0:
+        page = num_pages
+    
+    offset = (page - 1) * page_size
+    page_range = range(1, num_pages + 1)
+    
+    # Fetch paginated JDs with a single query (more efficient)
+    cursor.execute("""
+        SELECT rjd.jd_id, rjd.jd_summary, rjd.no_of_positions, t.team_name, c.company_name
+        FROM recruitment_jds rjd
+        LEFT JOIN teams t ON rjd.team_id = t.team_id
+        LEFT JOIN customers c ON rjd.company_id = c.company_id
+        WHERE jd_status='active'
+        ORDER BY rjd.updated_at DESC
+        LIMIT %s OFFSET %s
+    """, [page_size, offset])
+    
+    jds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    pagination = {
+        'current_page': page,
+        'num_pages': num_pages,
+        'has_previous': page > 1,
+        'has_next': page < num_pages,
+        'previous_page': page - 1 if page > 1 else None,
+        'next_page': page + 1 if page < num_pages else None,
+        'page_range': page_range,
+        'offset': offset  # This is needed for proper row numbering
+    }
+
+    return render(request, "assign_jd.html", {
+        'name': name, 
+        'jds': jds, 
+        'pagination': pagination
+    })
 
 @login_required
 def employee_view_page(request):
