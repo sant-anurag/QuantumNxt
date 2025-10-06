@@ -1,5 +1,124 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Quill editor for job description
+    let quill = null;
+    const editorContainer = document.getElementById('jd_description_editor');
+    const hiddenTextarea = document.getElementById('jd_description');
+    
+    if (editorContainer && hiddenTextarea) {
+        quill = new Quill('#jd_description_editor', {
+            theme: 'snow',
+            placeholder: 'Enter detailed job description with formatting... (Tip: Paste from PDF and line breaks will be preserved)',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    ['link'],
+                    [{ 'align': [] }],
+                    ['clean']
+                ],
+                clipboard: {
+                    // Allow more HTML tags and attributes when pasting
+                    matchVisual: false
+                }
+            }
+        });
+
+        // Handle paste events to preserve line breaks
+        quill.clipboard.addMatcher(Node.TEXT_NODE, function(node, delta) {
+            // Convert line breaks to proper Quill line breaks
+            if (typeof node.data === 'string') {
+                const lines = node.data.split('\n');
+                const newOps = [];
+                
+                lines.forEach((line, index) => {
+                    if (index > 0) {
+                        newOps.push({ insert: '\n' });
+                    }
+                    if (line.trim()) {
+                        newOps.push({ insert: line });
+                    }
+                });
+                
+                return { ops: newOps };
+            }
+            return delta;
+        });
+
+        // Better paste handling for formatted content
+        quill.clipboard.addMatcher('p', function(node, delta) {
+            // Preserve paragraph breaks
+            delta.ops.push({ insert: '\n' });
+            return delta;
+        });
+
+        // Update hidden textarea when Quill content changes
+        quill.on('text-change', function() {
+            const htmlContent = quill.root.innerHTML;
+            hiddenTextarea.value = htmlContent;
+        });
+
+        // Add a helper function to convert plain text with line breaks
+        quill.on('selection-change', function(range, oldRange, source) {
+            if (range === null && oldRange !== null) {
+                // Editor lost focus, ensure content is synced
+                const htmlContent = quill.root.innerHTML;
+                hiddenTextarea.value = htmlContent;
+            }
+        });
+
+        // Format button functionality
+        const formatBtn = document.getElementById('formatTextBtn');
+        if (formatBtn) {
+            formatBtn.addEventListener('click', function() {
+                const currentText = quill.getText();
+                if (currentText.trim()) {
+                    // Clear the editor
+                    quill.setContents([]);
+                    
+                    // Split by double line breaks first (paragraphs)
+                    const paragraphs = currentText.split(/\n\s*\n/);
+                    
+                    paragraphs.forEach((paragraph, index) => {
+                        if (paragraph.trim()) {
+                            // Split single line breaks within paragraphs
+                            const lines = paragraph.split('\n');
+                            lines.forEach((line, lineIndex) => {
+                                if (line.trim()) {
+                                    quill.insertText(quill.getLength(), line.trim());
+                                    if (lineIndex < lines.length - 1) {
+                                        // Add line break within paragraph
+                                        quill.insertText(quill.getLength(), '\n');
+                                    }
+                                }
+                            });
+                            
+                            // Add paragraph break
+                            if (index < paragraphs.length - 1) {
+                                quill.insertText(quill.getLength(), '\n\n');
+                            }
+                        }
+                    });
+                    
+                    // Update the hidden textarea
+                    hiddenTextarea.value = quill.root.innerHTML;
+                    
+                    // Show success feedback
+                    formatBtn.textContent = '✅ Formatted!';
+                    formatBtn.style.backgroundColor = '#28a745';
+                    setTimeout(() => {
+                        formatBtn.textContent = '📝 Format Pasted Text (Convert Line Breaks)';
+                        formatBtn.style.backgroundColor = '#6c757d';
+                    }, 2000);
+                } else {
+                    alert('Please paste some text first, then click this button to format it.');
+                }
+            });
+        }
+    }
+
     const searchInput = document.getElementById('companySearch');
     const hiddenInput = document.getElementById('companyId');
     const dropdown = document.getElementById('companyDropdown');
@@ -121,6 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('jdForm');
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Validate company selection
             if (!hiddenInput.value) {
                 e.preventDefault();
                 searchInput.focus();
@@ -132,6 +252,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 3000);
                 
                 alert('Please select a valid company from the list.');
+                return;
+            }
+            
+            // Validate Quill editor content
+            if (quill && quill.getText().trim().length === 0) {
+                e.preventDefault();
+                alert('Please enter a job description.');
+                return;
+            }
+            
+            // Update hidden textarea with Quill content before submission
+            if (quill) {
+                hiddenTextarea.value = quill.root.innerHTML;
             }
         });
     }
@@ -152,14 +285,50 @@ function openJDModal(jd_id) {
             const form = document.getElementById('jdEditForm');
             form.jd_id.value = jd.jd_id;
             form.jd_summary.value = jd.jd_summary;
+            
+            // Initialize Quill editor for the edit modal if not already initialized
+            if (!window.editQuill) {
+                window.editQuill = new Quill('#jdEditDescriptionEditor', {
+                    theme: 'snow',
+                    placeholder: 'Enter detailed job description with formatting...',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            ['link'],
+                            [{ 'align': [] }],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                // Update hidden textarea when Quill content changes
+                window.editQuill.on('text-change', function() {
+                    const htmlContent = window.editQuill.root.innerHTML;
+                    form.jd_description.value = htmlContent;
+                });
+            }
+            
+            // Set Quill content
+            window.editQuill.root.innerHTML = jd.jd_description || '';
             form.jd_description.value = jd.jd_description;
+            
             form.must_have_skills.value = jd.must_have_skills;
             form.good_to_have_skills.value = jd.good_to_have_skills;
             form.total_profiles.value = jd.total_profiles;
             form.jd_status.value = jd.jd_status;
+            
             // Disable all fields initially
             Array.from(form.elements).forEach(el => el.disabled = true);
             form.jd_id.disabled = true;
+            
+            // Disable Quill editor initially
+            if (window.editQuill) {
+                window.editQuill.enable(false);
+            }
+            
             form.querySelector('button[type="submit"]').style.display = 'none';
             document.getElementById('jdModal').style.display = 'flex';
         });
@@ -169,6 +338,12 @@ function enableEditJD() {
     const form = document.getElementById('jdEditForm');
     Array.from(form.elements).forEach(el => el.disabled = false);
     form.jd_id.disabled = true;
+    
+    // Enable Quill editor
+    if (window.editQuill) {
+        window.editQuill.enable(true);
+    }
+    
     form.querySelector('button[type="submit"]').style.display = '';
 }
 
@@ -182,6 +357,12 @@ if (jd_edit_form) {
         e.preventDefault();
         const form = e.target;
         const jd_id = form.jd_id.value;
+        
+        // Update hidden textarea with Quill content before submission
+        if (window.editQuill) {
+            form.jd_description.value = window.editQuill.root.innerHTML;
+        }
+        
         const data = new FormData(form);
         fetch(`/jds/${jd_id}/`, {
             method: 'POST',

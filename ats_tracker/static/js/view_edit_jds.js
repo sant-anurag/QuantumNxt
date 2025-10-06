@@ -564,15 +564,84 @@ document.addEventListener("DOMContentLoaded", function() {
                         [{ 'color': [] }, { 'background': [] }],
                         ['link'],
                         ['clean']
-                    ]
+                    ],
+                    clipboard: {
+                        matchVisual: false
+                    }
                 },
-                placeholder: 'Enter job description...'
+            });
+
+            // Handle paste events to preserve line breaks
+            window.quill.clipboard.addMatcher(Node.TEXT_NODE, function(node, delta) {
+                if (typeof node.data === 'string') {
+                    const lines = node.data.split('\n');
+                    const newOps = [];
+                    
+                    lines.forEach((line, index) => {
+                        if (index > 0) {
+                            newOps.push({ insert: '\n' });
+                        }
+                        if (line.trim()) {
+                            newOps.push({ insert: line });
+                        }
+                    });
+                    
+                    return { ops: newOps };
+                }
+                return delta;
+            });
+
+            window.quill.clipboard.addMatcher('p', function(node, delta) {
+                delta.ops.push({ insert: '\n' });
+                return delta;
             });
             
             // Update hidden input when Quill content changes
-            quill.on('text-change', function() {
-                document.getElementById("jd_description").value = quill.root.innerHTML;
+            window.quill.on('text-change', function() {
+                document.getElementById("jd_description").value = window.quill.root.innerHTML;
             });
+
+            // Format button functionality for modal
+            const formatBtnModal = document.getElementById('formatTextBtnModal');
+            if (formatBtnModal) {
+                formatBtnModal.addEventListener('click', function() {
+                    const currentText = window.quill.getText();
+                    if (currentText.trim()) {
+                        window.quill.setContents([]);
+                        
+                        const paragraphs = currentText.split(/\n\s*\n/);
+                        
+                        paragraphs.forEach((paragraph, index) => {
+                            if (paragraph.trim()) {
+                                const lines = paragraph.split('\n');
+                                lines.forEach((line, lineIndex) => {
+                                    if (line.trim()) {
+                                        window.quill.insertText(window.quill.getLength(), line.trim());
+                                        if (lineIndex < lines.length - 1) {
+                                            window.quill.insertText(window.quill.getLength(), '\n');
+                                        }
+                                    }
+                                });
+                                
+                                if (index < paragraphs.length - 1) {
+                                    window.quill.insertText(window.quill.getLength(), '\n\n');
+                                }
+                            }
+                        });
+                        
+                        document.getElementById("jd_description").value = window.quill.root.innerHTML;
+                        
+                        formatBtnModal.textContent = '✅ Formatted!';
+                        formatBtnModal.style.backgroundColor = '#28a745';
+                        setTimeout(() => {
+                            formatBtnModal.textContent = '📝 Format Pasted Text (Convert Line Breaks)';
+                            formatBtnModal.style.backgroundColor = '#6c757d';
+                        }, 2000);
+                    } else {
+                        alert('Please paste some text first, then click this button to format it.');
+                    }
+                });
+            }
         }
         
         // Set Quill content from JD description
@@ -638,4 +707,126 @@ document.addEventListener("DOMContentLoaded", function() {
             modalOverlay.style.display = "none";
         }
     };
+
+    // PDF-Style View Modal Functions
+    function showPDFModal(jd) {
+        const pdfModalOverlay = document.getElementById("jd-view-modal-overlay");
+        
+        // Populate PDF modal with JD data
+        document.getElementById("view-jd-summary").textContent = jd.jd_summary || "No summary available";
+        document.getElementById("view-jd-id").textContent = jd.jd_id || "";
+        document.getElementById("view-company").textContent = jd.company_name || "N/A";
+        document.getElementById("view-team").textContent = jd.team_name || "N/A";
+        document.getElementById("view-location").textContent = jd.location || "N/A";
+        document.getElementById("view-positions").textContent = jd.no_of_positions || "N/A";
+        document.getElementById("view-experience").textContent = jd.experience_required || "N/A";
+        document.getElementById("view-education").textContent = jd.education_required || "N/A";
+        document.getElementById("view-budget").textContent = jd.budget_ctc || "N/A";
+        document.getElementById("view-status").textContent = jd.jd_status ? jd.jd_status.charAt(0).toUpperCase() + jd.jd_status.slice(1) : "N/A";
+        
+        // Set closure date and show/hide section based on whether there's a date
+        const closureSection = document.getElementById("view-closure-section");
+        const closureDate = document.getElementById("view-closure-date");
+        if (jd.closure_date && jd.closure_date.trim()) {
+            closureDate.textContent = jd.closure_date;
+            closureSection.style.display = "block";
+        } else {
+            closureSection.style.display = "none";
+        }
+        
+        // Set created date (you might want to add this field to your JD data)
+        const createdDateElement = document.getElementById("view-created-date");
+        if (createdDateElement) {
+            createdDateElement.textContent = jd.created_date || "N/A";
+        }
+        
+        // Handle description with HTML content
+        const descriptionElement = document.getElementById("view-jd-description");
+        if (jd.jd_description) {
+            // Remove Quill-specific classes and clean up HTML
+            let cleanDescription = jd.jd_description
+                .replace(/<p><br><\/p>/g, '<br>')
+                .replace(/<p>/g, '')
+                .replace(/<\/p>/g, '<br>')
+                .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '<br><br>');
+            descriptionElement.innerHTML = cleanDescription;
+        } else {
+            descriptionElement.textContent = "No description available.";
+        }
+        
+        // Handle skills - convert to list format
+        const mustHaveSkills = document.getElementById("view-must-have-skills");
+        const goodToHaveSkills = document.getElementById("view-good-to-have-skills");
+        
+        if (jd.must_have_skills && jd.must_have_skills.trim()) {
+            const skillsList = jd.must_have_skills.split('\n').filter(skill => skill.trim());
+            if (skillsList.length > 0) {
+                mustHaveSkills.innerHTML = skillsList.map(skill => `<li style="margin-bottom: 5px;">${skill.trim()}</li>`).join('');
+            } else {
+                mustHaveSkills.innerHTML = '<p>No specific skills mentioned</p>';
+            }
+        } else {
+            mustHaveSkills.innerHTML = '<p>No specific skills mentioned</p>';
+        }
+        
+        if (jd.good_to_have_skills && jd.good_to_have_skills.trim()) {
+            const skillsList = jd.good_to_have_skills.split('\n').filter(skill => skill.trim());
+            if (skillsList.length > 0) {
+                goodToHaveSkills.innerHTML = skillsList.map(skill => `<li style="margin-bottom: 5px;">${skill.trim()}</li>`).join('');
+            } else {
+                goodToHaveSkills.innerHTML = '<p>No additional skills mentioned</p>';
+            }
+        } else {
+            goodToHaveSkills.innerHTML = '<p>No additional skills mentioned</p>';
+        }
+        
+        // Show the PDF modal
+        pdfModalOverlay.style.display = "flex";
+    }
+
+    // Add event listener for PDF view button (we'll add this button to the regular modal)
+    document.addEventListener("click", function(e) {
+        // PDF View button
+        if (e.target.id === "jd-pdf-view-btn" || (e.target.parentElement && e.target.parentElement.id === "jd-pdf-view-btn")) {
+            // Get current JD data from the form
+            const currentJD = {
+                jd_id: document.getElementById("jd_id").value,
+                jd_summary: document.getElementById("jd_summary").value,
+                company_name: document.getElementById("company_id").selectedOptions[0]?.text || document.getElementById("company_id").value,
+                team_name: document.getElementById("team_id").selectedOptions[0]?.text || document.getElementById("team_id").value,
+                location: document.getElementById("location").value,
+                no_of_positions: document.getElementById("no_of_positions").value,
+                experience_required: document.getElementById("experience").value,
+                education_required: document.getElementById("education").value,
+                budget_ctc: document.getElementById("budget_ctc").value,
+                jd_status: document.getElementById("jd_status").value,
+                closure_date: document.getElementById("closure_date").value,
+                jd_description: window.quill ? window.quill.root.innerHTML : document.getElementById("jd_description").value,
+                must_have_skills: document.getElementById("must_have_skills").value,
+                good_to_have_skills: document.getElementById("good_to_have_skills").value
+            };
+            showPDFModal(currentJD);
+        }
+        
+        // Close PDF modal - updated to match HTML structure
+        if (e.target.id === "jd-view-close-modal" || e.target.id === "jd-view-close-btn" || e.target.classList.contains("jd-view-close-modal")) {
+            document.getElementById("jd-view-modal-overlay").style.display = "none";
+        }
+        
+        // Edit from view modal - close view modal and show edit modal
+        if (e.target.id === "jd-edit-from-view-btn" || (e.target.parentElement && e.target.parentElement.id === "jd-edit-from-view-btn")) {
+            document.getElementById("jd-view-modal-overlay").style.display = "none";
+            // The edit modal should already be populated with the current JD data
+        }
+    });
+
+    // Close PDF modal when clicking outside content - updated to match HTML structure
+    const pdfModalOverlay = document.getElementById("jd-view-modal-overlay");
+    if (pdfModalOverlay) {
+        pdfModalOverlay.onclick = function(event) {
+            if (event.target === pdfModalOverlay) {
+                pdfModalOverlay.style.display = "none";
+            }
+        };
+    }
 });

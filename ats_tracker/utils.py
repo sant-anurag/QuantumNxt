@@ -2,6 +2,8 @@ import re
 # ...existing code...
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
+from bleach.linkifier import Linker, DEFAULT_CALLBACKS
+from bleach.callbacks import target_blank # To add target="_blank" to links
 
 import os
 from cryptography.fernet import Fernet
@@ -524,15 +526,15 @@ class DataValidators:
             str: The sanitized HTML content.
         """
         css_sanitizer = CSSSanitizer(allowed_css_properties=Constants.ALLOWED_STYLES)
+        linkify_callbacks = DEFAULT_CALLBACKS + [target_blank]
         if not html_content:
             return ""
-        
+            
         # --- 2. Initial Cleaning and Stripping ---
         cleaned_html = bleach.clean(
             html_content,
             tags=Constants.ALLOWED_TAGS,
             attributes=Constants.ALLOWED_ATTRIBUTES,
-            styles=Constants.ALLOWED_STYLES,
             css_sanitizer=css_sanitizer, # Strips all non-allowed styles
             strip=True,                  # Strip disallowed tags entirely
             strip_comments=True
@@ -545,7 +547,7 @@ class DataValidators:
         cleaned_html = bleach.linkify(
             cleaned_html,
             # Force these security attributes on all links
-            rel=['nofollow', 'noopener', 'noreferrer'],
+            callbacks=linkify_callbacks,
             # Don't try to make links out of text inside a pre or code block 
             skip_tags=['pre', 'code'], 
         )

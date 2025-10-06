@@ -734,6 +734,8 @@ def create_jd(request):
         education_required = request.POST.get("education_required", "")
         location = request.POST.get("location", "")
 
+        jd_description = DataValidators.sanitize_html(jd_description)
+
         required_fields = [jd_id, jd_summary, jd_description, must_have_skills, company_id, no_of_positions, budget_ctc]
         if not all(required_fields):
             messages.error(request, "All required fields must be filled.")
@@ -1457,7 +1459,6 @@ def update_jd(request, jd_id):
         team_id = data['team_id'] if data['team_id'] not in ('', None) else None
         company_id = data['company_id'] if data['company_id'] not in ('', None) else None
 
-        print("update_jd -> job description:", data['jd_description'])
         try:
             # make firstly job description as free from risk as it contains html tags
             data['jd_description'] = DataValidators.sanitize_html(data['jd_description'])

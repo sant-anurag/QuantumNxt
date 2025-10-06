@@ -51,12 +51,117 @@
         <div id="jd-card-pagination" class="jd-pagination" style="display:none;"></div>
     </div>
 
-    <!-- Modal Overlay -->
+    <!-- PDF-Style View Modal -->
+    <div id="jd-view-modal-overlay" class="jd-view-modal-overlay" style="display:none;">
+        <div class="jd-view-modal-content">
+            <span class="jd-view-close-modal" id="jd-view-close-modal">&times;</span>
+            <div class="jd-document-container">
+                <div class="jd-document-header">
+                    <h1 class="jd-document-title">Job Description</h1>
+                    <div class="jd-document-meta">
+                        <span class="jd-doc-id">JD ID: <span id="view-jd-id"></span></span>
+                        <span class="jd-doc-date">Date Created: <span id="view-created-date"></span></span>
+                    </div>
+                </div>
+
+                <div class="jd-document-body">
+                    <section class="jd-doc-section">
+                        <h2 class="jd-doc-section-title">Position Summary</h2>
+                        <p class="jd-doc-content" id="view-jd-summary"></p>
+                    </section>
+
+                    <section class="jd-doc-section">
+                        <h2 class="jd-doc-section-title">Job Description</h2>
+                        <div class="jd-doc-content" id="view-jd-description"></div>
+                    </section>
+
+                    <section class="jd-doc-section">
+                        <h2 class="jd-doc-section-title">Required Skills</h2>
+                        <ul class="jd-doc-content" id="view-must-have-skills">
+                            <!-- Skills will be populated by JavaScript -->
+                        </ul>
+                    </section>
+
+                    <section class="jd-doc-section">
+                        <h2 class="jd-doc-section-title">Preferred Skills</h2>
+                        <ul class="jd-doc-content" id="view-good-to-have-skills">
+                            <!-- Skills will be populated by JavaScript -->
+                        </ul>
+                    </section>
+
+                    <div class="jd-doc-row">
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Experience Required</h2>
+                            <p class="jd-doc-content" id="view-experience"></p>
+                        </section>
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Education Required</h2>
+                            <p class="jd-doc-content" id="view-education"></p>
+                        </section>
+                    </div>
+
+                    <div class="jd-doc-row">
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Budget/CTC</h2>
+                            <p class="jd-doc-content" id="view-budget"></p>
+                        </section>
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Location</h2>
+                            <p class="jd-doc-content" id="view-location"></p>
+                        </section>
+                    </div>
+
+                    <div class="jd-doc-row">
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Number of Positions</h2>
+                            <p class="jd-doc-content" id="view-positions"></p>
+                        </section>
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Status</h2>
+                            <p class="jd-doc-content" id="view-status"></p>
+                        </section>
+                    </div>
+
+                    <div class="jd-doc-row">
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Company</h2>
+                            <p class="jd-doc-content" id="view-company"></p>
+                        </section>
+                        <section class="jd-doc-section jd-doc-half">
+                            <h2 class="jd-doc-section-title">Team</h2>
+                            <p class="jd-doc-content" id="view-team"></p>
+                        </section>
+                    </div>
+
+                    <section class="jd-doc-section" id="view-closure-section" style="display: none;">
+                        <h2 class="jd-doc-section-title">Closure Date</h2>
+                        <p class="jd-doc-content" id="view-closure-date"></p>
+                    </section>
+                </div>
+
+                <div class="jd-document-footer">
+                    <div class="jd-doc-actions">
+                        <button type="button" id="jd-print-btn" class="jd-doc-btn jd-doc-btn-primary">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button type="button" id="jd-edit-from-view-btn" class="jd-doc-btn jd-doc-btn-secondary">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button type="button" id="jd-view-close-btn" class="jd-doc-btn jd-doc-btn-tertiary">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal Overlay -->
     <div id="jd-modal-overlay" class="jd-modal-overlay" style="display:none;">
         <div class="jd-modal-content">
             <span class="jd-close-modal" id="jd-close-modal">&times;</span>
             <form id="jd-edit-form">
-                <h3 style="color: #666de7;"><i class="fas fa-file-alt"></i> JD Details</h3>
+                <h3 style="color: #666de7;"><i class="fas fa-edit"></i> Edit JD Details</h3>
                 <div class="jd-form-row">
                     <div class="jd-form-group">
                         <label>JD ID</label>
@@ -70,20 +175,24 @@
                 <div class="jd-form-row">
                     <div class="jd-form-group">
                         <label>Description</label>
+                        <div style="margin-bottom: 10px;">
+                            <button type="button" id="formatTextBtnModal" class="jd-btn-secondary" style="font-size: 12px; padding: 5px 10px; background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer; margin-bottom: 5px;">
+                                📝 Format Pasted Text (Convert Line Breaks)
+                            </button>
+                            <small style="color: #666; margin-left: 10px; display: block;">Click after pasting text from PDF to properly format line breaks</small>
+                        </div>
                         <div id="jd_description_editor" style="height: 150px; background-color: white;"></div>
                         <input type="hidden" name="jd_description" id="jd_description" required>
                     </div>
                 </div>
-                <div class="jd-form-row">
+                <div class="jd-form-row jd-skills-row">
                     <div class="jd-form-group">
                         <label>Must Have Skills</label>
-                        <input type="text" name="must_have_skills" id="must_have_skills">
+                        <textarea name="must_have_skills" id="must_have_skills" rows="3" placeholder="Enter required skills, one per line or separated by commas"></textarea>
                     </div>
-                </div>
-                <div class="jd-form-row">
                     <div class="jd-form-group">
                         <label>Good to Have Skills</label>
-                        <input type="text" name="good_to_have_skills" id="good_to_have_skills">
+                        <textarea name="good_to_have_skills" id="good_to_have_skills" rows="3" placeholder="Enter preferred skills, one per line or separated by commas"></textarea>
                     </div>
                 </div>
                 <div class="jd-form-row">
@@ -145,6 +254,7 @@
                     </div>
                 </div>
                 <div class="jd-modal-actions">
+                    <button type="button" id="jd-pdf-view-btn" class="jd-btn-secondary"><i class="fas fa-file-pdf"></i> PDF View</button>
                     <button type="button" id="jd-edit-btn" class="jd-btn-primary"><i class="fas fa-edit"></i> Edit</button>
                     <button type="submit" id="jd-save-btn" class="jd-btn-success" disabled><i class="fas fa-save"></i> Save</button>
                     <button type="button" id="jd-close-btn" class="jd-btn-secondary"><i class="fas fa-times"></i> Close</button>
