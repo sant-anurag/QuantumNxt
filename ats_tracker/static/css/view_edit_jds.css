@@ -206,17 +206,40 @@
         color: #fff;
         border: none;
         border-radius: 14px;
-        padding: 7px 18px;
+        padding: 7px 12px;
         font-size: 0.98em;
         font-weight: 600;
         cursor: pointer;
         transition: background .13s, box-shadow .14s, transform .1s;
         display: flex;
         align-items: center;
-        gap: 7px;
+        gap: 5px;
+        min-width: 36px;
+        justify-content: center;
     }
     .jd-btn-view:hover {
         background: linear-gradient(97deg, #11b7ee 0%, #666de7 100%);
+        transform: scale(1.04);
+    }
+    
+    .jd-btn-edit {
+        background: linear-gradient(96deg, #28a745 0%, #20c997 100%);
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        padding: 7px 12px;
+        font-size: 0.98em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .13s, box-shadow .14s, transform .1s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 36px;
+        justify-content: center;
+    }
+    .jd-btn-edit:hover {
+        background: linear-gradient(97deg, #20c997 0%, #28a745 100%);
         transform: scale(1.04);
     }
 

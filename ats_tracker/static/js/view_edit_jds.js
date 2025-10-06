@@ -209,9 +209,15 @@ document.addEventListener("DOMContentLoaded", function() {
                         </div>
                     </div>
                     
-                    <button class="jd-btn-view bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150" data-jd="${jd.jd_id}">
-                        View/Edit Details
-                    </button>
+                    
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                        <button class="jd-btn-view bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150" data-jd="${jd.jd_id}" title="View JD">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="jd-btn-edit bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold py-2 px-3 rounded-lg shadow-md transition duration-150" data-jd="${jd.jd_id}" title="Edit JD">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                 </div>
             `;
             cardContainer.appendChild(card);
@@ -274,7 +280,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 </td>
                 <td>${jd.closure_date || 'N/A'}</td>
                 <td>
-                    <button class="jd-btn-view" data-jd="${jd.jd_id}"><i class="fas fa-eye"></i> View/Edit</button>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <button class="jd-btn-view" data-jd="${jd.jd_id}" title="View JD"><i class="fas fa-eye"></i></button>
+                        <button class="jd-btn-edit" data-jd="${jd.jd_id}" title="Edit JD"><i class="fas fa-edit"></i></button>
+                    </div>
                 </td>
             `;
             tableBody.appendChild(tr);
@@ -658,6 +667,28 @@ document.addEventListener("DOMContentLoaded", function() {
         modalOverlay.style.display = "flex";
     }
 
+    async function fetchJDDetailsForView(jd_id) {
+        try {
+            const response = await fetch(`/get_jd/${jd_id}/`);
+            
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status} - ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log("Fetched JD details for view:", data);
+            if (data.jd) {
+                showPDFModal(data.jd);
+            } else {
+                alert("JD details not found or invalid data format.");
+                console.error("Invalid JD data format:", data);
+            }
+        } catch (error) {
+            console.error("Error fetching JD details for view:", error);
+            alert("Failed to load JD details. Please try again.");
+        }
+    }
+
     async function fetchJDDetails(jd_id) {
         // Show modal with loading indicator
         showModalLoading();
@@ -687,14 +718,24 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Delegate click for all .jd-btn-view buttons (table and card)
+    // Delegate click for all view and edit buttons (table and card)
     document.addEventListener("click", function(e) {
-        // View/Edit button
+        // View button - opens PDF-style view modal directly
         if (e.target.classList.contains("jd-btn-view") || (e.target.parentElement && e.target.parentElement.classList.contains("jd-btn-view"))) {
             const btn = e.target.classList.contains("jd-btn-view") ? e.target : e.target.parentElement;
             const jd_id = btn.getAttribute("data-jd");
+            
+            // Fetch JD details and show PDF modal directly
+            fetchJDDetailsForView(jd_id);
+        }
+        
+        // Edit button - opens edit modal
+        if (e.target.classList.contains("jd-btn-edit") || (e.target.parentElement && e.target.parentElement.classList.contains("jd-btn-edit"))) {
+            const btn = e.target.classList.contains("jd-btn-edit") ? e.target : e.target.parentElement;
+            const jd_id = btn.getAttribute("data-jd");
             fetchJDDetails(jd_id);
         }
+        
         // Close modal
         if (e.target === closeModalBtn || e.target === closeBtn) {
             modalOverlay.style.display = "none";
@@ -784,30 +825,8 @@ document.addEventListener("DOMContentLoaded", function() {
         pdfModalOverlay.style.display = "flex";
     }
 
-    // Add event listener for PDF view button (we'll add this button to the regular modal)
+    // Add event listeners for PDF view modal
     document.addEventListener("click", function(e) {
-        // PDF View button
-        if (e.target.id === "jd-pdf-view-btn" || (e.target.parentElement && e.target.parentElement.id === "jd-pdf-view-btn")) {
-            // Get current JD data from the form
-            const currentJD = {
-                jd_id: document.getElementById("jd_id").value,
-                jd_summary: document.getElementById("jd_summary").value,
-                company_name: document.getElementById("company_id").selectedOptions[0]?.text || document.getElementById("company_id").value,
-                team_name: document.getElementById("team_id").selectedOptions[0]?.text || document.getElementById("team_id").value,
-                location: document.getElementById("location").value,
-                no_of_positions: document.getElementById("no_of_positions").value,
-                experience_required: document.getElementById("experience").value,
-                education_required: document.getElementById("education").value,
-                budget_ctc: document.getElementById("budget_ctc").value,
-                jd_status: document.getElementById("jd_status").value,
-                closure_date: document.getElementById("closure_date").value,
-                jd_description: window.quill ? window.quill.root.innerHTML : document.getElementById("jd_description").value,
-                must_have_skills: document.getElementById("must_have_skills").value,
-                good_to_have_skills: document.getElementById("good_to_have_skills").value
-            };
-            showPDFModal(currentJD);
-        }
-        
         // Close PDF modal - updated to match HTML structure
         if (e.target.id === "jd-view-close-modal" || e.target.id === "jd-view-close-btn" || e.target.classList.contains("jd-view-close-modal")) {
             document.getElementById("jd-view-modal-overlay").style.display = "none";
@@ -816,7 +835,11 @@ document.addEventListener("DOMContentLoaded", function() {
         // Edit from view modal - close view modal and show edit modal
         if (e.target.id === "jd-edit-from-view-btn" || (e.target.parentElement && e.target.parentElement.id === "jd-edit-from-view-btn")) {
             document.getElementById("jd-view-modal-overlay").style.display = "none";
-            // The edit modal should already be populated with the current JD data
+            // Get the current JD ID from the view modal and fetch details for edit
+            const jdId = document.getElementById("view-jd-id").textContent;
+            if (jdId) {
+                fetchJDDetails(jdId);
+            }
         }
     });
 
