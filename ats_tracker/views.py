@@ -1668,6 +1668,70 @@ def assign_jd_page(request):
 
     name = request.session.get('name', 'Guest')
     # Get JD assignments with pagination
+    # try:
+    #     page = int(request.GET.get('page', 1))
+    #     if page < 1:
+    #         page = 1
+    # except ValueError:
+    #     page = 1
+        
+    # page_size = 5
+    # conn = DataOperations.get_db_connection()
+    # cursor = conn.cursor(dictionary=True)
+    
+    # # Count total JDs for pagination
+    # cursor.execute("""
+    #     SELECT COUNT(*) as total
+    #     FROM recruitment_jds rjd
+    #     WHERE jd_status='active'
+    # """)
+    # total_jds = cursor.fetchone()['total']
+    
+    # # Calculate pagination values
+    # num_pages = (total_jds + page_size - 1) // page_size
+    # if page > num_pages and num_pages > 0:
+    #     page = num_pages
+    
+    # offset = (page - 1) * page_size
+    # page_range = range(1, num_pages + 1)
+    
+    # # Fetch paginated JDs with a single query (more efficient)
+    # cursor.execute("""
+    #     SELECT rjd.jd_id, rjd.jd_summary, rjd.no_of_positions, t.team_name, c.company_name
+    #     FROM recruitment_jds rjd
+    #     LEFT JOIN teams t ON rjd.team_id = t.team_id
+    #     LEFT JOIN customers c ON rjd.company_id = c.company_id
+    #     WHERE jd_status='active'
+    #     ORDER BY rjd.updated_at DESC
+    #     LIMIT %s OFFSET %s
+    # """, [page_size, offset])
+    
+    # jds = cursor.fetchall()
+    # cursor.close()
+    # conn.close()
+
+    # pagination = {
+    #     'current_page': page,
+    #     'num_pages': num_pages,
+    #     'has_previous': page > 1,
+    #     'has_next': page < num_pages,
+    #     'previous_page': page - 1 if page > 1 else None,
+    #     'next_page': page + 1 if page < num_pages else None,
+    #     'page_range': page_range,
+    #     'offset': offset  # This is needed for proper row numbering
+    # }
+
+    return render(request, "assign_jd.html", {
+        'name': name, 
+        # 'jds': jds, 
+        # 'pagination': pagination
+    })
+
+@login_required
+def get_jd_assignments_api(request):
+    """
+    API endpoint to get paginated JD assignments.
+    """
     try:
         page = int(request.GET.get('page', 1))
         if page < 1:
@@ -1693,11 +1757,12 @@ def assign_jd_page(request):
         page = num_pages
     
     offset = (page - 1) * page_size
-    page_range = range(1, num_pages + 1)
     
-    # Fetch paginated JDs with a single query (more efficient)
+    # Fetch paginated JDs with a single query
     cursor.execute("""
-        SELECT rjd.jd_id, rjd.jd_summary, rjd.no_of_positions, t.team_name, c.company_name
+        SELECT rjd.jd_id, rjd.jd_summary, rjd.no_of_positions, 
+               COALESCE(t.team_name, 'Not Assigned') as team_name, 
+               COALESCE(c.company_name, 'Unknown') as company_name
         FROM recruitment_jds rjd
         LEFT JOIN teams t ON rjd.team_id = t.team_id
         LEFT JOIN customers c ON rjd.company_id = c.company_id
@@ -1710,6 +1775,10 @@ def assign_jd_page(request):
     cursor.close()
     conn.close()
 
+    # Add row numbers starting from offset
+    for i, jd in enumerate(jds):
+        jd['row_number'] = offset + i + 1
+
     pagination = {
         'current_page': page,
         'num_pages': num_pages,
@@ -1717,13 +1786,13 @@ def assign_jd_page(request):
         'has_next': page < num_pages,
         'previous_page': page - 1 if page > 1 else None,
         'next_page': page + 1 if page < num_pages else None,
-        'page_range': page_range,
-        'offset': offset  # This is needed for proper row numbering
+        'total_jds': total_jds,
+        'offset': offset
     }
 
-    return render(request, "assign_jd.html", {
-        'name': name, 
-        'jds': jds, 
+    return JsonResponse({
+        'success': True,
+        'jds': jds,
         'pagination': pagination
     })
 
@@ -2627,8 +2696,8 @@ def api_candidates_pipeline(request):
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
         """
-        where_conditions.append("(t.lead_emp_id = %s OR tm.emp_id = %s)")
-        params.extend([emp_id, emp_id])
+        where_conditions.append("(t.lead_emp_id = %s OR tm.emp_id = %s) AND c.hr_member_id = %s")
+        params.extend([emp_id, emp_id, emp_id])
     
     # JD filtering
     if jd_id and jd_id != 'all':
@@ -2648,6 +2717,7 @@ def api_candidates_pipeline(request):
         search_param = f'%{search_query}%'
         params.extend([search_param, search_param, search_param, search_param, search_param])
     
+    where_conditions.append("j.jd_status='active'")
     # Combine query with WHERE conditions
     if where_conditions:
         base_query += " WHERE " + " AND ".join(where_conditions)

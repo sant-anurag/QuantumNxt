@@ -218,7 +218,7 @@ class ATSDatabaseInitializer:
                 candidate_id INT NOT NULL,
                 emp_id INT NOT NULL,
                 activity_type ENUM('interview_feedback', 'screening_notes', 'hr_notes', 'technical_assessment', 'offer_details', 'onboarding', 'rejection', 'general', 'other') DEFAULT 'general',
-                note_title VARCHAR(255) NOT NULL,
+                note_title VARCHAR(255) NOT NULL DEFAULT 'Untitled Activity',
                 activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 notes TEXT,
                 priority ENUM('high', 'medium', 'low') DEFAULT 'medium',
@@ -263,6 +263,8 @@ class ATSDatabaseInitializer:
                     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE
                 )
             """)
+        
+        
         self.conn.commit()
 
         print("Database, HR team members, and teams tables created.")
