@@ -217,9 +217,13 @@ class ATSDatabaseInitializer:
             activity_id INT AUTO_INCREMENT PRIMARY KEY,
                 candidate_id INT NOT NULL,
                 emp_id INT NOT NULL,
-                activity_type ENUM('screening', 'interview', 'offer', 'rejection', 'onboarding', 'other') DEFAULT 'other',
+                activity_type ENUM('interview_feedback', 'screening_notes', 'hr_notes', 'technical_assessment', 'offer_details', 'onboarding', 'rejection', 'general', 'other') DEFAULT 'general',
+                note_title VARCHAR(255) NOT NULL,
                 activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 notes TEXT,
+                priority ENUM('high', 'medium', 'low') DEFAULT 'medium',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE,
                 FOREIGN KEY (emp_id) REFERENCES hr_team_members(emp_id) ON DELETE CASCADE
             );
