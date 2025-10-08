@@ -1185,7 +1185,7 @@ def view_edit_jds(request):
     elif user_role_ == 'User':
         emp_id = DataOperations.get_emp_id_from_user_id(user_id)
         cursor.execute("""
-            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, c.company_name, j.team_id, j.created_at
+            SELECT DISTINCT j.jd_id, j.jd_summary, j.jd_status, j.no_of_positions, c.company_name, t.team_name, j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
