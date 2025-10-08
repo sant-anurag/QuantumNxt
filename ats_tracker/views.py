@@ -846,6 +846,37 @@ def jd_detail(request, jd_id):
         return JsonResponse({"success": True})
 
 
+def download_jd_pdf(request, jd_id):
+    """
+    View to download a job description as a PDF.
+    """
+    from .utils import PDFGenerator
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            j.jd_id, j.jd_summary, j.jd_description, j.must_have_skills, 
+            j.good_to_have_skills, j.no_of_positions, j.total_profiles,
+            j.profiles_selected, j.profiles_completed, j.jd_status, t.team_name,
+            c.company_name, j.location, j.experience_required, j.education_required
+        FROM recruitment_jds j
+        LEFT JOIN customers c ON c.company_id=j.company_id
+        LEFT JOIN teams t on t.team_id=j.team_id
+        WHERE j.jd_id=%s
+    """, (jd_id,))
+    jd = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not jd:
+        return HttpResponse("JD not found", status=404)
+    
+    html_content = render_to_string('jd_pdf_template.html', {'jd': jd})
+    pdf_file = PDFGenerator.generate_pdf_from_html(html_content)
+    
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{jd_id}.pdf"'
+    return response
+
 def get_customer_list_optimized(request):
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -2476,7 +2507,203 @@ def get_candidate_details(request):
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})
 
-# views.py
+@login_required
+def search_jds(request):
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    jds = []
+
+    # Implement search functionality
+    search_query = request.GET.get('search', '').strip()
+
+    SQL_QUERY = """
+        SELECT 
+            j.jd_id, j.jd_summary, c.company_name 
+        FROM recruitment_jds j
+        LEFT JOIN customers c ON j.company_id = c.company_id
+    """
+    params = []
+    if user_role in ['Team_Lead', 'User']:
+        SQL_QUERY += """
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+        """
+        params.extend([emp_id, emp_id])
+
+    if search_query:
+        query_filter = "j.jd_id LIKE %s OR j.jd_summary LIKE %s OR j.jd_description LIKE %s OR c.company_name LIKE %s"
+        query = f"""
+            {SQL_QUERY}
+            WHERE {query_filter} AND j.jd_status='active'
+            ORDER BY j.jd_id DESC
+            LIMIT 10
+        """
+        params = [*params, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
+        cursor.execute(query, (*params,))
+    else:
+        cursor.execute(f"""
+            {SQL_QUERY}
+            WHERE j.jd_status='active'
+            ORDER BY j.updated_at DESC
+            LIMIT 10
+        """, params)
+
+    jds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'jds': jds})
+
+@login_required
+def candidate_pipeline_page(request):
+    """
+    View to render the candidate handling page.
+    """
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # get emp_id
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    candidates_info = []
+    search_query = request.GET.get('search', '').strip()
+    
+
+    return render(request, 'candidate_handle.html', {
+        'candidates_info': candidates_info,
+    })
+
+@login_required
+def api_candidates_pipeline(request):
+    """
+    API endpoint to get filtered candidates for the pipeline.
+    """
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # get emp_id
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    
+    # Get filter parameters
+    jd_id = request.GET.get('jd_id', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    
+    # Build base query for candidates
+    base_query = """
+        SELECT 
+            c.candidate_id,
+            c.name,
+            c.email,
+            c.phone,
+            c.resume_id,
+            c.jd_id,
+            c.screen_status,
+            c.l1_result,
+            c.l2_result,
+            c.l3_result,
+            c.offer_status,
+            j.jd_summary,
+            comp.company_name,
+            r.file_name as resume_filename
+        FROM candidates c
+        LEFT JOIN recruitment_jds j ON c.jd_id = j.jd_id
+        LEFT JOIN customers comp ON j.company_id = comp.company_id
+        LEFT JOIN resumes r ON c.resume_id = r.resume_id
+    """
+    
+    params = []
+    where_conditions = []
+    
+    # Role-based filtering
+    if user_role in ['Team_Lead', 'User']:
+        base_query += """
+            LEFT JOIN teams t ON j.team_id = t.team_id
+            LEFT JOIN team_members tm ON t.team_id = tm.team_id
+        """
+        where_conditions.append("(t.lead_emp_id = %s OR tm.emp_id = %s)")
+        params.extend([emp_id, emp_id])
+    
+    # JD filtering
+    if jd_id and jd_id != 'all':
+        where_conditions.append("c.jd_id = %s")
+        params.append(jd_id)
+    
+    # Search filtering
+    if search_query:
+        where_conditions.append("""
+            (c.name LIKE %s OR 
+            c.email LIKE %s OR 
+            j.jd_summary LIKE %s OR 
+            comp.company_name LIKE %s OR
+            j.jd_id LIKE %s
+        )
+        """)
+        search_param = f'%{search_query}%'
+        params.extend([search_param, search_param, search_param, search_param, search_param])
+    
+    # Combine query with WHERE conditions
+    if where_conditions:
+        base_query += " WHERE " + " AND ".join(where_conditions)
+    
+    base_query += " ORDER BY c.updated_at DESC LIMIT 50"
+    
+    try:
+        cursor.execute(base_query, params)
+        candidates = cursor.fetchall()
+        
+        # Process candidates data to add initials and other UI data
+        candidate_info = []
+        for candidate in candidates:
+            # Generate initials from name
+            name_parts = candidate['name'].strip().split()
+            if len(name_parts) >= 2:
+                initials = f"{name_parts[0][0]}{name_parts[-1][0]}".upper()
+            elif len(name_parts) == 1:
+                initials = name_parts[0][:2].upper()
+            else:
+                initials = "??"
+            
+            # Create job summary display text
+            job_summary = candidate['jd_summary'] or candidate['jd_title'] or f"JD-{candidate['jd_id']}"
+            
+            candidate_info.append({
+                'candidate_id': candidate['candidate_id'],
+                'name': candidate['name'],
+                'email': candidate['email'],
+                'phone': candidate['phone'],
+                'initials': initials,
+                'job_summary': job_summary,
+                'company_name': candidate['company_name'] or 'No Company',
+                'screen_status': candidate['screen_status'],
+                'l1_result': candidate['l1_result'],
+                'l2_result': candidate['l2_result'],
+                'l3_result': candidate['l3_result'],
+                'offer_status': candidate['offer_status'],
+                'jd_id': candidate['jd_id'],
+                'resume_filename': candidate['resume_filename']
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        return JsonResponse({
+            'success': True,
+            'candidates': candidate_info,
+            'total_count': len(candidate_info)
+        })
+        
+    except Exception as e:
+        print(f"api_candidates_pipeline -> Error: {str(e)}")
+        cursor.close()
+        conn.close()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 def schedule_interviews_page(request):
     """
@@ -3198,18 +3425,12 @@ def get_search_candidates(request):
 
     from .utils import DataValidators
 
-    if filters['from_date']:
-        if not DataValidators.is_valid_date(filters['from_date']):
-            return JsonResponse({'success': False, 'error': 'Invalid from_date format. Use YYYY-MM-DD.'}, status=400)
-    else:
-        # select start date of current month
-        filters['from_date'] = datetime.now().replace(day=1).strftime('%Y-%m-%d')
-
-    if filters['to_date']:
-        if not DataValidators.is_valid_date(filters['to_date']):
-            return JsonResponse({'success': False, 'error': 'Invalid to_date format. Use YYYY-MM-DD.'}, status=400)
-    else:
-        filters['to_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # Only validate dates if they are provided, don't set defaults
+    if filters['from_date'] and not DataValidators.is_valid_date(filters['from_date']):
+        return JsonResponse({'success': False, 'error': 'Invalid from_date format. Use YYYY-MM-DD.'}, status=400)
+    
+    if filters['to_date'] and not DataValidators.is_valid_date(filters['to_date']):
+        return JsonResponse({'success': False, 'error': 'Invalid to_date format. Use YYYY-MM-DD.'}, status=400)
 
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -3308,6 +3529,7 @@ def get_search_candidates(request):
         where_clauses.append("(c.name LIKE %s OR c.email LIKE %s OR c.phone LIKE %s)")
         params.extend([f"%{filters['search_query']}%"] * 3)
     
+    # Only apply date filters if both dates are provided
     if filters['from_date'] and filters['to_date']:
         where_clauses.append("ca.activity_date BETWEEN %s AND %s")
         params.append(filters['from_date'])
@@ -3359,15 +3581,14 @@ def get_candidate_muster(request, candidate_id):
         'from_date': request.GET.get('from_date', ''),
         'to_date': request.GET.get('to_date', '')
     }
-
+    
     if not FILTERS['from_date']:
-        # select start of the month
-        FILTERS['from_date'] = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+        # select start date of current month
+        FILTERS['from_date'] = datetime.now().replace(month=datetime.now().month-3, day=1).strftime('%Y-%m-%d')
 
     if not FILTERS['to_date']:
-        # select today with exact time.
-        FILTERS['to_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
+        # select end date of current month
+        FILTERS['to_date'] = (datetime.now().replace(day=1, month=datetime.now().month+1) - timedelta(days=1)).strftime('%Y-%m-%d')
 
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -3383,7 +3604,6 @@ def get_candidate_muster(request, candidate_id):
             DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Permission denied to access this candidate'}, status=403)
     
-
     cursor.execute("""
         SELECT
             ca.activity_id,
@@ -3393,19 +3613,21 @@ def get_candidate_muster(request, candidate_id):
             ca.activity_date,
             ca.notes,
             ca.activity_type,
+            ca.note_title,
             CONCAT(htm.first_name, ' ', htm.last_name) AS hr_member_name
         FROM
             candidate_activities AS ca
-        JOIN
+        LEFT JOIN
             candidates AS c ON ca.candidate_id = c.candidate_id
-        JOIN
+        LEFT JOIN
             recruitment_jds AS rj ON c.jd_id = rj.jd_id
-        JOIN
+        LEFT JOIN
             hr_team_members AS htm ON ca.emp_id = htm.emp_id
-        JOIN
+        LEFT JOIN
             team_members AS tm ON htm.emp_id = tm.emp_id AND c.team_id = tm.team_id
         WHERE
-            c.candidate_id=%s AND ca.activity_date BETWEEN %s AND %s;
+            c.candidate_id=%s AND ca.activity_date BETWEEN %s AND %s
+        ORDER BY ca.updated_at DESC
     """, (candidate_id, FILTERS['from_date'], FILTERS['to_date']))
     activity_records = cursor.fetchall()
     cursor.close()
@@ -3423,6 +3645,7 @@ def add_candidate_activity(request):
     data = json.loads(request.body)
     candidate_id = data.get('candidate_id')
     activity_type = data.get('activity_type')
+    activity_title =  data.get('activity_title', 'Untitled Activity').strip()
     notes = data.get('notes', '').strip()
 
     if not candidate_id or not candidate_id.isdigit():
@@ -3432,7 +3655,7 @@ def add_candidate_activity(request):
     
     
 
-    if not activity_type or activity_type not in ['call', 'email', 'interview', 'other']:
+    if not activity_type or activity_type not in ('interview_feedback','screening_notes','hr_notes','technical_assessment','offer_details','onboarding','rejection','general','other'):
         return JsonResponse({'success': False, 'error': 'Invalid activity type'}, status=400)
 
     user_id = request.session.get('user_id', None)
@@ -3456,9 +3679,9 @@ def add_candidate_activity(request):
 
     try:
         cursor.execute("""
-            INSERT INTO candidate_activities (candidate_id, emp_id, activity_type, notes)
-            VALUES (%s, %s, %s, %s)
-        """, (candidate_id, emp_id, activity_type, notes))
+            INSERT INTO candidate_activities (candidate_id, emp_id, activity_type, note_title, notes)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (candidate_id, emp_id, activity_type, activity_title, notes))
         conn.commit()
         return JsonResponse({'success': True}, status=201)
     except Exception as e:

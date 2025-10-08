@@ -1,0 +1,253 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/candidate_handle.css' %}">
+<div class="candidate-container">
+    <div class="candidate-pipeline-header">
+        <h2>Candidate Pipeline</h2>
+        <div class="filters-container">
+            <div class="jd-filter">
+                <div class="jd-dropdown">
+                    <button class="jd-dropdown-btn" id="jd-dropdown-btn">
+                        <span class="jd-selected-text">All Job Descriptions</span>
+                        <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="jd-dropdown-content" id="jd-dropdown-content">
+                        <div class="jd-search-container">
+                            <input type="text" id="jd-search-input" placeholder="Search job descriptions...">
+                        </div>
+                        <div class="jd-options" id="jd-options">
+                            <div class="jd-option" data-jd-id="all">
+                                <span class="jd-option-text">All Job Descriptions</span>
+                            </div>
+                            <!-- JD options will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search by name, JD ID, or summary">
+                <button id="search-button">Search</button>
+            </div>
+        </div>
+    </div>
+    <div id="candidates-cards-list">
+        {% if candidate_info %}
+            {% for candidate in candidate_info %}
+            <div class="candidate-card">
+                <div class="card-header">
+                    <div class="initials-circle bg-blue">{{ candidate.initials }}</div>
+                    <div class="profile-info">
+                        <h3 class="candidate-name">{{ candidate.name }}</h3>
+                        <div class="tooltip-container">
+                            <p class="role-title">{{ candidate.job_summary }}</p>
+                            <span class="tooltip-text">{{ candidate.job_summary }}</span>
+                        </div>
+                    </div>
+                    <button class="action-btn view-resume">View Resume</button>
+                </div>
+                
+                <div class="profile-progress-bar">
+                    <span class="progress-label">82% Profile Complete</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 82%;"></div>
+                    </div>
+                </div>
+
+                <div class="stage-tracker">
+                    <div class="stage completed"></div>
+                    <div class="stage active"></div>
+                    <div class="stage upcoming"></div>
+                    <div class="stage upcoming"></div>
+                    <div class="stage upcoming"></div>
+                </div>
+
+                <div class="current-stage-status">
+                    <span class="status-label">Screening:</span>
+                    <span class="status-value highlight-orange">Interview Scheduled</span>
+                </div>
+
+                <div class="candidate_actions">
+                    <button class="action-btn primary add-note">Add Note</button>
+                    <button class="action-btn primary">Take Action</button>
+                </div>
+                
+            </div>
+
+            {% endfor %}
+        {% else %}
+            <p>No candidates found.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div id="addNoteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add Note</h3>
+            <span class="close" id="closeAddNoteModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="candidate-info">
+                <div class="candidate-details">
+                    <div class="candidate-avatar">
+                        <span id="noteModalInitials">AS</span>
+                    </div>
+                    <div class="candidate-meta">
+                        <h4 id="noteModalCandidateName">Candidate Name</h4>
+                        <p id="noteModalJobTitle">Job Title</p>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="addNoteForm">
+                <div class="form-group">
+                    <label for="noteType">Note Type</label>
+                    <select id="noteType" name="noteType" required>
+                        <option value="">Select note type</option>
+                        <option value="interview_feedback">Interview Feedback</option>
+                        <option value="screening_notes">Screening Notes</option>
+                        <option value="hr_notes">HR Notes</option>
+                        <option value="technical_assessment">Technical Assessment</option>
+                        <option value="offer_details">Offer Details</option>
+                        <option value="onboarding">Onboarding</option>
+                        <option value="general">General Note</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="noteTitle">Title</label>
+                    <input type="text" id="noteTitle" name="noteTitle" placeholder="Enter note title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="noteContent">Note</label>
+                    <textarea id="noteContent" name="noteContent" rows="6" placeholder="Enter your note here..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notePriority">Priority</label>
+                    <select id="notePriority" name="notePriority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelAddNote">Cancel</button>
+            <button type="submit" form="addNoteForm" class="btn btn-primary">Save Note</button>
+        </div>
+    </div>
+</div>
+
+<!-- Take Action Modal -->
+<div id="takeActionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Take Action</h3>
+            <span class="close" id="closeTakeActionModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="candidate-info">
+                <div class="candidate-details">
+                    <div class="candidate-avatar">
+                        <span id="actionModalInitials">AS</span>
+                    </div>
+                    <div class="candidate-meta">
+                        <h4 id="actionModalCandidateName">Candidate Name</h4>
+                        <p id="actionModalJobTitle">Job Title</p>
+                        <div class="current-stage">
+                            <span class="stage-label">Current Stage:</span>
+                            <span id="actionModalCurrentStage" class="stage-value">Screening</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="takeActionForm">
+                <div class="form-group">
+                    <label for="actionType">Action Type</label>
+                    <select id="actionType" name="actionType" required>
+                        <option value="">Select action</option>
+                        <option value="advance_stage">Advance to Next Stage</option>
+                        <option value="reject">Reject Candidate</option>
+                        <option value="put_on_hold">Put on Hold</option>
+                        <option value="schedule_interview">Schedule Interview</option>
+                        <option value="send_offer">Send Offer</option>
+                        <option value="withdraw_offer">Withdraw Offer</option>
+                        <option value="mark_hired">Mark as Hired</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="rejectionReasonGroup" style="display: none;">
+                    <label for="rejectionReason">Rejection Reason</label>
+                    <select id="rejectionReason" name="rejectionReason">
+                        <option value="">Select reason</option>
+                        <option value="skills_mismatch">Skills Mismatch</option>
+                        <option value="experience_insufficient">Insufficient Experience</option>
+                        <option value="cultural_fit">Cultural Fit Issues</option>
+                        <option value="salary_expectations">Salary Expectations</option>
+                        <option value="availability">Availability Issues</option>
+                        <option value="technical_assessment">Failed Technical Assessment</option>
+                        <option value="interview_performance">Poor Interview Performance</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="holdReasonGroup" style="display: none;">
+                    <label for="holdReason">Hold Reason</label>
+                    <select id="holdReason" name="holdReason">
+                        <option value="">Select reason</option>
+                        <option value="budget_review">Budget Under Review</option>
+                        <option value="hiring_freeze">Hiring Freeze</option>
+                        <option value="position_review">Position Requirements Review</option>
+                        <option value="team_availability">Team Availability</option>
+                        <option value="candidate_request">Candidate Request</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="interviewDetailsGroup" style="display: none;">
+                    <label for="interviewDate">Interview Date & Time</label>
+                    <input type="datetime-local" id="interviewDate" name="interviewDate">
+                    
+                    <label for="interviewType">Interview Type</label>
+                    <select id="interviewType" name="interviewType">
+                        <option value="phone">Phone Interview</option>
+                        <option value="video">Video Interview</option>
+                        <option value="in_person">In-Person Interview</option>
+                        <option value="technical">Technical Assessment</option>
+                    </select>
+                    
+                    <label for="interviewer">Interviewer</label>
+                    <input type="text" id="interviewer" name="interviewer" placeholder="Enter interviewer name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="actionComments">Comments</label>
+                    <textarea id="actionComments" name="actionComments" rows="4" placeholder="Add any additional comments..."></textarea>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="notifyCandidate" name="notifyCandidate" checked>
+                        <span class="checkmark"></span>
+                        Notify candidate via email
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelTakeAction">Cancel</button>
+            <button type="submit" form="takeActionForm" class="btn btn-primary">Execute Action</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/candidate_handle.js' %}"></script>
+{% endblock %}

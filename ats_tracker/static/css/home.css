@@ -224,11 +224,11 @@ body {
     opacity: 0;
     transition: opacity 0.23s ease-in-out;
 }
-.menu > li.active > a:before,
+/* .menu > li.active > a:before,
 .menu > li > a:hover:before {
     opacity: 1;
     background: #c7caff;
-}
+} */
 
 /* Menu Icons */
 .menu i {

@@ -23,6 +23,7 @@ urlpatterns = [
     path('customer_details/', views.customer_details, name='customer_details'),
     path('view_edit_jds/', views.view_edit_jds, name='view_edit_jds'),
     path('get_jds/', views.get_all_jds, name='get_all_jds'),
+    path('search_jds/', views.search_jds, name='search_jds'),
     path('get_jd/<str:jd_id>/', views.get_jd, name='get_jd'),
     path('update_jd/<str:jd_id>/', views.update_jd, name='update_jd'),
     path('assign_jd/', views.assign_jd, name='assign_jd'),
@@ -40,14 +41,15 @@ urlpatterns = [
     path('update_resume_status/', views.update_resume_status, name='update_resume_status'),
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
     path('assign_jd_data/', views.assign_jd_data, name='assign_jd_data'),
-    # urls.py
+
     path('get_candidate_details/', views.get_candidate_details, name='get_candidate_details'),
+
     path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
     path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
     path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
     path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
     path('get_jd_team_members/', views.get_jd_team_members, name='get_jd_team_members'),
-    # urls.py
+
     path('schedule_interviews/', views.schedule_interviews_page, name='schedule_interviews_page'),
     path('get_candidates_for_jd/', views.get_candidates_for_jd, name='get_candidates_for_jd'),
     path('schedule_interview/', views.schedule_interview, name='schedule_interview'),
@@ -83,7 +85,7 @@ urlpatterns = [
     path('api/ccr_filters/', views.ccr_filters, name='ccr_filters'),
     path('api/ccr_reports/', views.ccr_reports_api, name='ccr_reports_api'),
     path('api/ccr_reports/export/', views.ccr_reports_export, name='ccr_reports_export'),
-    # ... other urls
+
 
     # settings urls
     path('user/', views.user_profile, name='user_profile'),
@@ -112,9 +114,11 @@ urlpatterns = [
     path("settings/notification/mark_read/<int:notification_id>/", views.mark_as_read_notification, name="mark_notification_read"),
 
     # email config paths
-    # path("settings/email/", views.settings_email_config, name="settings_email_config"),
     path("settings/email/", views.save_email_config, name="save_email_config"),
 
+    # candidate muster and details urls
+    path("candidate_pipeline/", views.candidate_pipeline_page, name="candidate_pipeline"),
+    path("api/candidate_pipeline/", views.api_candidates_pipeline, name="api_candidates_pipeline"),
     path("candidate_musters/", views.candidate_muster_page, name="candidate_muster"),
     path("get_team_members/<str:team_id>/", views.get_members_from_team_id, name="candidate_muster_data"),
     path("get_candidate_suggestions/<str:query>/", views.candidate_suggestions_for_muster, name="get_candidate_suggestions_for_muster"),
