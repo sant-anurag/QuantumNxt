@@ -845,6 +845,12 @@
         padding: 2rem;
         box-sizing: border-box;
     }
+    /* make scrollbar invisible */
+    .jd-view-modal-overlay::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent;
+    }
     
     @keyframes jd-view-modal-fadein {
         from { opacity: 0; }
@@ -864,7 +870,22 @@
         border-radius: 8px;
         margin: auto;
     }
-    
+
+    /* make scrollbar slim and change its color */
+    .jd-view-modal-content::-webkit-scrollbar {
+        width: 8px !important;
+        background: transparent !important;
+    }
+
+    .jd-view-modal-content::-webkit-scrollbar-thumb {
+        background: #888 !important;
+        border-radius: 4px;
+    }
+
+    .jd-view-modal-content::-webkit-scrollbar-thumb:hover {
+        background: #555 !important;
+    }
+
     @keyframes jd-view-modal-slide {
         from { transform: scale(0.8) translateY(40px); opacity: 0; }
         to { transform: scale(1) translateY(0); opacity: 1; }

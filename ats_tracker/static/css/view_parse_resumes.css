@@ -348,7 +348,15 @@
       align-items: center;
       justify-content: center;
       font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      overflow-y: auto;
   }
+
+  /* make scrollbar invisible */
+    .modal-overlay::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent;
+    }
 
   .modal-content {
       background: linear-gradient(135deg, #f7fafd 80%, #e6ebff 100%);

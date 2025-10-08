@@ -56,70 +56,189 @@ document.addEventListener('DOMContentLoaded', function() {
 				const fromDate = document.getElementById('fromDate') ? document.getElementById('fromDate').value : '';
 				const toDate = document.getElementById('toDate') ? document.getElementById('toDate').value : '';
 				url = `/api/candidate_musters/${candidateId}/?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`
-				console.log("Fetching activities from URL:", url);
 				fetch(url)
 					.then(response => response.json())
 					.then(data => {
-						console.log("Fetched activities data:", data);
 						if (data.success && Array.isArray(data.activity_records)) {
-							let activitiesHtml = `<h3 class='font-bold mb-2'>Candidate Activities</h3>`;
+							let modalHtml = `
+								<div class="modal-header">
+									<h3 class='font-bold text-xl text-blue-900'>Candidate Activities</h3>
+								</div>
+								<div class="activities-section">
+							`;
+							
 							if (data.activity_records.length === 0) {
-								activitiesHtml += `<div class='text-gray-500'>No activities found.</div>`;
+								modalHtml += `<div class='no-activities-message'>No activities found for this candidate.</div>`;
 							} else {
-								activitiesHtml += `<ul class='space-y-4'>`;
+								modalHtml += `<div class='activities-container'>`;
 								data.activity_records.forEach(activity => {
-									activitiesHtml += `
-										<li class='border rounded p-3 bg-gray-50'>
-											<div class='flex flex-col gap-2'>
-												<div class='flex justify-between align-center gap-2'>
-													<div>
-														<span class='font-semibold'>Date:</span>
-														<span class='text-sm text-gray-500'>${activity.activity_date}</span>
-													</div>
-													<div>
-														<span class='font-semibold'>Type:</span>
-														<span class='text-sm text-gray-500'>${activity.activity_type}</span>
+									modalHtml += `
+										<div class='activity-card'>
+											<div class='activity-header'>
+												<div class='activity-title-section'>
+													<h5 class='activity-title'>${activity.note_title || 'Untitled Activity'}</h5>
+													<div class='activity-meta'>
+														<span class='activity-type-badge activity-type-${activity.activity_type.toLowerCase().replace(/_/g, '-')}'>${activity.activity_type.replace(/_/g, ' ')}</span>
+														<span class='activity-date'>${activity.activity_date}</span>
 													</div>
 												</div>
-												<div class='flex justify-between align-center gap-2 '>
-													<div>
-														<span class='font-semibold'>Author:</span>
-														<span class='text-sm text-gray-500'>${activity.hr_member_name}</span>
-													</div>
-													<div><span class='font-semibold'>JD:</span> <span class='text-sm text-gray-500'>${activity.jd_summary}</span></div>
+												<div class='activity-author'>
+													<span class='author-label'>By:</span>
+													<span class='author-name'>${activity.hr_member_name}</span>
 												</div>
-												<div><span class='font-semibold'>Note:</span> <input type='text' value="${activity.notes || ''}" class="activity-note-input border rounded px-2 py-1 my-1 w-full" data-activity-id="${activity.activity_id}" disabled></div>
-												${userRole === "Admin" ? `
-												<div class='activities-controls flex justify-end gap-2 px-2'>
-													<button class='edit-note-btn' data-activity-id="${activity.activity_id}">Edit</button>
-													<button class='save-note-btn' data-activity-id="${activity.activity_id}" style="display:none;">Save</button>
-													<button class='delete-note-btn' data-activity-id="${activity.activity_id}" style="display:none;">Delete</button>
-													<button class='cancel-note-btn' data-activity-id="${activity.activity_id}" style="display:none;">Cancel</button>
-												</div>
-												` : ''}
 											</div>
-										</li>
+											
+											<div class='activity-body'>
+												<div class='jd-info'>
+													<span class='jd-label'>Job Description:</span>
+													<span class='jd-summary'>${activity.jd_summary}</span>
+												</div>
+												<div class='note-section'>
+													<label class='note-label'>Notes:</label>
+													<textarea class='activity-note-input' data-activity-id='${activity.activity_id}' disabled rows='3'>${activity.notes || ''}</textarea>
+												</div>
+											</div>
+											
+											${userRole === "Admin" ? `
+											<div class='activity-actions'>
+												<button class='action-btn edit-btn edit-note-btn' data-activity-id='${activity.activity_id}'>
+													<i class='fa fa-edit'></i> Edit
+												</button>
+												<button class='action-btn save-btn save-note-btn' data-activity-id='${activity.activity_id}' style='display:none;'>
+													<i class='fa fa-save'></i> Save
+												</button>
+												<button class='action-btn delete-btn delete-note-btn' data-activity-id='${activity.activity_id}' style='display:none;'>
+													<i class='fa fa-trash'></i> Delete
+												</button>
+												<button class='action-btn cancel-btn cancel-note-btn' data-activity-id='${activity.activity_id}' style='display:none;'>
+													<i class='fa fa-times'></i> Cancel
+												</button>
+											</div>
+											` : ''}
+										</div>
 									`;
 								});
-								activitiesHtml += `</ul>`;
+								modalHtml += `</div>`;
 							}
-							activitiesHtml += `
-								<div class=\"add-note-section mt-8 px-6 py-5 border-t border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 rounded-b-lg shadow-sm\">
-									<h4 class=\"font-bold mb-3 text-blue-800 text-lg flex items-center gap-2\">
-										<i class=\"fa fa-plus\" aria-hidden=\"true\" class='w-5 h-5 text-blue-500'></i>
-										Add a New Note
-									</h4>
-									<form class=\"flex flex-col md:flex-row gap-3 items-center\" onsubmit=\"return false;\">
-										<input type=\"text\" id=\"newNoteInput\" class=\"activity-note-input border border-blue-300 rounded-lg px-3 py-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-800 placeholder-gray-400 text-base transition\" placeholder=\"Type your note here...\" maxlength=\"255\">
-										<button id=\"addNoteBtn\" class=\"bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-2 rounded-lg font-semibold shadow hover:from-blue-700 hover:to-blue-600 transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2\">
-											<i class=\"fa fa-check\" aria-hidden=\"true\" class='w-5 h-5 text-gray-500'></i>
-											Add Note
-										</button>
-									</form>
-									<div id=\"addNoteError\" class=\"text-red-500 mt-2 text-sm font-medium\" style=\"display:none;\"></div>
+							
+							modalHtml += `</div>`;
+							
+							// Add footer with add note section
+							modalHtml += `
+								<div class="modal-footer">
+									<div class="add-note-section">
+										<div class="mb-6">
+											<h4 class="font-bold text-xl text-blue-900 flex items-center gap-3">
+												<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+													<i class="fa fa-plus text-white text-sm" aria-hidden="true"></i>
+												</div>
+												Add New Activity Note
+											</h4>
+											<p class="text-blue-600 text-sm mt-1 ml-11">Record important candidate interactions and feedback</p>
+										</div>
+										
+										<form class="space-y-5" onsubmit="return false;">
+											<!-- Activity Type Selection -->
+											<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div class="form-group">
+													<label for="activityTypeSelect" class="block text-sm font-semibold text-gray-700 mb-2">
+														Activity Type <span class="text-red-500">*</span>
+													</label>
+													<select id="activityTypeSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm transition-all duration-200">
+														<option value="">Select activity type...</option>
+														<option value="interview_feedback">📋 Interview Feedback</option>
+														<option value="screening_notes">🔍 Screening Notes</option>
+														<option value="hr_notes">👥 HR Notes</option>
+														<option value="technical_assessment">💻 Technical Assessment</option>
+														<option value="offer_details">💼 Offer Details</option>
+														<option value="onboarding">🎯 Onboarding</option>
+														<option value="rejection">❌ Rejection</option>
+														<option value="general">📝 General</option>
+														<option value="other">🔗 Other</option>
+													</select>
+												</div>
+												
+												<!-- Priority Selection -->
+												<div class="form-group">
+													<label for="prioritySelect" class="block text-sm font-semibold text-gray-700 mb-2">
+														Priority Level <span class="text-red-500">*</span>
+													</label>
+													<select id="prioritySelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm transition-all duration-200">
+														<option value="medium">🟡 Medium Priority</option>
+														<option value="high">🔴 High Priority</option>
+														<option value="low">🟢 Low Priority</option>
+													</select>
+												</div>
+											</div>
+											
+											<!-- Note Title -->
+											<div class="form-group">
+												<label for="noteTitleInput" class="block text-sm font-semibold text-gray-700 mb-2">
+													Note Title <span class="text-red-500">*</span>
+												</label>
+												<input type="text" id="noteTitleInput" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200" placeholder="Enter a descriptive title for this note..." maxlength="100">
+											</div>
+											
+											<!-- Note Content -->
+											<div class="form-group">
+												<label for="newNoteInput" class="block text-sm font-semibold text-gray-700 mb-2">
+													Note Content <span class="text-red-500">*</span>
+												</label>
+												<textarea id="newNoteInput" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200 resize-none" placeholder="Enter detailed notes about this activity..." maxlength="500"></textarea>
+												<div class="text-right text-xs text-gray-500 mt-1">
+													<span id="charCount">0</span>/500 characters
+												</div>
+											</div>
+											
+											<!-- Action Buttons -->
+											<div class="flex flex-col sm:flex-row gap-3 pt-4">
+												<button id="addNoteBtn" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform hover:scale-[1.02]">
+													<i class="fa fa-save text-sm" aria-hidden="true"></i>
+													Save Activity Note
+												</button>
+												<button type="button" onclick="document.getElementById('newNoteInput').value=''; document.getElementById('noteTitleInput').value=''; document.getElementById('activityTypeSelect').value=''; document.getElementById('prioritySelect').value='medium';" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200 flex items-center justify-center gap-2">
+													<i class="fa fa-eraser text-sm" aria-hidden="true"></i>
+													Clear Form
+												</button>
+											</div>
+										</form>
+										
+										<div id="addNoteError" class="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium hidden">
+											<div class="flex items-center gap-2">
+												<i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+												<span class="error-message"></span>
+											</div>
+										</div>
+										
+										<div id="addNoteSuccess" class="mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm font-medium hidden">
+											<div class="flex items-center gap-2">
+												<i class="fa fa-check-circle" aria-hidden="true"></i>
+												<span>Note added successfully!</span>
+											</div>
+										</div>
+									</div>
+									<button class="close-modal-btn">Close</button>
 								</div>
 							`;
-							showModal(activitiesHtml);
+							
+							// Add character counter functionality after modal is shown
+							setTimeout(() => {
+								const textarea = document.getElementById('newNoteInput');
+								const charCount = document.getElementById('charCount');
+								if (textarea && charCount) {
+									textarea.addEventListener('input', function() {
+										charCount.textContent = this.value.length;
+										if (this.value.length > 450) {
+											charCount.classList.add('text-red-500');
+											charCount.classList.remove('text-gray-500');
+										} else {
+											charCount.classList.add('text-gray-500');
+											charCount.classList.remove('text-red-500');
+										}
+									});
+								}
+							}, 100);
+							showModal(modalHtml);
 						} else {
 							showModal(`<div class='text-red-500'>Failed to load activities.</div>`);
 						}
@@ -251,12 +370,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const candidateActivityModal = document.getElementById('candidate-activity-modal');
 
     function showModal(contentHtml) {
-		console.log("Showing modal with content:", contentHtml);
         candidateActivityModal.innerHTML = `
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 ${contentHtml}
-                <button class="close-modal-btn mt-4">Close</button>
             </div>
         `;
         candidateActivityModal.style.display = 'block';
@@ -290,21 +407,55 @@ document.addEventListener('DOMContentLoaded', function() {
 	candidateActivityModal.addEventListener('click', function(e) {
 		if (e.target && e.target.id === 'addNoteBtn') {
 			const noteInput = document.getElementById('newNoteInput');
-			const noteText = noteInput.value.trim();
+			const noteTitleInput = document.getElementById('noteTitleInput');
+			const activityTypeSelect = document.getElementById('activityTypeSelect');
+			const prioritySelect = document.getElementById('prioritySelect');
+			
+			const noteText = noteInput ? noteInput.value.trim() : '';
+			const noteTitle = noteTitleInput ? noteTitleInput.value.trim() : '';
+			const activityType = activityTypeSelect ? activityTypeSelect.value : '';
+			const priority = prioritySelect ? prioritySelect.value : 'medium';
+			
 			const errorDiv = document.getElementById('addNoteError');
-			errorDiv.style.display = 'none';
+			const successDiv = document.getElementById('addNoteSuccess');
+			const errorMessage = errorDiv ? errorDiv.querySelector('.error-message') : null;
+			
+			// Hide previous messages
+			if (errorDiv) errorDiv.classList.add('hidden');
+			if (successDiv) successDiv.classList.add('hidden');
+			
+			// Validation
 			if (!noteText) {
-				errorDiv.textContent = 'Note cannot be empty.';
-				errorDiv.style.display = 'block';
+				if (errorMessage) errorMessage.textContent = 'Note content cannot be empty.';
+				if (errorDiv) errorDiv.classList.remove('hidden');
 				return;
 			}
+			
+			if (!noteTitle) {
+				if (errorMessage) errorMessage.textContent = 'Note title is required.';
+				if (errorDiv) errorDiv.classList.remove('hidden');
+				return;
+			}
+			
+			if (!activityType) {
+				if (errorMessage) errorMessage.textContent = 'Please select an activity type.';
+				if (errorDiv) errorDiv.classList.remove('hidden');
+				return;
+			}
+			
 			const candidateId = candidateActivityModal.dataset.candidateId;
 			if (!candidateId) {
-				errorDiv.textContent = 'Candidate ID not found.';
-				errorDiv.style.display = 'block';
+				if (errorMessage) errorMessage.textContent = 'Candidate ID not found.';
+				if (errorDiv) errorDiv.classList.remove('hidden');
 				return;
 			}
-			const activityType = 'other';
+			
+			// Disable button during submission
+			const addBtn = document.getElementById('addNoteBtn');
+			const originalText = addBtn.innerHTML;
+			addBtn.innerHTML = '<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> Saving...';
+			addBtn.disabled = true;
+			
 			fetch('/api/candidate_musters/add_note/', {
 				method: 'POST',
 				headers: {
@@ -314,29 +465,48 @@ document.addEventListener('DOMContentLoaded', function() {
 				body: JSON.stringify({
 					candidate_id: candidateId,
 					activity_type: activityType,
-					notes: noteText
+					activity_title: noteTitle,
+					notes: noteText,
+					priority: priority
 				})
 			})
 			.then(response => response.json())
 			.then(data => {
 				if (data.success) {
-					noteInput.value = '';
-					errorDiv.style.display = 'none';
-					// Refresh activities list by simulating activitiesBtn click
-					const activitiesBtn = document.querySelector(`.activities-btn[data-candidate-id='${candidateId}']`);
-					if (activitiesBtn) {
-						activitiesBtn.click();
-					} else {
-						hideModal();
-					}
+					// Clear form
+					if (noteInput) noteInput.value = '';
+					if (noteTitleInput) noteTitleInput.value = '';
+					if (activityTypeSelect) activityTypeSelect.value = '';
+					if (prioritySelect) prioritySelect.value = 'medium';
+					
+					// Show success message
+					if (successDiv) successDiv.classList.remove('hidden');
+					
+					// Refresh activities list after a short delay
+					setTimeout(() => {
+						const activitiesBtn = document.querySelector(`.activities-btn[data-candidate-id='${candidateId}']`);
+						if (activitiesBtn) {
+							activitiesBtn.click();
+						} else {
+							hideModal();
+						}
+					}, 1500);
 				} else {
-					errorDiv.textContent = data.error || 'Failed to add note.';
-					errorDiv.style.display = 'block';
+					if (errorMessage) errorMessage.textContent = data.error || 'Failed to add note.';
+					if (errorDiv) errorDiv.classList.remove('hidden');
 				}
 			})
-			.catch(() => {
-				errorDiv.textContent = 'Error adding note.';
-				errorDiv.style.display = 'block';
+			.catch(error => {
+				console.error('Error adding note:', error);
+				if (errorMessage) errorMessage.textContent = 'Network error occurred while adding note.';
+				if (errorDiv) errorDiv.classList.remove('hidden');
+			})
+			.finally(() => {
+				// Re-enable button
+				if (addBtn) {
+					addBtn.innerHTML = originalText;
+					addBtn.disabled = false;
+				}
 			});
 		}
 	});
