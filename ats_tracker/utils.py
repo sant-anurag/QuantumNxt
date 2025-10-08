@@ -21,6 +21,9 @@ from email.mime.text import MIMEText
 from django.conf import settings
 import smtplib
 
+import io
+import pdfkit
+
 import environ
 
 env = environ.Env()
@@ -599,6 +602,53 @@ def compare_mobile_numbers(num1, num2):
         return digits
 
     return normalize(num1) == normalize(num2)
+
+
+class PDFGenerator:
+    """
+    A utility class for generating PDF files from HTML content using pdfkit, 
+    which is a wrapper around the powerful wkhtmltopdf utility.
+
+    Dependencies required:
+    1. Python package: pip install pdfkit
+    2. System dependency: The wkhtmltopdf executable MUST be installed on your system 
+       and available in your system's PATH. (wkhtmltopdf can be downloaded from its official website).
+    """
+
+    @staticmethod
+    def generate_pdf_from_html(html_content: str) -> io.BytesIO:
+        """
+        Converts a string of HTML content into a PDF file held in memory.
+
+        Args:
+            html_content: The full HTML content string (including <html>, <body> tags).
+
+        Returns:
+            An io.BytesIO object containing the generated PDF data.
+        """
+        try:
+            # pdfkit.from_string returns the raw PDF content (bytes)
+            # The output is suppressed (False) so it returns the bytes instead of writing to a file.
+            pdf_bytes = pdfkit.from_string(html_content, False)
+
+            # 1. Create an in-memory file-like object and write the bytes
+            pdf_file = io.BytesIO(pdf_bytes)
+
+            # 2. Rewind the buffer's position to the start before returning.
+            pdf_file.seek(0)
+            
+            return pdf_file
+
+        except IOError as e:
+            # Handle case where wkhtmltopdf is not found or not accessible.
+            # This is the most common error with pdfkit setup.
+            print(f"I/O Error generating PDF. Ensure 'wkhtmltopdf' is installed and in your PATH. Error: {e}")
+            # Returning an empty BytesIO object upon failure
+            return io.BytesIO(b'')
+        except Exception as e:
+            # Catch other potential errors
+            print(f"Error generating PDF: {e}")
+            return io.BytesIO(b'')
 
 
 class Constants:
