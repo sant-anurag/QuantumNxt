@@ -129,44 +129,46 @@
                 const member = data.member || {};
 // Inside renderResult(data)
 let html = `
-<div class="ev-section" style="max-width:420px;margin-bottom:24px;">
-    <div style="font-size:1.15em;font-weight:700;color:#666de7;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+<div class="ev-section" style="margin-bottom:24px;">
+    <h3>
         <i class="fas fa-id-badge" style="color:#11b7ee;"></i> Member Details
+    </h3>
+    <div class="ev-table-container">
+        <table class="ev-table">
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Name</strong></td>
+                <td class="ev-table-cell">${member.first_name || ""} ${member.last_name || ""}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Email</strong></td>
+                <td class="ev-table-cell">${member.email || ""}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Employee ID</strong></td>
+                <td class="ev-table-cell">${member.emp_id || ""}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Role</strong></td>
+                <td class="ev-table-cell">${member.role || ""}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Status</strong></td>
+                <td class="ev-table-cell"><span class="ev-status-${(member.status || '').toLowerCase().replace(' ', '-')}">${member.status || ""}</span></td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Active JDs</strong></td>
+                <td class="ev-table-cell">${activeCount}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>Closed JDs</strong></td>
+                <td class="ev-table-cell">${closedCount}</td>
+            </tr>
+            <tr class="ev-table-row">
+                <td class="ev-table-cell"><strong>On Hold JDs</strong></td>
+                <td class="ev-table-cell">${holdCount}</td>
+            </tr>
+        </table>
     </div>
-    <table style="width:100%;border-collapse:collapse;border:1.2px solid #dde6ee;">
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0 8px 0;width:38%;border:1.2px solid #dde6ee;">Name</td>
-            <td style="font-weight:600;padding:8px 0 8px 0;border:1.2px solid #dde6ee;">${member.first_name || ""} ${member.last_name || ""}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Email</td>
-            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.email || ""}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Employee ID</td>
-            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.emp_id || ""}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Role</td>
-            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.role || ""}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Status</td>
-            <td style="font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">${member.status || ""}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Active JDs</td>
-            <td style="font-weight:600;color:#1aa674;padding:8px 0;border:1.2px solid #dde6ee;">${activeCount}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">Closed JDs</td>
-            <td style="font-weight:600;color:#da3c45;padding:8px 0;border:1.2px solid #dde6ee;">${closedCount}</td>
-        </tr>
-        <tr>
-            <td style="color:#898fa4;font-weight:600;padding:8px 0;border:1.2px solid #dde6ee;">On Hold JDs</td>
-            <td style="font-weight:600;color:#666de7;padding:8px 0;border:1.2px solid #dde6ee;">${holdCount}</td>
-        </tr>
-    </table>
 </div>
 `;
 resultDiv.innerHTML = html;
@@ -188,7 +190,7 @@ resultDiv.innerHTML = html;
                         return;
                     }
                     const { rows, numPages } = paginate(jds, page, 5);
-                    let table = `<table class="ev-table"><thead>
+                    let table = `<div class="ev-table-container"><table class="ev-table"><thead>
                         <tr>
                             <th>JD ID</th>
                             <th>Summary</th>
@@ -207,7 +209,7 @@ resultDiv.innerHTML = html;
                             <td>${jd.company_name || "-"}</td>
                         </tr>`;
                     });
-                    table += `</tbody></table>`;
+                    table += `</tbody></table></div>`;
                     jdSection.insertAdjacentHTML("beforeend", table);
                     // Pagination controls
                     if (numPages > 1) {
@@ -243,7 +245,7 @@ resultDiv.innerHTML = html;
                                 return;
                             }
                             const { rows, numPages } = paginate(jds, page, 5);
-                            let table = `<table class="ev-table"><thead>
+                            let table = `<div class="ev-table-container"><table class="ev-table"><thead>
                                 <tr>
                                     <th>JD ID</th>
                                     <th>Summary</th>
@@ -260,7 +262,7 @@ resultDiv.innerHTML = html;
                                     <td>${jd.company_name || "-"}</td>
                                 </tr>`;
                             });
-                            table += `</tbody></table>`;
+                            table += `</tbody></table></div>`;
                             teamDiv.insertAdjacentHTML("beforeend", table);
                             if (numPages > 1) {
                                 const pagDiv = document.createElement("div");

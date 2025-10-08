@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     let allJDs = [];
     let allTeams = [];
+    let currentPage = 1;
 
     // Fetch JDs and Teams for dropdowns
     fetch("/assign_jd_data/")
@@ -12,6 +13,9 @@ document.addEventListener("DOMContentLoaded", function() {
             renderTeamOptions(allTeams);
         });
 
+    // Load initial assignments table
+    loadAssignmentsTable(1);
+
     function renderJDOptions(jds) {
         const select = document.getElementById("assign-jd-select");
         select.innerHTML = "";
@@ -22,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
             select.appendChild(opt);
         });
     }
+    
     function renderTeamOptions(teams) {
         const select = document.getElementById("assign-team-select");
         select.innerHTML = "";
@@ -32,6 +37,100 @@ document.addEventListener("DOMContentLoaded", function() {
             select.appendChild(opt);
         });
     }
+
+    function loadAssignmentsTable(page = 1) {
+        currentPage = page;
+        fetch(`/api/jd_assignments/?page=${page}`)
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    renderAssignmentsTable(data.jds);
+                    renderPagination(data.pagination);
+                } else {
+                    console.error('Failed to load assignments:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading assignments:', error);
+            });
+    }
+
+    function renderAssignmentsTable(jds) {
+        const tbody = document.getElementById("assignments-tbody");
+        tbody.innerHTML = "";
+        
+        if (jds.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="no-records">No JD assignments found.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        jds.forEach(jd => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${jd.row_number}</td>
+                <td>${jd.jd_id}</td>
+                <td title="${jd.jd_summary}">${jd.jd_summary}</td>
+                <td>${jd.no_of_positions}</td>
+                <td title="${jd.company_name}">${jd.company_name}</td>
+                <td title="${jd.team_name}">${jd.team_name}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderPagination(pagination) {
+        const paginationDiv = document.getElementById("assignments-pagination");
+        
+        if (pagination.num_pages <= 1) {
+            paginationDiv.innerHTML = "";
+            return;
+        }
+
+        let paginationHTML = '<div class="pagination-controls">';
+        
+        // First and Previous buttons
+        if (pagination.has_previous) {
+            paginationHTML += `
+                <button class="pagination-btn first" onclick="loadAssignmentsTable(1)">« First</button>
+                <button class="pagination-btn prev" onclick="loadAssignmentsTable(${pagination.previous_page})">Previous</button>
+            `;
+        } else {
+            paginationHTML += `
+                <span class="pagination-btn disabled">« First</span>
+                <span class="pagination-btn disabled">Previous</span>
+            `;
+        }
+        
+        // Page info
+        paginationHTML += `
+            <span class="pagination-info">
+                Page ${pagination.current_page} of ${pagination.num_pages}
+            </span>
+        `;
+        
+        // Next and Last buttons
+        if (pagination.has_next) {
+            paginationHTML += `
+                <button class="pagination-btn next" onclick="loadAssignmentsTable(${pagination.next_page})">Next</button>
+                <button class="pagination-btn last" onclick="loadAssignmentsTable(${pagination.num_pages})">Last »</button>
+            `;
+        } else {
+            paginationHTML += `
+                <span class="pagination-btn disabled">Next</span>
+                <span class="pagination-btn disabled">Last »</span>
+            `;
+        }
+        
+        paginationHTML += '</div>';
+        paginationDiv.innerHTML = paginationHTML;
+    }
+
+    // Make loadAssignmentsTable available globally for pagination buttons
+    window.loadAssignmentsTable = loadAssignmentsTable;
 
     // Search filter for JD dropdown
     document.getElementById("jd-search-box").addEventListener("input", function() {
@@ -77,10 +176,18 @@ document.addEventListener("DOMContentLoaded", function() {
         const teamSelect = document.getElementById("assign-team-select");
         const jd_id = jdSelect.value;
         const team_id = teamSelect.value;
+        
         if (!jd_id || !team_id) {
             alert("Please select both JD and Team.");
             return;
         }
+
+        // Disable the button and show loading state
+        const assignBtn = document.getElementById("assign-btn");
+        const originalText = assignBtn.innerHTML;
+        assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
+        assignBtn.disabled = true;
+
         fetch("/assign_jd/", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
@@ -90,9 +197,22 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(data => {
             if (data.success) {
                 showResult(data.jd, data.team, data.members);
+                // Refresh the assignments table to show the new assignment
+                loadAssignmentsTable(currentPage);
+                // Reset the form
+                document.getElementById("reset-btn").click();
             } else {
                 alert(data.error || "Assignment failed.");
             }
+        })
+        .catch(error => {
+            console.error('Assignment error:', error);
+            alert("An error occurred during assignment.");
+        })
+        .finally(() => {
+            // Re-enable the button
+            assignBtn.innerHTML = originalText;
+            assignBtn.disabled = false;
         });
     };
 

@@ -299,7 +299,35 @@ document.addEventListener('DOMContentLoaded', function() {
 					data.members.forEach(member => {
 						const option = document.createElement('option');
 						option.value = member.emp_id;
-						option.textContent = `${member.first_name} ${member.last_name} (${member.email})`;
+						
+						// Create member display text and truncate if too long
+						const fullName = `${member.first_name} ${member.last_name}`;
+						const emailText = `(${member.email})`;
+						const fullText = `${fullName} ${emailText}`;
+						
+						// Truncate if longer than 35 characters
+						let displayText;
+						if (fullText.length > 35) {
+							// Try to fit name + truncated email
+							if (fullName.length <= 20) {
+								const availableSpace = 35 - fullName.length - 5; // 5 for " (...)"
+								const truncatedEmail = member.email.length > availableSpace 
+									? member.email.substring(0, availableSpace) + '...'
+									: member.email;
+								displayText = `${fullName} (${truncatedEmail})`;
+							} else {
+								// Truncate name if it's too long
+								const truncatedName = fullName.length > 25 
+									? fullName.substring(0, 25) + '...'
+									: fullName;
+								displayText = truncatedName;
+							}
+						} else {
+							displayText = fullText;
+						}
+						
+						option.textContent = displayText;
+						option.title = fullText; // Full text on hover
 						memberSelect.appendChild(option);
 					});
 				}

@@ -62,29 +62,7 @@
             </table>
         </div>
         <div id="assignments-pagination" class="pagination">
-            {% if pagination.num_pages > 1 %}
-                <div class="pagination-controls">
-                    {% if pagination.has_previous %}
-                        <a href="?page=1" class="pagination-btn first">&laquo; First</a>
-                        <a href="?page={{ pagination.previous_page }}" class="pagination-btn prev">Previous</a>
-                    {% else %}
-                        <span class="pagination-btn disabled">&laquo; First</span>
-                        <span class="pagination-btn disabled">Previous</span>
-                    {% endif %}
-                    
-                    <span class="pagination-info">
-                        Page {{ pagination.current_page }} of {{ pagination.num_pages }}
-                    </span>
-                    
-                    {% if pagination.has_next %}
-                        <a href="?page={{ pagination.next_page }}" class="pagination-btn next">Next</a>
-                        <a href="?page={{ pagination.num_pages }}" class="pagination-btn last">Last &raquo;</a>
-                    {% else %}
-                        <span class="pagination-btn disabled">Next</span>
-                        <span class="pagination-btn disabled">Last &raquo;</span>
-                    {% endif %}
-                </div>
-            {% endif %}
+            <!-- Pagination will be populated dynamically -->
         </div>
     </div>
 </div>
