@@ -2581,53 +2581,136 @@ def get_candidate_details(request):
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})
 
+# @login_required
+# def search_jds(request):
+#     user_id = request.session.get('user_id', None)
+#     user_role = request.session.get('role', 'Guest')
+#     conn = DataOperations.get_db_connection()
+#     cursor = conn.cursor(dictionary=True)
+
+#     emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+#     jds = []
+
+#     # Implement search functionality
+#     search_query = request.GET.get('search', '').strip()
+
+#     SQL_QUERY = """
+#         SELECT 
+#             j.jd_id, j.jd_summary, c.company_name 
+#         FROM recruitment_jds j
+#         LEFT JOIN customers c ON j.company_id = c.company_id
+#     """
+#     params = []
+#     if user_role in ['Team_Lead', 'User']:
+#         SQL_QUERY += """
+#             LEFT JOIN teams t ON j.team_id = t.team_id
+#             LEFT JOIN team_members tm ON t.team_id = tm.team_id
+#             WHERE t.lead_emp_id=%s OR tm.emp_id=%s
+#         """
+#         params.extend([emp_id, emp_id])
+
+#     if search_query:
+#         query_filter = "j.jd_id LIKE %s OR j.jd_summary LIKE %s OR j.jd_description LIKE %s OR c.company_name LIKE %s"
+#         query = f"""
+#             {SQL_QUERY}
+#             WHERE {query_filter} AND j.jd_status='active'
+#             ORDER BY j.jd_id DESC
+#             LIMIT 10
+#         """
+#         params = [*params, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
+#         cursor.execute(query, (*params,))
+#     else:
+#         query = f"""
+#             {SQL_QUERY}
+#             WHERE j.jd_status='active'
+#             ORDER BY j.updated_at DESC
+#             LIMIT 10
+#         """
+#         cursor.execute(query, params)
+
+#     jds = cursor.fetchall()
+#     cursor.close()
+#     conn.close()
+#     return JsonResponse({'success': True, 'jds': jds})
+
 @login_required
 def search_jds(request):
     user_id = request.session.get('user_id', None)
     user_role = request.session.get('role', 'Guest')
+    search_query = request.GET.get('search', '').strip()
+    
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     emp_id = DataOperations.get_emp_id_from_user_id(user_id)
     jds = []
-
-    # Implement search functionality
-    search_query = request.GET.get('search', '').strip()
-
-    SQL_QUERY = """
+    
+    # --- 1. Base Query Structure ---
+    # Start with the SELECT and FROM clauses
+    SQL_SELECT_FROM = """
         SELECT 
             j.jd_id, j.jd_summary, c.company_name 
         FROM recruitment_jds j
         LEFT JOIN customers c ON j.company_id = c.company_id
     """
+    
+    # List to hold all WHERE conditions and parameters
+    where_conditions = []
     params = []
+    joins = []
+    
+    # --- 2. Role-Based Access Control (ACL) Filter ---
     if user_role in ['Team_Lead', 'User']:
-        SQL_QUERY += """
-            LEFT JOIN teams t ON j.team_id = t.team_id
-            LEFT JOIN team_members tm ON t.team_id = tm.team_id
-            WHERE t.lead_emp_id=%s OR tm.emp_id=%s
-        """
-        params.extend([emp_id, emp_id])
+        cursor.execute("""
+            SELECT 
+                team_id FROM team_members
+            WHERE emp_id=%s
+        """, (emp_id,))
+        teams = cursor.fetchall()
+        team_ids = [team['team_id'] for team in teams]
+        team_ids_placeholders = f"({', '.join(['%s'] * len(team_ids))})" if team_ids else "(NULL)"  # Handle case with no teams
 
+        # Add necessary JOINS for role-based filtering
+        joins.append("LEFT JOIN teams t ON j.team_id = t.team_id")
+        joins.append("LEFT JOIN team_members tm ON t.team_id = tm.team_id")
+        
+        # Add the WHERE condition for access control
+        where_conditions.append(f"(t.lead_emp_id=%s OR tm.emp_id=%s) AND j.team_id IN {team_ids_placeholders}")
+        params.extend([emp_id, emp_id, *team_ids])
+
+    # --- 3. Mandatory JD Status Filter ---
+    where_conditions.append("j.jd_status='active'")
+    # Note: No %s placeholder needed here as 'active' is a fixed string.
+
+    # --- 4. Optional Search Query Filter ---
     if search_query:
-        query_filter = "j.jd_id LIKE %s OR j.jd_summary LIKE %s OR j.jd_description LIKE %s OR c.company_name LIKE %s"
-        query = f"""
-            {SQL_QUERY}
-            WHERE {query_filter} AND j.jd_status='active'
-            ORDER BY j.jd_id DESC
-            LIMIT 10
-        """
-        params = [*params, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
-        cursor.execute(query, (*params,))
-    else:
-        cursor.execute(f"""
-            {SQL_QUERY}
-            WHERE j.jd_status='active'
-            ORDER BY j.updated_at DESC
-            LIMIT 10
-        """, params)
+        search_filter = "(j.jd_id LIKE %s OR j.jd_summary LIKE %s OR j.jd_description LIKE %s OR c.company_name LIKE %s)"
+        where_conditions.append(search_filter)
+        
+        search_term = f'%{search_query}%'
+        params.extend([search_term, search_term, search_term, search_term])
 
+    # --- 5. Final Query Construction ---
+    
+    # Combine JOINS and WHERE clauses
+    SQL_QUERY = SQL_SELECT_FROM + " " + " ".join(joins)
+    
+    # Join all conditions with AND and prepend the WHERE keyword
+    if where_conditions:
+        SQL_QUERY += " WHERE " + " AND ".join(where_conditions)
+    
+    # Add ORDER BY and LIMIT
+    if search_query:
+        # Order by jd_id when searching, as per original logic
+        SQL_QUERY += " ORDER BY j.jd_id DESC LIMIT 10"
+    else:
+        # Order by updated_at when not searching, as per original logic
+        SQL_QUERY += " ORDER BY j.updated_at DESC LIMIT 10"
+
+    # --- 6. Execution and Return ---
+    cursor.execute(SQL_QUERY, params)
     jds = cursor.fetchall()
+
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'jds': jds})
@@ -2774,6 +2857,818 @@ def api_candidates_pipeline(request):
         cursor.close()
         conn.close()
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# Action executions in take action popup
+
+@csrf_exempt
+@login_required
+def candidate_action_handler(request):
+    """
+    Main handler for candidate actions from the frontend.
+    Routes to appropriate action functions based on action type.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'}, status=405)
+    
+    try:
+        # Get session data
+        user_id = request.session.get('user_id', None)
+        user_email = request.session.get('email', None)
+        user_role = request.session.get('role', "Guest")
+        
+        # Parse request data
+        data = json.loads(request.body)
+        action = data.get('actionType')
+        candidate_id = data.get('candidate_id')
+        comment = data.get('actionComments', '').strip()
+        notify_status = data.get('notifyCandidate', False)
+
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+            
+        # Validate required fields
+        if not action or not candidate_id:
+            return JsonResponse({'success': False, 'error': 'Action type and candidate ID are required'}, status=400)
+
+        cursor.execute("""
+            SELECT candidate_id, hr_member_id 
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate = cursor.fetchone()
+
+        DataOperations.close_db_connection(conn, cursor)
+
+        if not candidate:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+        
+        if user_role in ["Team_Lead", "User"] and not user_id:
+            emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+            if not emp_id:
+                return JsonResponse({'success': False, 'error': 'Employee ID not found for the user'}, status=403)
+            
+            if emp_id != candidate['hr_member_id']:
+                return JsonResponse({'success': False, 'error': "You are not authorized to access this candidate"})
+        
+        # Route to appropriate action based on action type
+        if action == 'advance_stage':
+            # TODO: Call advance_to_next_stage method
+            return advanced_to_next_stage(request, candidate_id, comment, notify_status)
+            
+        elif action == 'reject':
+            rejection_reason = data.get('rejectionReason', '')
+            # TODO: Call reject_candidate method with rejection reason
+            return reject_candidate(request, candidate_id, rejection_reason, comment, notify_status)
+            
+        elif action == 'put_on_hold':
+            hold_reason = data.get('holdReason', '')
+            # TODO: Call put_candidate_on_hold method with hold reason
+            return put_candidate_on_hold(request, candidate_id, hold_reason, comment, notify_status)
+        elif action == 'back_to_previous_stage':
+            return back_to_previous_stage(request, candidate_id, comment)
+        elif action == 'schedule_interview':
+            interview_data = {
+                'interview_date': data.get('interviewDate'),
+                'interview_type': data.get('interviewType'),
+                'interview_level': data.get('interviewLevel'),
+                'interviewer': data.get('interviewer'),
+                'interviewer_email': data.get('interviewerEmail'),
+                'interview_link': data.get('interviewLink')
+            }
+            # TODO: Call schedule_interview_for_candidate method with interview data
+            return schedule_interview_for_candidate(request, candidate_id, interview_data)
+            
+        elif action == 'send_offer':
+            # TODO: Call send_offer_to_candidate method
+            return send_offer_to_candidate(request, candidate_id)
+            
+        elif action == 'withdraw_offer':
+            # TODO: Call withdraw_candidate_offer method
+            return withdraw_candidate_offer(request, candidate_id)
+            
+        elif action == 'mark_hired':
+            # TODO: Call mark_candidate_as_hired method
+            return mark_candidate_as_hired(request, candidate_id)
+            
+        elif action == 'mark_resigned':
+            # TODO: Call mark_candidate_as_resigned method
+            return mark_candidate_as_resigned(request, candidate_id)
+            
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown action type: {action}'}, status=400)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"candidate_action_handler -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500) 
+
+
+@login_required
+def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_status: bool):
+    """
+    Advances a candidate's stage status to 'selected' at the current level (Screening, L1, L2, or L3).
+    This function should only be called if the candidate is currently 'toBeScreened' at their last passed stage.
+    """
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    today = date.today().isoformat()
+    
+    try:
+        # 1. Determine current status and check for existing rejections/selections
+        # Fetch all relevant status columns in one query
+        cursor.execute("""
+            SELECT 
+                screen_status, l1_result, l2_result, l3_result, 
+                name, email, jd_id
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate_data = cursor.fetchone()
+
+        if not candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate data retrieval failed'}, status=500)
+
+        # 2. Validate if advancement is possible
+
+        # Check for rejection at any stage (prevents advancing a rejected candidate)
+        rejection_statuses = ['rejected', 'onHold']
+        if any(candidate_data[f'{level}_result'] in rejection_statuses for level in ['l1', 'l2', 'l3']):
+            return JsonResponse({'success': False, 'error': 'Cannot advance: Candidate is already rejected or on hold at a previous level.'}, status=400)
+        if candidate_data['screen_status'] in rejection_statuses:
+             return JsonResponse({'success': False, 'error': 'Cannot advance: Candidate is already rejected or on hold at the screening level.'}, status=400)
+
+        # Determine the stage to update
+        update_column = None
+        date_column = None
+        comment_column = None
+        new_status = 'selected'
+        stage_name = ""
+
+        # Logic to find the FIRST status that is NOT 'selected'
+        if candidate_data['screen_status'] != 'selected':
+            update_column = 'screen_status'
+            date_column = 'screened_on'
+            comment_column = 'screened_remarks'
+            stage_name = "Screening"
+        elif candidate_data['l1_result'] != 'selected':
+            update_column = 'l1_result'
+            date_column = 'l1_date'
+            comment_column = 'l1_comments'
+            stage_name = "L1 Interview"
+        elif candidate_data['l2_result'] != 'selected':
+            update_column = 'l2_result'
+            date_column = 'l2_date'
+            comment_column = 'l2_comments'
+            stage_name = "L2 Interview"
+        elif candidate_data['l3_result'] != 'selected':
+            update_column = 'l3_result'
+            date_column = 'l3_date'
+            comment_column = 'l3_comments'
+            stage_name = "L3 Interview"
+        else:
+            # Candidate is already selected at L3
+            return JsonResponse({'success': False, 'error': 'Candidate is already fully selected (L3) and cannot be advanced further.'}, status=400)
+            
+        
+        # 3. Update candidate status, date, and comments for the determined stage
+
+        # We must verify the current status before advancing
+        current_status = candidate_data.get(update_column)
+        if current_status != 'toBeScreened':
+             return JsonResponse({'success': False, 'error': f'Candidate is currently set to "{current_status}" at the {stage_name} stage and cannot be automatically advanced. Must be "toBeScreened"'}, status=400)
+
+
+        # Dynamic SQL update based on the determined stage
+        update_query = f"""
+            UPDATE candidates 
+            SET 
+                {update_column}=%s, 
+                {date_column}=%s, 
+                {comment_column}=%s,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE candidate_id=%s
+        """
+        update_params = [new_status, today, comment, candidate_id]
+        
+        cursor.execute(update_query, tuple(update_params))
+        conn.commit()
+
+        # 4. Notify candidate if required (TODO)
+        if notify_status:
+            # TODO: Implement robust email notification logic here.
+            # Example: send_notification_email(candidate_data['email'], stage_name, new_status)
+            pass
+
+        # Log activity
+        # TODO: Add logic to insert a record into candidate_activities table.
+        # activity_comment = f"Advanced to next stage: {stage_name} marked as {new_status}"
+        # DataOperations.log_candidate_activity(candidate_id, user_id, 'ADVANCE', activity_comment)
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Candidate {candidate_id} successfully advanced. {stage_name} marked as "{new_status}".',
+            'new_status_field': update_column,
+            'new_status_value': new_status
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"advanced_to_next_stage -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Database or internal server error during advancement'}, status=500)
+        
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+
+# def advanced_to_next_stage(request, candidate_id, comment=None, notify_candidate=False):
+#     """
+
+#     """
+#     conn = DataOperations.get_db_connection()
+#     cursor = conn.cursor(dictionary=True)
+#     # TODO: Implement advancing to the next stage logic
+#     # - Determine current stage
+#     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
+#     candidate = cursor.fetchone()
+#     if not candidate:
+#         DataOperations.close_db_connection(conn, cursor)
+#         return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+#     current_stage = {
+#         'screen_status': candidate['screen_status'],
+#         'l1_result': candidate['l1_result'],
+#         'l2_result': candidate['l2_result'],
+#         'l3_result': candidate['l3_result'],
+#         'offer_status': candidate['offer_status']
+#     }
+    
+
+#     # - Validate if advancement is possible
+#     anywhere_rejected = current_stage['screen_status'] == 'rejected' or \
+#         current_stage['l1_result'] == 'rejected' or \
+#         current_stage['l2_result'] == 'rejected' or \
+#         current_stage['l3_result'] == 'rejected'
+
+#     if anywhere_rejected:
+#         DataOperations.close_db_connection(conn, cursor)
+#         return JsonResponse({'success': False, 'error': 'Cannot advance candidate who has been rejected in any stage'}, status=400)
+    
+#     if current_stage['l3_result'] == 'selected':
+#         DataOperations.close_db_connection(conn, cursor)
+#         return JsonResponse({'success': False, 'error': 'Cannot advance candidate who is at last stage'}, status=400)
+
+#     # - Get last completed stage
+#     last_completed_stage = None
+#     next_stage = None
+#     if current_stage['l3_result'] in ['selected', 'rejected']:
+#         last_completed_stage = 'l3'
+#         next_stage = None
+
+#     elif current_stage['l2_result'] in ['selected', 'rejected']:
+#         last_completed_stage = 'l2'
+#         next_stage = 'l3'
+#     elif current_stage['l1_result'] in ['selected', 'rejected']:
+#         last_completed_stage = 'l1'
+#         next_stage = 'l2'
+#     elif current_stage['screen_status'] == 'selected':
+#         last_completed_stage = 'screen'
+#         next_stage = 'l1'
+#     else:
+#         last_completed_stage=None
+#         next_stage = 'screen'
+
+#     # - Update candidate status
+#     if next_stage == 'screen':
+#         screen_status = 'selected'
+#         screen_remarks = comment
+#         screened_on = datetime.now().date().format('%Y-%m-%d')
+#         cursor.execute("""
+#             UPDATE candidates
+#             SET screen_status=%s,
+#                 screened_remarks=%s,
+#                 screened_on=%s,
+#                 updated_at=NOW()
+#             WHERE candidate_id=%s
+#         """, (screen_status, screen_remarks, screened_on, candidate_id))
+    
+#     elif next_stage=='l1':
+#         l1_result = 'selected'
+#         l1_remarks = comment
+#         l1_interviewed_on = datetime.now().date().format('%Y-%m-%d')
+#         cursor.execute("""
+#             UPDATE candidates
+#             SET l1_result=%s,
+#                 l2_comments=%s,
+#                 l1_date=%s,
+#                 updated_at=NOW()
+#             WHERE candidate_id=%s
+#         """, (l1_result, l1_remarks, l1_interviewed_on, candidate_id))
+
+#     # - Add comments if provided
+#     # - Update candidate Mustor
+#     # - Notify candidate if required
+#     return JsonResponse({'success': True, 'message': 'Advanced to next stage successfully.'})
+
+@login_required
+def reject_candidate(request, candidate_id: int, rejection_reason: str = None, comment: str = None, notify_candidate: bool = False):
+    """
+    Rejects a candidate at their current stage (Screening, L1, L2, or L3).
+    The stage rejected is the first one that is NOT 'selected'.
+    """
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    today = date.today().isoformat()
+    
+    # Combined comment/reason for the DB remarks column
+    full_comment = f"REASON: {rejection_reason.strip()}"
+    if comment and comment.strip():
+        full_comment += f" | REMARKS: {comment.strip()}"
+
+    try:
+        # 1. Determine current status (and fetch data for notification/logging)
+        cursor.execute("""
+            SELECT 
+                screen_status, l1_result, l2_result, l3_result, 
+                name, email, jd_id
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate_data = cursor.fetchone()
+
+        if not candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate data retrieval failed or candidate not found'}, status=404)
+
+        # 2. Validate if rejection is not possible
+
+        # Check 1: Fully Selected
+        if candidate_data['l3_result'] == 'selected':
+            return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already fully selected (L3) and moved to the final stage.'}, status=400)
+
+        # Check 2: Already Rejected/On Hold (at any stage, as per user request)
+        rejection_statuses = ['rejected']
+        if any(candidate_data[f'{level}_result'] in rejection_statuses for level in ['l1', 'l2', 'l3']):
+            return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already formally rejected at a previous level.'}, status=400)
+        if candidate_data['screen_status'] in rejection_statuses:
+             return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already formally rejected at the screening level.'}, status=400)
+
+        
+        # Determine the stage to update (The first stage that is NOT 'selected')
+        update_column = None
+        date_column = None
+        remarks_column = None
+        stage_name = ""
+        
+        # Determine the earliest possible stage that hasn't been successfully passed
+        if candidate_data['screen_status'] != 'selected':
+            update_column = 'screen_status'
+            date_column = 'screened_on'
+            remarks_column = 'screened_remarks'
+            stage_name = "Screening"
+        elif candidate_data['l1_result'] != 'selected':
+            update_column = 'l1_result'
+            date_column = 'l1_date'
+            remarks_column = 'l1_comments'
+            stage_name = "L1 Interview"
+        elif candidate_data['l2_result'] != 'selected':
+            update_column = 'l2_result'
+            date_column = 'l2_date'
+            remarks_column = 'l2_comments'
+            stage_name = "L2 Interview"
+        elif candidate_data['l3_result'] != 'selected':
+            update_column = 'l3_result'
+            date_column = 'l3_date'
+            remarks_column = 'l3_comments'
+            stage_name = "L3 Interview"
+        
+        # This condition is technically redundant due to Check 1, but kept for clarity
+        if not update_column:
+             return JsonResponse({'success': False, 'error': 'Candidate status is ambiguous or fully selected.'}, status=400)
+
+
+        # 4. Validate member rejection reason
+        if not rejection_reason or not rejection_reason.strip():
+            return JsonResponse({'success': False, 'error': 'Rejection reason must be provided to reject the candidate.'}, status=400)
+
+        
+        # 5. Update candidate status, date, and remarks
+        new_status = 'rejected'
+        
+        update_query = f"""
+            UPDATE candidates 
+            SET 
+                {update_column}=%s, 
+                {date_column}=%s, 
+                {remarks_column}=%s,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE candidate_id=%s
+        """
+        update_params = [new_status, today, full_comment, candidate_id]
+        
+        cursor.execute(update_query, tuple(update_params))
+        conn.commit()
+
+        # 6. Notify candidate if required (TODO)
+        if notify_candidate:
+            # TODO: Implement robust email notification logic here using
+            # candidate_data['name'] and candidate_data['email'].
+            # Example: send_notification_email(candidate_data['email'], stage_name, new_status, full_comment)
+            pass
+
+        # Log activity
+        # TODO: Add logic to insert a record into candidate_activities table.
+        # activity_comment = f"Rejected at {stage_name}. Reason: {rejection_reason}"
+        # DataOperations.log_candidate_activity(candidate_id, request.session.get('user_id'), 'REJECTED', activity_comment)
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Candidate {candidate_id} successfully rejected. {stage_name} marked as "{new_status}".',
+            'rejected_stage': stage_name
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"reject_candidate -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Database or internal server error during rejection process'}, status=500)
+        
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+
+# def reject_candidate(request, candidate_id, rejection_reason=None, comment=None, notify_candidate=False):
+#     """
+
+#     """
+#     # TODO: Implement rejection logic
+#     # - Check current candidate status
+#     # - Validate rejection reason
+#     # - Update candidate status to rejected
+#     # - Record rejection reason and comments
+#     # - Notify candidate if required
+
+#     return JsonResponse({'success': True, 'message': 'Candidate rejected successfully.'})
+
+@login_required
+def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, comment: str = None, notify_candidate: bool = False):
+    """
+    Puts a candidate on hold at their current stage (Screening, L1, L2, or L3).
+    The status is updated to 'onHold' at the earliest stage that is NOT 'selected'.
+    """
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    today = date.today().isoformat()
+    
+    # Combined comment/reason for the DB remarks column
+    full_comment = f"HOLD REASON: {hold_reason.strip()}"
+    if comment and comment.strip():
+        full_comment += f" | REMARKS: {comment.strip()}"
+
+    try:
+        # 1. Determine current status (and fetch data for logging)
+        cursor.execute("""
+            SELECT 
+                screen_status, l1_result, l2_result, l3_result, 
+                name, email, jd_id
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate_data = cursor.fetchone()
+
+        if not candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate data retrieval failed or candidate not found'}, status=404)
+
+        # 2. Validate if status change is possible
+        
+        # Check 1: Fully Selected (cannot put on hold if they've passed all interviews)
+        if candidate_data['l3_result'] == 'selected':
+            return JsonResponse({'success': False, 'error': 'Cannot put on hold: Candidate is already fully selected (L3).'}, status=400)
+
+        # Check 2: Already Rejected (rejected is usually final; should not be changed to 'onHold')
+        rejection_statuses = ['rejected']
+        if any(candidate_data[f'{level}_result'] in rejection_statuses for level in ['l1', 'l2', 'l3']):
+            return JsonResponse({'success': False, 'error': 'Cannot put on hold: Candidate is already formally rejected at a previous level.'}, status=400)
+        if candidate_data['screen_status'] in rejection_statuses:
+             return JsonResponse({'success': False, 'error': 'Cannot put on hold: Candidate is already formally rejected at the screening level.'}, status=400)
+
+        
+        # Determine the stage to update (The first stage that is NOT 'selected')
+        update_column = None
+        date_column = None
+        remarks_column = None
+        stage_name = ""
+        
+        # Determine the earliest possible stage that hasn't been successfully passed
+        if candidate_data['screen_status'] != 'selected':
+            update_column = 'screen_status'
+            date_column = 'screened_on'
+            remarks_column = 'screened_remarks'
+            stage_name = "Screening"
+        elif candidate_data['l1_result'] != 'selected':
+            update_column = 'l1_result'
+            date_column = 'l1_date'
+            remarks_column = 'l1_comments'
+            stage_name = "L1 Interview"
+        elif candidate_data['l2_result'] != 'selected':
+            update_column = 'l2_result'
+            date_column = 'l2_date'
+            remarks_column = 'l2_comments'
+            stage_name = "L2 Interview"
+        elif candidate_data['l3_result'] != 'selected':
+            update_column = 'l3_result'
+            date_column = 'l3_date'
+            remarks_column = 'l3_comments'
+            stage_name = "L3 Interview"
+        
+        if not update_column:
+             return JsonResponse({'success': False, 'error': 'Candidate status is ambiguous or fully selected.'}, status=400)
+
+
+        # 4. Validate the hold reason (must not be blank)
+        if not hold_reason or not hold_reason.strip():
+            return JsonResponse({'success': False, 'error': 'Hold reason must be provided to put the candidate on hold.'}, status=400)
+
+        
+        # 5. Update candidate status, date, and remarks
+        new_status = 'onHold'
+        
+        update_query = f"""
+            UPDATE candidates 
+            SET 
+                {update_column}=%s, 
+                {date_column}=%s, 
+                {remarks_column}=%s,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE candidate_id=%s
+        """
+        update_params = [new_status, today, full_comment, candidate_id]
+        
+        cursor.execute(update_query, tuple(update_params))
+        conn.commit()
+
+        # 6. Notify candidate if required (TODO)
+        if notify_candidate:
+            # TODO: Implement robust email notification logic here using
+            # candidate_data['name'] and candidate_data['email'].
+            # Example: send_notification_email(candidate_data['email'], stage_name, new_status, full_comment)
+            pass
+
+        # Log activity
+        # TODO: Add logic to insert a record into candidate_activities table.
+        # activity_comment = f"Put on hold at {stage_name}. Reason: {hold_reason}"
+        # DataOperations.log_candidate_activity(candidate_id, request.session.get('user_id'), 'ON_HOLD', activity_comment)
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Candidate {candidate_id} successfully put on hold. {stage_name} marked as "{new_status}".',
+            'held_stage': stage_name
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"put_candidate_on_hold -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Database or internal server error during hold process'}, status=500)
+        
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+
+# def put_candidate_on_hold(request, candidate_id, hold_reason=None, comment=None, notify_candidate=False):
+    """
+
+    """
+    # TODO: Implement putting candidate on hold logic
+    # - Check current candidate status
+    # - Validate hold reason
+    # - Update candidate status to on hold
+    # - Record hold reason and comments
+    # - Notify candidate if required
+
+    return JsonResponse({'success': True, 'message': 'Candidate put on hold successfully.'})
+
+@login_required
+def back_to_previous_stage(request, candidate_id: int, comment: str):
+    """
+    Reverts the candidate's last recorded stage (anything other than 'toBeScreened') 
+    back to 'toBeScreened'. Useful for re-activating rejected or on-hold candidates.
+    """
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    user_id = request.session.get('user_id', 'SYSTEM')
+
+    try:
+        # 1. Fetch current statuses and recruiter comments
+        cursor.execute("""
+            SELECT 
+                screen_status, l1_result, l2_result, l3_result, recruiter_comments
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate_data = cursor.fetchone()
+
+        if not candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+
+        # 2. Determine the LAST stage that is NOT 'toBeScreened'
+        update_column = None
+        date_column = None
+        comments_column = None
+        stage_name = ""
+        
+        stages = [
+            ('l3', 'l3_result', 'l3_date', 'l3_comments', "L3 Interview"),
+            ('l2', 'l2_result', 'l2_date', 'l2_comments', "L2 Interview"),
+            ('l1', 'l1_result', 'l1_date', 'l1_comments', "L1 Interview"),
+            ('screen', 'screen_status', 'screened_on', 'screened_remarks', "Screening"),
+        ]
+        
+        # Iterate in reverse order (L3 -> Screening) to find the LAST successful/recorded status
+        for key, status_col, date_col, comments_col, name in stages:
+            status_value = candidate_data.get(status_col)
+            if status_value and status_value != 'toBeScreened':
+                update_column = status_col
+                date_column = date_col
+                comments_column = comments_col
+                stage_name = name
+                # Found the last active stage, break the loop
+                break
+        
+        if not update_column:
+            return JsonResponse({'success': False, 'error': 'Cannot revert: Candidate is already at the initial "toBeScreened" state or status is ambiguous.'}, status=400)
+
+        
+        # Prepare the update
+        new_status = 'toBeScreened'
+        
+        # Append the reason for rollback to the general recruiter_comments field
+        new_recruiter_comment = f"\n[ROLLBACK on {date.today().isoformat()} by {user_id}]: Resetting {stage_name} from '{candidate_data.get(update_column)}' to '{new_status}'. Reason: {comment.strip()}"
+        
+        # 3. Update candidate status (resetting the status, date, and comments for that specific stage)
+        update_query = f"""
+            UPDATE candidates 
+            SET 
+                {update_column}=%s, 
+                {date_column}=NULL, 
+                {comments_column}=NULL,
+                recruiter_comments=CONCAT(COALESCE(recruiter_comments, ''), %s),
+                updated_at=CURRENT_TIMESTAMP
+            WHERE candidate_id=%s
+        """
+        update_params = [new_status, new_recruiter_comment, candidate_id]
+        
+        cursor.execute(update_query, tuple(update_params))
+        conn.commit()
+
+        # We are explicitly not notifying the candidate as per instruction.
+
+        # Log activity
+        # TODO: Add logic to insert a record into candidate_activities table.
+        # activity_comment = f"Reverted {stage_name} status from '{candidate_data.get(update_column)}' to '{new_status}'. Reason: {comment}"
+        # DataOperations.log_candidate_activity(candidate_id, user_id, 'REVERT', activity_comment)
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Candidate {candidate_id} successfully reverted. {stage_name} reset to "{new_status}".',
+            'reverted_stage': stage_name
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"back_to_previous_stage -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Database or internal server error during stage reversion process'}, status=500)
+        
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+@login_required
+def schedule_interview_for_candidate(request, candidate_id, interview_data, **kwargs):
+    """
+    Schedule an interview for a specific candidate with provided interview details.
+    """
+    # Extract interview details from the provided data
+    # TODO: Implement interview scheduling logic
+    # - Validate interview data
+    # - Save interview details to database
+    # - Send email notifications if required
+    # - Update candidate status
+    return JsonResponse({'success': True, 'message': 'Interview scheduled successfully.'})
+
+@login_required
+def send_offer_to_candidate(request, candidate_id):
+    """
+    Send offer to a candidate.
+    """
+    # TODO: Implement offer sending logic
+    # - Generate offer letter
+    # - Update candidate offer status
+    # - Send offer email to candidate
+    # - Notify relevant team members
+    return JsonResponse({'success': True, 'message': 'Offer sent successfully.'})
+
+@login_required
+def withdraw_candidate_offer(request, candidate_id: int, comment: str = None, notify_candidate: bool = False):
+    """
+    Withdraw an existing offer for a candidate.
+    Sets offer_status to 'declined' and records the reason in recruiter_comments.
+    
+    :param notify_candidate: If True, triggers a notification to the candidate.
+    """
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    user_id = request.session.get('user_id', 'SYSTEM')
+
+    # Construct the final comment for recruiter_comments
+    final_comment = f"\n[OFFER WITHDRAWAL on {date.today().isoformat()} by {user_id}]: Cause: Offer Withdrawn by us | Remarks: {comment.strip()}" if comment and comment.strip() else f"\n[OFFER WITHDRAWAL on {date.today().isoformat()} by {user_id}]: Cause: Offer Withdrawn by us | Remarks: No additional comments"
+
+    try:
+        # 1. Fetch current status and validate if the candidate is in the offering stage
+        cursor.execute("""
+            SELECT 
+                l3_result, offer_status, name, email
+            FROM candidates
+            WHERE candidate_id=%s
+        """, (candidate_id,))
+        candidate_data = cursor.fetchone()
+
+        if not candidate_data:
+            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+
+        # Basic validation: Check if they passed L3 (were 'selected')
+        if candidate_data['l3_result'] != 'selected':
+             return JsonResponse({'success': False, 'error': f'Cannot withdraw offer: Candidate has not successfully passed L3 (current L3 status: {candidate_data["l3_result"]}).'}, status=400)
+             
+        # Optional validation: Check if offer status is already set to declined/withdrawn
+        # Note: 'declined' is used for both candidate-declined and recruiter-withdrawn offers
+        if candidate_data['offer_status'] in ['declined', 'hired']:
+             return JsonResponse({'success': False, 'error': f'Offer is already in a final state: {candidate_data["offer_status"]}.'}, status=400)
+
+        # 2. Update candidate status
+        new_offer_status = 'declined'
+        
+        update_query = """
+            UPDATE candidates 
+            SET 
+                offer_status=%s, 
+                recruiter_comments=CONCAT(COALESCE(recruiter_comments, ''), %s),
+                updated_at=CURRENT_TIMESTAMP
+            WHERE candidate_id=%s
+        """
+        update_params = [new_offer_status, final_comment, candidate_id]
+        
+        cursor.execute(update_query, tuple(update_params))
+        conn.commit()
+
+        # 3. Handle notification
+        if notify_candidate:
+            # TODO: Implement robust email notification logic here using
+            # candidate_data['name'] and candidate_data['email'].
+            # Example: send_withdrawal_email(candidate_data['email'])
+            pass
+        
+        # Log activity
+        # TODO: Add logic to insert a record into candidate_activities table.
+        # activity_comment = f"Offer withdrawn by recruiter. Reason: {comment}"
+        # DataOperations.log_candidate_activity(candidate_id, user_id, 'OFFER_WITHDRAWN', activity_comment)
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Offer for Candidate {candidate_id} successfully withdrawn.',
+            'new_offer_status': new_offer_status
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"withdraw_candidate_offer -> Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Database or internal server error during offer withdrawal process'}, status=500)
+        
+    finally:
+        DataOperations.close_db_connection(conn, cursor)
+
+@login_required
+def mark_candidate_as_hired(request, candidate_id):
+    """
+    Mark a candidate as hired.
+    """
+    # TODO: Implement hired marking logic
+    # - Update candidate status to hired
+    # - Move candidate to hired candidates table
+    # - Send welcome email
+    # - Notify HR and relevant teams
+    return JsonResponse({'success': True, 'message': 'Candidate marked as hired successfully.'})
+
+@login_required
+def mark_candidate_as_resigned(request, candidate_id):
+    """
+    Mark a candidate as resigned.
+    """
+    # TODO: Implement resignation marking logic
+    # - Update candidate status to resigned
+    # - Record resignation date and reason
+    # - Notify relevant teams
+    # - Update reporting systems
+    return JsonResponse({'success': True, 'message': 'Candidate marked as resigned successfully.'})
 
 def schedule_interviews_page(request):
     """
@@ -3717,6 +4612,7 @@ def add_candidate_activity(request):
     activity_type = data.get('activity_type')
     activity_title =  data.get('activity_title', 'Untitled Activity').strip()
     notes = data.get('notes', '').strip()
+    priority = data.get('priority', 'medium').strip().lower()
 
     if not candidate_id or not candidate_id.isdigit():
         return JsonResponse({'success': False, 'error': 'Invalid candidate ID'}, status=400)

@@ -120,6 +120,7 @@ urlpatterns = [
     # candidate muster and details urls
     path("candidate_pipeline/", views.candidate_pipeline_page, name="candidate_pipeline"),
     path("api/candidate_pipeline/", views.api_candidates_pipeline, name="api_candidates_pipeline"),
+    path("api/candidate_action/", views.candidate_action_handler, name="candidate_action_handler"),
     path("candidate_musters/", views.candidate_muster_page, name="candidate_muster"),
     path("get_team_members/<str:team_id>/", views.get_members_from_team_id, name="candidate_muster_data"),
     path("get_candidate_suggestions/<str:query>/", views.candidate_suggestions_for_muster, name="get_candidate_suggestions_for_muster"),

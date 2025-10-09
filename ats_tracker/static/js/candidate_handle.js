@@ -757,58 +757,52 @@ function handleTakeAction() {
     const formData = new FormData(document.getElementById('takeActionForm'));
     const actionData = {
         candidate_id: currentCandidateId,
-        action_type: formData.get('actionType'),
-        comments: formData.get('actionComments'),
-        notify_candidate: formData.get('notifyCandidate') === 'on'
+        actionType: formData.get('actionType'),
+        actionComments: formData.get('actionComments'),
+        notifyCandidate: formData.get('notifyCandidate') === 'on'
     };
     
     // Add specific fields based on action type
     const actionType = formData.get('actionType');
     if (actionType === 'reject') {
-        actionData.rejection_reason = formData.get('rejectionReason');
+        actionData.rejectionReason = formData.get('rejectionReason');
     } else if (actionType === 'put_on_hold') {
-        actionData.hold_reason = formData.get('holdReason');
+        actionData.holdReason = formData.get('holdReason');
     } else if (actionType === 'schedule_interview') {
-        actionData.interview_date = formData.get('interviewDate');
-        actionData.interview_type = formData.get('interviewType');
+        actionData.interviewDate = formData.get('interviewDate');
+        actionData.interviewType = formData.get('interviewType');
+        actionData.interviewLevel = formData.get('interviewLevel');
         actionData.interviewer = formData.get('interviewer');
+        actionData.interviewerEmail = formData.get('interviewerEmail');
+        actionData.interviewLink = formData.get('interviewLink');
     }
     
     console.log('Taking action:', actionData);
     
-    // TODO: Send to backend
-    // fetch('/api/take_action/', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json',
-    //         'X-CSRFToken': getCsrfToken()
-    //     },
-    //     body: JSON.stringify(actionData)
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     if (data.success) {
-    //         showNotification('Action executed successfully!', 'success');
-    //         closeTakeActionModal();
-    //         // Refresh candidates list
-    //         filterCandidates();
-    //     } else {
-    //         showNotification('Failed to execute action: ' + data.error, 'error');
-    //     }
-    // })
-    // .catch(error => {
-    //     console.error('Error:', error);
-    //     showNotification('An error occurred while executing the action', 'error');
-    // });
-    
-    // For demo purposes
-    alert('Action executed successfully!\n\nAction: ' + actionData.action_type + '\nComments: ' + actionData.comments);
-    closeTakeActionModal();
-    
-    // Simulate refresh
-    setTimeout(() => {
-        filterCandidates();
-    }, 500);
+    // Send to backend
+    fetch('/api/candidate_action/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(actionData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Action executed successfully!', 'success');
+            closeTakeActionModal();
+            // Refresh candidates list
+            filterCandidates();
+        } else {
+            showNotification('Failed to execute action: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while executing the action', 'error');
+    });
 }
 
 function handleActionTypeChange(actionType) {

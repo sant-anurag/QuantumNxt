@@ -177,10 +177,12 @@
                         <option value="advance_stage">Advance to Next Stage</option>
                         <option value="reject">Reject Candidate</option>
                         <option value="put_on_hold">Put on Hold</option>
+                        <option value="back_to_previous_stage">Back to Previous Stage</option>
                         <option value="schedule_interview">Schedule Interview</option>
                         <option value="send_offer">Send Offer</option>
                         <option value="withdraw_offer">Withdraw Offer</option>
                         <option value="mark_hired">Mark as Hired</option>
+                        <option value="mark_resigned">Mark as Resigned</option>
                     </select>
                 </div>
                 
@@ -224,8 +226,22 @@
                         <option value="technical">Technical Assessment</option>
                     </select>
                     
+                    <label for="interviewLevel">Interview Level</label>
+                    <select id="interviewLevel" name="interviewLevel">
+                        <option value="">Select level</option>
+                        <option value="l1">L1 - Initial Screening</option>
+                        <option value="l2">L2 - Technical Interview</option>
+                        <option value="l3">L3 - Final Interview</option>
+                    </select>
+                    
                     <label for="interviewer">Interviewer</label>
                     <input type="text" id="interviewer" name="interviewer" placeholder="Enter interviewer name">
+                    
+                    <label for="interviewerEmail">Interviewer Email</label>
+                    <input type="email" id="interviewerEmail" name="interviewerEmail" placeholder="Enter interviewer email">
+                    
+                    <label for="interviewLink">Interview Link</label>
+                    <input type="text" id="interviewLink" name="interviewLink" placeholder="Enter interview link (Zoom, Teams, etc.)">
                 </div>
                 
                 <div class="form-group">
