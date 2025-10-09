@@ -2835,7 +2835,8 @@ def api_candidates_pipeline(request):
                 'l3_result': candidate['l3_result'],
                 'offer_status': candidate['offer_status'],
                 'jd_id': candidate['jd_id'],
-                'resume_filename': candidate['resume_filename']
+                'resume_filename': candidate['resume_filename'],
+                'resume_id': candidate['resume_id'],
             })
         
         cursor.close()
