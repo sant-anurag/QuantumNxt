@@ -2017,12 +2017,7 @@ def upload_resume(request):
             """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
 
             resume_id = cursor.lastrowid
-            # inclease the total_profiles count for the JD
-            cursor.execute("""
-                UPDATE recruitment_jds
-                SET total_profiles = total_profiles + 1
-                WHERE jd_id = %s
-            """, (jd_id,))
+
             conn.commit()
             return JsonResponse({'success': True, 'resume_id': resume_id})
 
@@ -2980,7 +2975,7 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
         # Fetch all relevant status columns in one query
         cursor.execute("""
             SELECT 
-                screen_status, l1_result, l2_result, l3_result, 
+                screen_status, l1_result, l2_result, l3_result, offer_status,
                 name, email, jd_id
             FROM candidates
             WHERE candidate_id=%s
@@ -3051,8 +3046,20 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
             WHERE candidate_id=%s
         """
         update_params = [new_status, today, comment, candidate_id]
-        
         cursor.execute(update_query, tuple(update_params))
+
+        # handle jd counts
+        previous_data = candidate_data.copy()
+        current_data = previous_data.copy()
+        current_data[update_column] = new_status
+        current_data[date_column] = today
+        current_data[comment_column] = comment
+
+        check = DataOperations.update_recruitment_jds(cursor, previous_data, current_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
         conn.commit()
 
         # 4. Notify candidate if required (TODO)
@@ -3191,7 +3198,7 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         cursor.execute("""
             SELECT 
                 screen_status, l1_result, l2_result, l3_result, 
-                name, email, jd_id
+                offer_status, name, email, jd_id
             FROM candidates
             WHERE candidate_id=%s
         """, (candidate_id,))
@@ -3267,6 +3274,17 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         update_params = [new_status, today, full_comment, candidate_id]
         
         cursor.execute(update_query, tuple(update_params))
+
+        # handle jd counts
+        previous_data = candidate_data.copy()
+        current_data = previous_data.copy()
+        current_data[update_column] = new_status
+        current_data[date_column] = today
+        current_data[remarks_column] = full_comment
+        check = DataOperations.update_recruitment_jds(cursor, previous_data, current_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
         conn.commit()
 
         # 6. Notify candidate if required (TODO)
@@ -3405,6 +3423,17 @@ def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, c
         update_params = [new_status, today, full_comment, candidate_id]
         
         cursor.execute(update_query, tuple(update_params))
+
+        # handle jd counts
+        previous_data = candidate_data.copy()
+        current_data = previous_data.copy()
+        current_data[update_column] = new_status
+        current_data[date_column] = today
+        current_data[remarks_column] = full_comment
+        check = DataOperations.update_recruitment_jds(cursor, previous_data, current_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
         conn.commit()
 
         # 6. Notify candidate if required (TODO)
@@ -3462,7 +3491,8 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
         # 1. Fetch current statuses and recruiter comments
         cursor.execute("""
             SELECT 
-                screen_status, l1_result, l2_result, l3_result, recruiter_comments
+                screen_status, l1_result, l2_result, l3_result, recruiter_comments, offer_status,
+                name, email, jd_id
             FROM candidates
             WHERE candidate_id=%s
         """, (candidate_id,))
@@ -3497,7 +3527,11 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
         
         if not update_column:
             return JsonResponse({'success': False, 'error': 'Cannot revert: Candidate is already at the initial "toBeScreened" state or status is ambiguous.'}, status=400)
-
+        if update_column == 'l3_result' and candidate_data.get('offer_status') == 'hired':
+            return JsonResponse({'success': False, 'error': 'Cannot revert: Candidate has already been hired after L3.'}, status=400)
+        # if user is not screened yet
+        if update_column == 'screen_status' and candidate_data.get('screen_status') == 'toBeScreened':
+            return JsonResponse({'success': False, 'error': 'Cannot revert: Candidate is already at the initial "toBeScreened" state.'}, status=400)
         
         # Prepare the update
         new_status = 'toBeScreened'
@@ -3519,6 +3553,17 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
         update_params = [new_status, new_recruiter_comment, candidate_id]
         
         cursor.execute(update_query, tuple(update_params))
+        # handle jd counts
+        previous_data = candidate_data.copy()
+        current_data = previous_data.copy()
+        current_data[update_column] = new_status
+        current_data[date_column] = None
+        current_data[comments_column] = None
+        check = DataOperations.update_recruitment_jds(cursor, previous_data, current_data)
+        if not check:
+            conn.rollback()
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
         conn.commit()
 
         # We are explicitly not notifying the candidate as per instruction.

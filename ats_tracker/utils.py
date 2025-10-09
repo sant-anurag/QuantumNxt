@@ -134,8 +134,8 @@ class DataOperations:
         conn.close()
         return jds
     
-    @staticmethod
-    def update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data):
+    # @staticmethod
+    # def update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data):
         """
         Checks for status changes in a candidate profile and updates the
         corresponding JD's progress counts in the recruitment_jds table.
@@ -245,38 +245,140 @@ class DataOperations:
                 print(f"Error updating recruitment_jds: {err}")
                 return False
         return True
+    # Helper to determine the single category of a candidate (based on your definitions)
+    def _get_candidate_category(data: dict) -> str:
+        """Determines the single, final category for a candidate based on their statuses."""
+        
+        # 1. Hired (Highest Priority based on 'profiles_completed' definition)
+        if data.get('offer_status') == 'accepted':
+            return 'completed'
+        
+        # 2. Rejected (Second Highest Priority)
+        rejection_statuses = ['rejected', 'declined']
+        if any(data.get(f'{level}_result') == 'rejected' for level in ['screen', 'l1', 'l2', 'l3']):
+            return 'rejected'
+        if data.get('offer_status') == 'declined':
+            return 'rejected'
+
+        # 3. Selected (Post L3, Pre-Offer Acceptance)
+        if data.get('l3_result') == 'selected':
+            return 'selected'
+        
+        # 4. On Hold
+        if any(data.get(f'{level}_result') == 'onHold' for level in ['screen', 'l1', 'l2', 'l3']):
+            return 'on_hold'
+            
+        # 5. In Progress
+        # A candidate is in progress if selected at screening but L3 is not yet done/selected.
+        if data.get('screen_status') == 'selected' and data.get('l3_result') == 'toBeScreened':
+            return 'in_progress'
+
+        # 6. Default/New (Not tracked by the counters, but helps for tracking logic)
+        return 'new'
 
     @staticmethod
-    def get_team_lead_teams(user_id):
-        conn = DataOperations.get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT team_id 
-            FROM teams 
-            WHERE lead_emp_id = (
-                SELECT emp_id 
-                FROM hr_team_members 
-                WHERE email = (SELECT email FROM users WHERE user_id=%s)
-            )
-        """, (user_id,))
-        results = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return [row['team_id'] for row in results] if results else []
+    def update_recruitment_jds(cursor, previous_candidate_data, current_candidate_data):
+        """
+        Checks for a candidate's status change and updates the corresponding JD's 
+        progress counts based on the defined categories.
+        """
+        jd_id = current_candidate_data.get("jd_id")
+        
+        if not jd_id:
+            print("Error: JD ID not found in candidate data.")
+            return False
 
-    @staticmethod
-    def get_email_configs(user_id):
-        conn = DataOperations.get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT email, email_smtp_port, email_smtp_host, email_host_password 
-            FROM email_config
-            WHERE user_id=%s
-        """, (user_id,))
-        config = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return config if config else {}
+        # Get the single category for the candidate before and after the update
+        prev_category = DataOperations._get_candidate_category(previous_candidate_data)
+        curr_category = DataOperations._get_candidate_category(current_candidate_data)
+
+        # Map categories to the JD counter columns
+        category_to_column = {
+            'completed': 'profiles_completed',  # Offer accepted
+            'selected': 'profiles_selected',   # L3 selected, offer not accepted
+            'rejected': 'profiles_rejected',   # Rejected at any level or offer declined/withdrawn
+            'on_hold': 'profiles_on_hold',     # On hold at any level
+            'in_progress': 'profiles_in_progress', # Screened selected, but not L3 selected
+            'new': None # Default state, doesn't increment a special counter
+        }
+        
+        # --- Logic for Total Profiles (Handles Initial Candidate Creation) ---
+        update_fields = {}
+        if previous_candidate_data is None:
+            # This assumes the function is called immediately after candidate insertion
+            update_fields['total_profiles'] = 'total_profiles + 1'
+
+        # --- Logic for Category Change ---
+
+        # Only proceed if the effective category has changed
+        if prev_category != curr_category:
+            
+            # 1. Decrement the counter for the previous category (if it was a tracked category)
+            prev_column = category_to_column.get(prev_category)
+            if prev_column:
+                update_fields[prev_column] = f'{prev_column} - 1'
+
+            # 2. Increment the counter for the current category (if it is a tracked category)
+            curr_column = category_to_column.get(curr_category)
+            if curr_column:
+                # Check if we are trying to update the same field twice (e.g., in_progress -1 and +1)
+                # We must resolve the conflict, which should only happen if the logic in _get_candidate_category is flawed.
+                # But in the event of a clash (e.g., A -> B, then B -> A in one step), prioritize the final state.
+                if curr_column in update_fields and update_fields[curr_column] == f'{curr_column} - 1':
+                    # If previous was X and current is X (but status check somehow triggered this), 
+                    # this should mean no change, so we remove both the +1 and -1.
+                    del update_fields[curr_column]
+                else:
+                    update_fields[curr_column] = f'{curr_column} + 1'
+
+
+        # Build and execute the dynamic UPDATE query
+        if update_fields:
+            set_clauses = [f"{field} = {value}" for field, value in update_fields.items()]
+            query = f"UPDATE recruitment_jds SET {', '.join(set_clauses)} WHERE jd_id = %s"
+            try:
+                # We assume a MySQL connection error handling utility is available
+                cursor.execute(query, (jd_id,)) 
+                print(f"Updated recruitment_jds for JD: {jd_id} with changes: {update_fields}")
+                return True
+            except Exception as err:
+                # Assuming mysql.connector.Error is caught higher up or in DataOperations
+                print(f"Error updating recruitment_jds: {err}")
+                return False
+                
+        return True
+
+        @staticmethod
+        def get_team_lead_teams(user_id):
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT team_id 
+                FROM teams 
+                WHERE lead_emp_id = (
+                    SELECT emp_id 
+                    FROM hr_team_members 
+                    WHERE email = (SELECT email FROM users WHERE user_id=%s)
+                )
+            """, (user_id,))
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return [row['team_id'] for row in results] if results else []
+
+        @staticmethod
+        def get_email_configs(user_id):
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT email, email_smtp_port, email_smtp_host, email_host_password 
+                FROM email_config
+                WHERE user_id=%s
+            """, (user_id,))
+            config = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            return config if config else {}
 
 class MessageProviders:
 
