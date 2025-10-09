@@ -199,6 +199,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
+    // Make filterCandidates available globally for modal actions
+    window.filterCandidates = filterCandidates;
+    
     function updateCandidatesList(candidates) {
         const candidatesContainer = document.getElementById('candidates-cards-list');
         
@@ -237,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="tooltip-text">${candidate.job_summary}</span>
                     </div>
                 </div>
-                <button class="action-btn view-resume" onclick="viewResume(${candidate.candidate_id})">View Resume</button>
+                <button class="action-btn view-resume" onclick="viewResume(${candidate.candidate_id}, ${candidate.resume_id})">View Resume</button>
             </div>
             
             <div class="profile-progress-bar">
@@ -501,9 +504,29 @@ function getStatusClass(status) {
 }
 
 // Global functions for candidate actions
-function viewResume(candidateId) {
-    console.log('View resume for candidate:', candidateId);
-    // TODO: Implement resume viewing functionality
+function viewResume(candidateId, resume_id) {
+    console.log('Downloading resume for candidate:', candidateId, 'Resume ID:', resume_id);
+    
+    if (!resume_id) {
+        showNotification('Resume ID not found for this candidate', 'error');
+        return;
+    }
+    
+    // Create download URL
+    const downloadUrl = `/download_resume/${resume_id}/`;
+    
+    // Create a temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.style.display = 'none';
+    link.download = ''; // This will use the filename from the server
+    
+    // Add to DOM, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('Resume download started', 'success');
 }
 
 function addNote(candidateId) {
@@ -554,6 +577,11 @@ function resetAddNoteForm() {
 
 // Take Action Modal Functions  
 function openTakeActionModal(candidateId) {
+    if (!candidateId) {
+        showNotification('Error: No candidate ID provided', 'error');
+        return;
+    }
+    
     currentCandidateId = candidateId;
     
     // Find candidate data from the current candidates list
@@ -561,11 +589,29 @@ function openTakeActionModal(candidateId) {
     if (candidateData) {
         currentCandidateData = candidateData;
         populateTakeActionModal(candidateData);
+    } else {
+        showNotification('Warning: Candidate data not found. Some features may not work correctly.', 'warning');
+        // Set fallback data
+        currentCandidateData = {
+            candidate_id: candidateId,
+            name: 'Unknown Candidate',
+            jd_id: 'Unknown',
+            job_summary: 'Position'
+        };
+        populateTakeActionModal(currentCandidateData);
     }
     
     const modal = document.getElementById('takeActionModal');
+    if (!modal) {
+        showNotification('Error: Take Action modal not found', 'error');
+        return;
+    }
+    
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
+    
+    // Reset form to clean state
+    resetTakeActionForm();
 }
 
 function closeTakeActionModal() {
@@ -754,16 +800,82 @@ function handleAddNote() {
 }
 
 function handleTakeAction() {
-    const formData = new FormData(document.getElementById('takeActionForm'));
+    const form = document.getElementById('takeActionForm');
+    const formData = new FormData(form);
+    
+    // Validate required fields before sending
+    if (!currentCandidateId) {
+        showNotification('Error: No candidate selected', 'error');
+        return;
+    }
+    
+    const actionType = formData.get('actionType');
+    if (!actionType) {
+        showNotification('Please select an action type', 'error');
+        return;
+    }
+    
+    // Validate action-specific required fields
+    if (actionType === 'reject') {
+        const rejectionReason = formData.get('rejectionReason');
+        if (!rejectionReason) {
+            showNotification('Please select a rejection reason', 'error');
+            return;
+        }
+    }
+    
+    if (actionType === 'put_on_hold') {
+        const holdReason = formData.get('holdReason');
+        if (!holdReason) {
+            showNotification('Please select a hold reason', 'error');
+            return;
+        }
+    }
+    
+    if (actionType === 'schedule_interview') {
+        const interviewDate = formData.get('interviewDate');
+        const interviewType = formData.get('interviewType');
+        const interviewLevel = formData.get('interviewLevel');
+        const interviewer = formData.get('interviewer');
+        const interviewerEmail = formData.get('interviewerEmail');
+        
+        if (!interviewDate) {
+            showNotification('Please select interview date and time', 'error');
+            return;
+        }
+        if (!interviewType) {
+            showNotification('Please select interview type', 'error');
+            return;
+        }
+        if (!interviewLevel) {
+            showNotification('Please select interview level', 'error');
+            return;
+        }
+        if (!interviewer || interviewer.trim() === '') {
+            showNotification('Please enter interviewer name', 'error');
+            return;
+        }
+        if (!interviewerEmail || interviewerEmail.trim() === '') {
+            showNotification('Please enter interviewer email', 'error');
+            return;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(interviewerEmail)) {
+            showNotification('Please enter a valid interviewer email address', 'error');
+            return;
+        }
+    }
+    
     const actionData = {
         candidate_id: currentCandidateId,
-        actionType: formData.get('actionType'),
+        actionType: actionType,
         actionComments: formData.get('actionComments'),
         notifyCandidate: formData.get('notifyCandidate') === 'on'
     };
     
     // Add specific fields based on action type
-    const actionType = formData.get('actionType');
     if (actionType === 'reject') {
         actionData.rejectionReason = formData.get('rejectionReason');
     } else if (actionType === 'put_on_hold') {
@@ -779,6 +891,18 @@ function handleTakeAction() {
     
     console.log('Taking action:', actionData);
     
+    // Show loading state - find the submit button properly
+    const submitButton = form.querySelector('button[type="submit"]') || 
+                        document.querySelector('button[form="takeActionForm"][type="submit"]') ||
+                        document.querySelector('.modal-footer .btn-primary');
+    
+    let originalButtonText = 'Execute Action';
+    if (submitButton) {
+        originalButtonText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+    }
+    
     // Send to backend
     fetch('/api/candidate_action/', {
         method: 'POST',
@@ -788,20 +912,65 @@ function handleTakeAction() {
         },
         body: JSON.stringify(actionData)
     })
-    .then(response => response.json())
+    .then(response => {
+        // Check if the response is ok
+        if (!response.ok) {
+            // Handle HTTP errors
+            if (response.status === 404) {
+                throw new Error('Candidate not found');
+            } else if (response.status === 403) {
+                throw new Error('You are not authorized to perform this action');
+            } else if (response.status === 400) {
+                throw new Error('Invalid request data');
+            } else if (response.status >= 500) {
+                throw new Error('Server error. Please try again later');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            showNotification('Action executed successfully!', 'success');
+            // Always show the backend message if available, otherwise use generic success message
+            const message = data.message || 'Action executed successfully!';
+            showNotification(message, 'success');
             closeTakeActionModal();
             // Refresh candidates list
-            filterCandidates();
+            if (typeof window.filterCandidates === 'function') {
+                window.filterCandidates();
+            } else {
+                // Fallback: reload the page if filterCandidates is not available
+                window.location.reload();
+            }
         } else {
-            showNotification('Failed to execute action: ' + data.error, 'error');
+            // Always show the backend error message if available
+            const errorMessage = data.error || data.message || 'Unknown error occurred';
+            showNotification(errorMessage, 'error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showNotification('An error occurred while executing the action', 'error');
+        console.error('Error executing action:', error);
+        
+        // Handle different types of errors
+        let errorMessage = 'An error occurred while executing the action';
+        
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            errorMessage = 'Network error. Please check your connection and try again';
+        } else if (error.name === 'SyntaxError') {
+            errorMessage = 'Invalid response from server. Please try again';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        showNotification(errorMessage, 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
     });
 }
 
@@ -823,17 +992,131 @@ function handleActionTypeChange(actionType) {
 
 // Utility functions
 function getCsrfToken() {
+    // First try to get from cookies
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
         if (name === 'csrftoken') {
-            return value;
+            return decodeURIComponent(value);
         }
     }
+    
+    // Try to get from meta tag (Django's recommended approach)
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    // Try to get from hidden form input
+    const hiddenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (hiddenInput) {
+        return hiddenInput.value;
+    }
+    
+    // Log warning if no CSRF token found
+    console.warn('CSRF token not found. This may cause authentication issues.');
     return '';
 }
 
 function showNotification(message, type = 'info') {
-    // TODO: Implement notification system
+    // Remove any existing notifications first
+    const existingNotifications = document.querySelectorAll('.custom-notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `custom-notification custom-notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        max-width: 400px;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Set background color based on type
+    switch (type) {
+        case 'success':
+            notification.style.backgroundColor = '#10b981';
+            break;
+        case 'error':
+            notification.style.backgroundColor = '#ef4444';
+            break;
+        case 'warning':
+            notification.style.backgroundColor = '#f59e0b';
+            break;
+        default:
+            notification.style.backgroundColor = '#3b82f6';
+    }
+    
+    // Add close button
+    const closeButton = document.createElement('span');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+        float: right;
+        margin-left: 10px;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+    `;
+    closeButton.onclick = () => notification.remove();
+    
+    // Add message
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    
+    notification.appendChild(messageSpan);
+    notification.appendChild(closeButton);
+    
+    // Add animation styles if not already present
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Add to document
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds (longer for errors)
+    const duration = type === 'error' ? 8000 : 5000;
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, duration);
+    
+    // Also log to console for debugging
     console.log(`${type.toUpperCase()}: ${message}`);
 }
