@@ -2455,14 +2455,17 @@ def save_candidate_details(request):
                                 jd_id, resume_id, name, phone, email, skills,
                                 education, experience, previous_job_profile, 
                                 current_ctc, expected_ctc, notice_period, 
-                                location, screened_on, screen_status, screened_remarks, recruiter_comments)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                location, screened_on, screen_status, screened_remarks,
+                                recruiter_comments, team_id, hr_member_id, shared_on
+                            )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
                     email, skills, education, experience,
                     previous_job_profile, current_ctc, 
                     expected_ctc, notice_period, location, 
-                    screened_on, screen_status, screened_remarks, recruiters_comment
+                    screened_on, screen_status, screened_remarks, recruiters_comment,
+                    screening_team, hr_member_id, shared_on
                 ])
                 # increase the total_profiles count for the JD
                 
@@ -2559,7 +2562,9 @@ def get_jd_team_members(request):
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
+
 @csrf_exempt
+@login_required
 def get_candidate_details(request):
     """
     API endpoint to get details of a specific candidate.
@@ -2634,16 +2639,11 @@ def candidate_pipeline_page(request):
     """
     user_id = request.session.get('user_id', None)
     user_role = request.session.get('role', 'Guest')
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # get emp_id
-    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
     candidates_info = []
-    search_query = request.GET.get('search', '').strip()
     
 
     return render(request, 'candidate_handle.html', {
+        'user_role': user_role,
         'candidates_info': candidates_info,
     })
 

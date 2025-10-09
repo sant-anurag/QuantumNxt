@@ -285,6 +285,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                 document.getElementById('modal-screen-status').value = c.screen_status || 'toBeScreened';
                                 document.getElementById('modal-screened-remarks').value = c.screened_remarks || '';
                                 document.getElementById('modal-shared-on').value = c.shared_on || '';
+                                document.getElementById('modal-current-ctc').value = c.current_ctc || '';
+                                document.getElementById('modal-expected-ctc').value = c.expected_ctc || '';
+                                document.getElementById('modal-notice-period').value = c.notice_period || '';
+                                document.getElementById('modal-location').value = c.location || '';
+                                document.getElementById('modal-prev-job-profile').value = c.prev_job_profile || '';
+                                document.getElementById('modal-recruiter-comments').value = c.recruiter_comments || '';
+                                document.getElementById('modal-education').value = c.education || '';
+                                document.getElementById('modal-prev-job-profile').value = c.previous_job_profile || '';
 
                                 if (c.hr_member_id) {
                                     document.getElementById('modal-hr-member-id').value = c.hr_member_id;
