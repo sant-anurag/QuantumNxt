@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Calculate progress width (% of profiles in progress)
             let progressWidth = 0;
             if (metrics.total_profiles > 0) {
-                progressWidth = Math.round((metrics.profiles_in_progress / metrics.total_profiles) * 100);
+                progressWidth = Math.round((metrics.profiles_completed / metrics.total_profiles) * 100);
             }
             
             // Calculate selection rate (% of profiles completed that were selected)
