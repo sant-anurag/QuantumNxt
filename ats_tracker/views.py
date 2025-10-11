@@ -3718,12 +3718,14 @@ def mark_candidate_as_resigned(request, candidate_id):
     # - Update reporting systems
     return JsonResponse({'success': True, 'message': 'Candidate marked as resigned successfully.'})
 
+@login_required
 def schedule_interviews_page(request):
     """
     View to render the schedule interviews page.
     """
     return render(request, 'schedule_interviews.html')
 
+@login_required
 def get_candidates_for_jd(request):
     """
     API endpoint to get candidates for a specific job description.
