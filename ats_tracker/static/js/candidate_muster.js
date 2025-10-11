@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		let html = `<table class="min-w-full bg-white rounded-lg shadow-md">
 			<thead class="bg-blue-50">
 				<tr>
+					<th class="px-4 py-2 text-left">Sr. No.</th>
 					<th class="px-4 py-2 text-left">Name</th>
 					<th class="px-4 py-2 text-left">Email</th>
 					<th class="px-4 py-2 text-left">Phone</th>
@@ -33,13 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
 				</tr>
 			</thead>
 			<tbody>`;
-		candidates.forEach(candidate => {
+		candidates.forEach((candidate, index) => {
 			html += `<tr class="hover:bg-blue-50">
-				<td class="px-4 py-2">${candidate.name}</td>
-				<td class="px-4 py-2">${candidate.email}</td>
-				<td class="px-4 py-2">${candidate.phone || ''}</td>
-				<td class="px-4 py-2">${candidate.experience || ''}</td>
-				<td class="px-4 py-2">${candidate.jd_summary || ''}</td>
+				<td class="px-4 py-2 text-ellipsis-cell">${index + 1}</td>
+				<td class="px-4 py-2 text-ellipsis-cell" title="${candidate.name}">${candidate.name}</td>
+				<td class="px-4 py-2 text-ellipsis-cell" title="${candidate.email}">${candidate.email}</td>
+				<td class="px-4 py-2 text-ellipsis-cell" title="${candidate.phone || 'N/A'}">${candidate.phone || ''}</td>
+				<td class="px-4 py-2 text-ellipsis-cell" title="${candidate.experience || 'N/A'}">${candidate.experience || ''}</td>
+				<td class="px-4 py-2 text-ellipsis-cell" title="${candidate.jd_summary || 'N/A'}">${candidate.jd_id || ''}-${candidate.jd_summary || ''}</td>
 				<td class="px-4 py-2 text-center">
                     <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition activities-btn" data-candidate-id="${candidate.candidate_id}">Activities</button>
 				</td>
@@ -252,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	function renderPagination(page, numPages) {
 		candidatePagination.innerHTML = '';
+		console.log("Rendering pagination - Current page:", page, "Total pages:", numPages);
 		if (numPages <= 1) return;
 		for (let i = 1; i <= numPages; i++) {
 			const btn = document.createElement('button');
@@ -275,6 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			.then(response => response.json())
 			.then(data => {
 				renderCandidateTable(data.candidates);
+				console.log("Pagination data:", data.page, data.num_pages);
 				renderPagination(data.page, data.num_pages);
 			})
 			.catch(() => {

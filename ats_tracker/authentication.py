@@ -59,8 +59,6 @@ def role_required(role_names, is_api=False):
         return _wrapped_view
     return decorator
 
-
-
 # This decorator checks that user is not logged in.
 def anonymous_required(view_func):
     """

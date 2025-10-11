@@ -348,37 +348,37 @@ class DataOperations:
                 
         return True
 
-        @staticmethod
-        def get_team_lead_teams(user_id):
-            conn = DataOperations.get_db_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT team_id 
-                FROM teams 
-                WHERE lead_emp_id = (
-                    SELECT emp_id 
-                    FROM hr_team_members 
-                    WHERE email = (SELECT email FROM users WHERE user_id=%s)
-                )
-            """, (user_id,))
-            results = cursor.fetchall()
-            cursor.close()
-            conn.close()
-            return [row['team_id'] for row in results] if results else []
+    @staticmethod
+    def get_team_lead_teams(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT team_id 
+            FROM teams 
+            WHERE lead_emp_id = (
+                SELECT emp_id 
+                FROM hr_team_members 
+                WHERE email = (SELECT email FROM users WHERE user_id=%s)
+            )
+        """, (user_id,))
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [row['team_id'] for row in results] if results else []
 
-        @staticmethod
-        def get_email_configs(user_id):
-            conn = DataOperations.get_db_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT email, email_smtp_port, email_smtp_host, email_host_password 
-                FROM email_config
-                WHERE user_id=%s
-            """, (user_id,))
-            config = cursor.fetchone()
-            cursor.close()
-            conn.close()
-            return config if config else {}
+    @staticmethod
+    def get_email_configs(user_id):
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT email, email_smtp_port, email_smtp_host, email_host_password 
+            FROM email_config
+            WHERE user_id=%s
+        """, (user_id,))
+        config = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return config if config else {}
 
 class MessageProviders:
 

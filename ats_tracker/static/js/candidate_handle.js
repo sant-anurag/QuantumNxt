@@ -762,40 +762,40 @@ function handleAddNote() {
     const formData = new FormData(document.getElementById('addNoteForm'));
     const noteData = {
         candidate_id: currentCandidateId,
-        note_type: formData.get('noteType'),
-        title: formData.get('noteTitle'),
-        content: formData.get('noteContent'),
+        activity_type: formData.get('noteType'),
+        activity_title: formData.get('noteTitle'),
+        notes: formData.get('noteContent'),
         priority: formData.get('notePriority'),
 
     };
     
     console.log('Adding note:', noteData);
+
+    
     
     // TODO: Send to backend
-    // fetch('/api/add_note/', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json',
-    //         'X-CSRFToken': getCsrfToken()
-    //     },
-    //     body: JSON.stringify(noteData)
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     if (data.success) {
-    //         showNotification('Note added successfully!', 'success');
-    //         closeAddNoteModal();
-    //     } else {
-    //         showNotification('Failed to add note: ' + data.error, 'error');
-    //     }
-    // })
-    // .catch(error => {
-    //     console.error('Error:', error);
-    //     showNotification('An error occurred while adding the note', 'error');
-    // });
+    fetch('/api/candidate_musters/add_note/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(noteData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Note added successfully!\n\nNote: ' + noteData.activity_title + '\nContent: ' + noteData.notes);
+            closeAddNoteModal();
+        } else {
+            showNotification('Failed to add note: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while adding the note', 'error');
+    });
     
-    // For demo purposes
-    alert('Note added successfully!\n\nNote: ' + noteData.title + '\nContent: ' + noteData.content);
     closeAddNoteModal();
 }
 

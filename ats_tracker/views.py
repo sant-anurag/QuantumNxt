@@ -1921,7 +1921,7 @@ def employee_view_report(request):
     conn.close()
     return JsonResponse({"member": member, "jds": jds, "teams": teams})
 
-
+@login_required
 def upload_resume_page(request):
     """
     View to render the resume upload page.
@@ -1967,6 +1967,7 @@ def upload_resume_page(request):
     return render(request, 'upload_resume.html', {'jds': jds,'name': name})
 
 @csrf_exempt
+@login_required
 def upload_resume(request):
     """
     API endpoint to upload a resume.
@@ -2744,7 +2745,7 @@ def api_candidates_pipeline(request):
     
     # Build base query for candidates
     base_query = """
-        SELECT 
+        SELECT DISTINCT
             c.candidate_id,
             c.name,
             c.email,
@@ -2758,7 +2759,8 @@ def api_candidates_pipeline(request):
             c.offer_status,
             j.jd_summary,
             comp.company_name,
-            r.file_name as resume_filename
+            r.file_name as resume_filename,
+            c.updated_at
         FROM candidates c
         LEFT JOIN recruitment_jds j ON c.jd_id = j.jd_id
         LEFT JOIN customers comp ON j.company_id = comp.company_id
@@ -3808,7 +3810,7 @@ def schedule_interview(request):
             SELECT 
                        c.candidate_id, c.name, 
                        c.email, c.jd_id, 
-                       r.jd_summary
+                       r.jd_summary, c.team_id
             FROM candidates c
             JOIN recruitment_jds r ON c.jd_id = r.jd_id
             WHERE c.candidate_id = %s
@@ -4554,7 +4556,8 @@ def get_search_candidates(request):
     offset = (page - 1) * limit
 
     cursor.execute(f"""
-        SELECT DISTINCT c.candidate_id, c.name, c.email, c.phone, c.experience, jd.jd_summary, c.updated_at
+        SELECT DISTINCT 
+                c.candidate_id, c.name, c.email, c.phone, c.experience, jd.jd_id, jd.jd_summary, c.updated_at
         FROM candidates c
         LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
         LEFT JOIN candidate_activities ca ON c.candidate_id = ca.candidate_id
@@ -4563,7 +4566,14 @@ def get_search_candidates(request):
         LIMIT %s OFFSET %s
     """, (*params, limit, offset))
     candidates = cursor.fetchall()
-    total_count = len(candidates)
+    cursor.execute(f"""
+        SELECT COUNT(DISTINCT c.candidate_id) as total
+        FROM candidates c
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        LEFT JOIN candidate_activities ca ON c.candidate_id = ca.candidate_id
+        WHERE {where_statement}
+    """, params)
+    total_count = cursor.fetchone()['total']
     num_pages = (total_count // limit) + (1 if total_count % limit else 0)
     DataOperations.close_db_connection(conn, cursor)
     return JsonResponse({'success': True, 'candidates': candidates, 'page': page, 'num_pages': num_pages})
@@ -4660,12 +4670,9 @@ def add_candidate_activity(request):
     notes = data.get('notes', '').strip()
     priority = data.get('priority', 'medium').strip().lower()
 
-    if not candidate_id or not candidate_id.isdigit():
+    if not candidate_id or not str(candidate_id).isdigit():
         return JsonResponse({'success': False, 'error': 'Invalid candidate ID'}, status=400)
     candidate_id = int(candidate_id)
-
-    
-    
 
     if not activity_type or activity_type not in ('interview_feedback','screening_notes','hr_notes','technical_assessment','offer_details','onboarding','rejection','general','other'):
         return JsonResponse({'success': False, 'error': 'Invalid activity type'}, status=400)
@@ -4691,9 +4698,9 @@ def add_candidate_activity(request):
 
     try:
         cursor.execute("""
-            INSERT INTO candidate_activities (candidate_id, emp_id, activity_type, note_title, notes)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (candidate_id, emp_id, activity_type, activity_title, notes))
+            INSERT INTO candidate_activities (candidate_id, emp_id, activity_type, note_title, notes, priority)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, emp_id, activity_type, activity_title, notes, priority))
         conn.commit()
         return JsonResponse({'success': True}, status=201)
     except Exception as e:
