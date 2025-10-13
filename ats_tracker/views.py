@@ -139,12 +139,14 @@ def validate_user(username, password):
     conn.close()
     return None, None, None, None
 
+@login_required
 def home(request):
     """Home view for authenticated users."""
     session = request.session
     print(session)
     name = request.session.get('name', 'Guest')
-    return render(request, 'home.html', {'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'home.html', {'name': name, 'user_role': user_role})
 
 
 
@@ -156,6 +158,8 @@ def add_member(request):
 
     """
     print("add_member -> Request method:", request.method)
+    name = request.session.get('name', 'Guest')
+    user_role_ = request.session.get('role', 'Guest')
     from .utils import Constants
     message = ''
     error = ''
@@ -219,10 +223,10 @@ def add_member(request):
                     error = f"Failed to add member: {str(e)}"
             finally:
                 DataOperations.close_db_connection(connection, cursor)
-    name = request.session.get('name', 'Guest')
     return render(request, 'add_member.html', {
         'message': message,
         'name': name,
+        'user_role': user_role_,
         'error': error
     })
 
@@ -233,6 +237,9 @@ def manage_members(request):
     """
     members_list = []
     error = ''
+
+    role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
     
     # Get search and sort parameters
     search_query = request.GET.get('q', '')
@@ -249,8 +256,6 @@ def manage_members(request):
         sort_dir = 'asc'
 
     try:
-        role = request.session.get('role', 'Guest')
-        user_id = request.session.get('user_id', None)
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
@@ -311,11 +316,12 @@ def manage_members(request):
     return render(request, 'manage_members.html', {
         'members': page_obj,
         'name': name,
+        'user_role': role,
         'error': error,
         'search_query': search_query,
         'sort_by': sort_by,
         'sort_dir': sort_dir,
-        'next_sort_dir': 'desc' if sort_dir == 'asc' else 'asc'
+        'next_sort_dir': 'desc' if sort_dir == 'asc' else 'asc',
     })
 
 @role_required(['Admin', 'Team_Lead'])
@@ -459,11 +465,13 @@ def create_team(request):
         if 'conn' in locals():
             conn.close()
     name = request.session.get('name', 'Guest')
+    user_role_ = request.session.get('role', 'Guest')
     return render(request, "create_team.html", {
         "members": members,
         "teams": teams,
         "message": message,
         "name": name,
+        "user_role": user_role_,
         "error": error
     })
 
@@ -691,6 +699,8 @@ def create_jd_view(request):
     """
     View to create a new job description.
     """
+    user_role = request.session.get('role', 'Guest')
+    name = request.session.get('name', 'Guest')
     print("create_jd -> Request method:", request.method)
     companies = []
     try:
@@ -708,7 +718,9 @@ def create_jd_view(request):
             conn.close()
 
     return render(request, "jd_create.html", {
-        "companies": companies
+        "companies": companies,
+        "name": name,
+        "user_role": user_role
     })
 
 @csrf_exempt
@@ -954,6 +966,8 @@ def create_customer(request):
     """
     View to create a new customer.
     """
+    name = request.session.get('name', 'Guest')
+    user_role_ = request.session.get('role', 'Guest')
     message = error = None
     if request.method == "POST":
         # POST: Handle customer creation
@@ -1025,7 +1039,9 @@ def create_customer(request):
         "num_pages": num_pages,
         "total": total,
         "page_range": page_range,
-        "search": search
+        "search": search,
+        "name": name,
+        "user_role": user_role_,
     })
 
 @csrf_exempt
@@ -1722,7 +1738,8 @@ def assign_jd_page(request):
     # }
 
     return render(request, "assign_jd.html", {
-        'name': name, 
+        'name': name,
+        'user_role': request.session.get('role', 'Guest'),
         # 'jds': jds, 
         # 'pagination': pagination
     })
@@ -1802,7 +1819,8 @@ def employee_view_page(request):
     View to render the employee details page.
     """
     name = request.session.get('name', 'Guest')
-    return render(request, "employee_view.html",{'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, "employee_view.html",{'name': name, 'user_role': user_role})
 
 def employee_view_data(request):
     """
@@ -1964,7 +1982,7 @@ def upload_resume_page(request):
     cursor.close()
     conn.close()
     name = request.session.get('name', 'Guest')
-    return render(request, 'upload_resume.html', {'jds': jds,'name': name})
+    return render(request, 'upload_resume.html', {'jds': jds,'name': name, 'user_role': user_role})
 
 @csrf_exempt
 @login_required
@@ -2122,7 +2140,8 @@ def view_parse_resumes_page(request):
     View to render the resume parsing page.
     """
     name = request.session.get('name', 'Guest')
-    return render(request, 'view_parse_resumes.html', {'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'view_parse_resumes.html', {'name': name, 'user_role': user_role})
 
 @csrf_exempt
 def view_parse_resumes(request):
@@ -2716,12 +2735,13 @@ def candidate_pipeline_page(request):
     """
     View to render the candidate handling page.
     """
-    user_id = request.session.get('user_id', None)
+    name = request.session.get('name', 'Guest')
     user_role = request.session.get('role', 'Guest')
     candidates_info = []
     
 
     return render(request, 'candidate_handle.html', {
+        "name": name,
         'user_role': user_role,
         'candidates_info': candidates_info,
     })
@@ -3723,7 +3743,10 @@ def schedule_interviews_page(request):
     """
     View to render the schedule interviews page.
     """
-    return render(request, 'schedule_interviews.html')
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    print(f"schedule_interviews_page -> User: {name}, Role: {user_role}")
+    return render(request, 'schedule_interviews.html', {'name': name, 'user_role': user_role})
 
 @login_required
 def get_candidates_for_jd(request):
@@ -3923,6 +3946,9 @@ def record_interview_result_page(request):
     """
     View to render the record interview result page.
     """
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    print(f"record_interview_result_page -> User: {name}, Role: {user_role}")
     candidate_id = request.GET.get('candidate_id')
     level = request.GET.get('level')
     token = request.GET.get('token')
@@ -3934,8 +3960,16 @@ def record_interview_result_page(request):
     cursor.close()
     conn.close()
     if not candidate:
-        return render(request, 'record_interview_result.html', {'error': 'Candidate not found'})
+        return render(
+            request, 'record_interview_result.html', 
+            {
+                'error': 'Candidate not found', 
+                'name': name, 
+                'user_role': user_role
+            })
     return render(request, 'record_interview_result.html', {
+        'name': name,
+        'user_role': user_role,
         'candidate': candidate,
         'level': level,
         'token': token
@@ -4025,7 +4059,14 @@ def manage_candidate_status_page(request):
     """
     View to render the manage candidate status page.
     """
-    return render(request, "manage_candidate_status.html")
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    return render(request, "manage_candidate_status.html",
+        {
+            "name": name,
+            "user_role": user_role
+        }
+    )
 
 def manage_candidate_status_data(request):
     """
@@ -4189,7 +4230,8 @@ def view_finalized_candidates(request):
     """
     print("view_finalized_candidates -> Request method:", request.method)
     name = request.session.get('name', 'Guest')
-    return render(request, 'view_finalized_candidates.html', {'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'view_finalized_candidates.html', {'name': name, 'user_role': user_role})
 
 def api_jds(request):
     """
@@ -5160,7 +5202,8 @@ def offer_letter_page(request):
     View to render the offer letter page.
     """
     name = request.session.get('name', 'Guest')
-    return render(request, 'offer_letter.html', {'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'offer_letter.html', {'name': name, 'user_role': user_role})
 
 @csrf_exempt
 def generate_offer_letter(request):
@@ -5307,7 +5350,8 @@ def team_reports_page(request):
     View to render the team reports page.
     """
     name = request.session.get('name', 'Guest')
-    return render(request, 'team_reports.html', {'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'team_reports.html', {'name': name, 'user_role': user_role})
 
 @csrf_exempt
 @role_required(['Admin', 'Team_Lead'], is_api=True)
@@ -5712,7 +5756,8 @@ def task_progress_reports_page(request):
     View to render the task progress reports page.
     """
     name = request.session.get('name', 'Guest')
-    return render(request, "task_progress_reports.html", {"name": name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, "task_progress_reports.html", {"name": name, "user_role": user_role})
 
 def team_report_filters(request):
     """
@@ -6050,7 +6095,8 @@ def team_reports_export(request):
 @role_required(['Admin', 'Team_Lead'])
 def candidate_conversion_rates_page(request):
     name = request.session.get('name', 'Guest')
-    return render(request, "candidate_conversion_rates.html",{'name': name})
+    user_role = request.session.get('role', 'Guest')
+    return render(request, "candidate_conversion_rates.html",{'name': name, 'user_role': user_role})
 
 @role_required(['Admin', 'Team_Lead'], is_api=True)
 def ccr_filters(request):
@@ -6401,8 +6447,11 @@ def user_profile(request):
     """
     View to render the user profile page.
     """
+    email = request.session.get('email')
+    user_role = request.session.get('role', 'Guest')
+    name = request.session.get('name', 'Guest')
+    userDetails = {}
     try:
-        email = request.session.get('email')
         conn = DataOperations.get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
@@ -6426,7 +6475,7 @@ def user_profile(request):
         conn.close()
     except mysql.connector.Error as err:
         return HttpResponse(f"Database error: {err}", status=500)
-    return render(request, "user_profile.html", {"user": userDetails})
+    return render(request, "user_profile.html", {"user": userDetails, "name": name, "user_role": user_role})
 
 
 @role_required('Admin')
@@ -6434,6 +6483,8 @@ def manage_sessions_view(request):
     """
     View to manage user sessions.
     """
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -6454,8 +6505,7 @@ def manage_sessions_view(request):
         })
     cursor.close()
     conn.close()
-    name = request.session.get('name', 'Guest')
-    return render(request, 'manage_sessions.html', {'sessions': json.dumps(sessions), 'name': name})
+    return render(request, 'manage_sessions.html', {'sessions': json.dumps(sessions), 'name': name, 'user_role': user_role})
 
 @csrf_exempt
 def logout_session_api(request):
@@ -6481,15 +6531,22 @@ def access_permissions(request):
     """
     View to manage access permissions.
     """
-
-    is_admin = request.session.get('role') == "Admin"
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    is_admin = user_role in ["Admin", "Superuser"]
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT user_id, username, email, role, is_active, created_at FROM users")
     users = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render(request, "access_permissions.html", {"users": users, "is_admin": is_admin, "roles": Constants.ROLES})
+    return render(request, "access_permissions.html", {
+                "users": users, 
+                "is_admin": is_admin, 
+                "roles": Constants.ROLES, 
+                "name": name, 
+                "user_role": user_role
+            })
 
 
 @csrf_exempt
@@ -6584,7 +6641,7 @@ def status_report_page(request):
     if role == "Team_Lead":
         lead_team_ids = DataOperations.get_team_lead_teams(request.session.get("user_id"))
         if not lead_team_ids:
-            return render(request, 'status_report.html', {"teams": [], "members": []})
+            return render(request, 'status_report.html', {"teams": [], "members": [], "user_role": role})
         format_strings = ','.join(['%s'] * len(lead_team_ids))
         cursor.execute(f"SELECT team_id, team_name FROM teams WHERE team_id IN ({format_strings})", tuple(lead_team_ids))
     else:
@@ -6616,7 +6673,7 @@ def status_report_page(request):
     ]
     cursor.close()
     conn.close()
-    return render(request, 'status_report.html', {"teams": teams, "members": members})
+    return render(request, 'status_report.html', {"teams": teams, "members": members, "user_role": role})
 
 def _validate_report_params(request_data, role, user_id):
     """Validates and sanitizes report parameters."""
@@ -6949,6 +7006,7 @@ def notification_settings(request):
     print("Accessing notification settings page.")
     #fetch user id for username
     username = request.session.get("username")
+    user_role = request.session.get("role", "Guest")
     user_id = get_user_id_by_username(username)
     print("Current user ID:", username, "for:", user_id)
     conn = DataOperations.get_db_connection()
@@ -6971,6 +7029,7 @@ def notification_settings(request):
     return render(request, "settings_notification.html", {
         "notifications_enabled": notifications_enabled,
         "name": name,
+        "user_role": user_role,
         "notifications": notifications
     })
 
@@ -7063,6 +7122,8 @@ def toggle_notification(request):
 def save_email_config(request):
     session = request.session
     useremail = session.get('username')
+    name = session.get('name', 'Guest')
+    user_role = session.get('role', 'Guest')
     if not useremail:
         return redirect('login')
     
@@ -7092,7 +7153,13 @@ def save_email_config(request):
         user_id = get_user_id_by_username(useremail)
 
         if not user_id:
-            return render(request, "email_config.html", {"user": {"email": useremail}, "error": "User not found."})
+            return render(
+                request, "email_config.html", {
+                "user": {"email": useremail}, 
+                "user_role": user_role, 
+                "name": name, 
+                "error": "User not found."
+            })
         print("Saving email config for user ID:", useremail, "->", user_id)
         # Check email credentials by sending a test mail
         from .utils import encrypt_password
@@ -7136,13 +7203,25 @@ def save_email_config(request):
 
         messages.success(request, "Email configuration successful!")
         return redirect('save_email_config')
-    return render(request, "email_config.html", {"user": {"email": useremail}, "email_providers": mail_providers, "is_gmail": False})
+    return render(
+        request, "email_config.html", {
+            "name": name,
+            "user_role": user_role,
+            "user": {"email": useremail},
+            "email_providers": mail_providers,
+            "is_gmail": False
+        })
 
 def notifications_list(request):
     """
     View to render the notifications list page.
     """
-    return render(request, 'notifications_list.html', {})
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'notifications_list.html', {
+        "name": name,
+        "user_role": user_role
+    })
 
 def get_email_configs(user_id):
     conn = DataOperations.get_db_connection()
@@ -7462,6 +7541,8 @@ def prelogout_page(request):
     """
     # get email ids of all admins and self team lead if exists
     user_id = request.session.get("user_id")
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
     admin_and_teamlead_emails = []
     try:
         conn = DataOperations.get_db_connection()
@@ -7501,4 +7582,8 @@ def prelogout_page(request):
         if conn:
             conn.close()
 
-    return render(request, "prelogout.html", {"email_list": admin_and_teamlead_emails})
+    return render(request, "prelogout.html", {
+        "email_list": admin_and_teamlead_emails,
+        "name": name,
+        "user_role": user_role
+    })
