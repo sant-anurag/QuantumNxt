@@ -45,6 +45,7 @@
         <table class="customer-list-table" style="width:100%;border-collapse:collapse;">
             <thead>
                 <tr style="background:#f8fbff;border-bottom:1.5px solid #e0e6ef;">
+                    <th style="padding:10px 8px;text-align:left;">Sr. No.</th>
                     <th style="padding:10px 8px;text-align:left;">Company Name</th>
                     <th style="padding:10px 8px;text-align:left;">Contact Person</th>
                     <th style="padding:10px 8px;text-align:left;">Email</th>
@@ -56,6 +57,7 @@
                 {% if customer_list %}
                     {% for customer in customer_list %}
                     <tr style="border-bottom:1px solid #e0e6ef;" data-created-at="{{ customer.created_at|date:'Y-m-d' }}" data-note="{{ customer.note|default_if_none:''|escape|linebreaksbr|safe }}">
+                        <td style="padding:8px 6px;">{{ forloop.counter }}</td>
                         <td style="padding:8px 6px;" data-fulltext="{{ customer.company_name }}">{{ customer.company_name }}</td>
                         <td style="padding:8px 6px;" data-fulltext="{{ customer.contact_person_name }}">{{ customer.contact_person_name }}</td>
                         <td style="padding:8px 6px;" data-fulltext="{{ customer.contact_email }}">{{ customer.contact_email }}</td>
