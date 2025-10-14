@@ -679,7 +679,8 @@ def get_display_filename(file_name, jd_id):
         parts = file_name.split('__')
         if len(parts) >= 3:
             # parts[1] is the original name
-            orig_name = parts[1]
+            orig_name = parts[1:-1]
+            orig_name = '__'.join(orig_name)  # In case original name had '__'
             ext = os.path.splitext(file_name)[1]
             return orig_name + ext
         return file_name
