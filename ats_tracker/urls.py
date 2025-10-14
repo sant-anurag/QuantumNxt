@@ -47,6 +47,8 @@ urlpatterns = [
 
     path('export_resumes_excel/', views.export_resumes_excel, name='export_resumes_excel'),
     path('parse_resumes/', views.parse_resumes, name='parse_resumes'),
+    path('parse_individual_resume/', views.parse_individual_resume, name='parse_individual_resume'),
+    path('parse_resume/<int:resume_id>/', views.parse_single_resume, name='parse_single_resume'),
     path('save_candidate_details/', views.save_candidate_details, name='save_candidate_details'),
     path('update_candidate_screen_status/', views.update_candidate_screen_status, name='update_candidate_screen_status'),
     path('get_jd_team_members/', views.get_jd_team_members, name='get_jd_team_members'),

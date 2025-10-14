@@ -468,6 +468,44 @@
       color: #fff;
   }
 
+  /* Parse individual resume button */
+  .icon-btn.parse-btn {
+      background: #fff3cd;
+      color: #d97706;
+      font-size: 1.1em;
+      border: 1.5px solid #f59e0b;
+      margin-left: 2px;
+      margin-right: 2px;
+      transition: background 0.2s, color 0.2s;
+  }
+  .icon-btn.parse-btn:hover {
+      background: #fef3c7;
+      color: #d97706;
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.15);
+  }
+  .icon-btn.parse-btn:disabled {
+      background: #f3f4f6;
+      color: #9ca3af;
+      border-color: #d1d5db;
+      cursor: not-allowed;
+  }
+
+  /* Spinner animation for loading states */
+  .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #d97706;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
+
   /* Record Details icon */
   .icon-btn.record-btn {
       background: #f7fafd;

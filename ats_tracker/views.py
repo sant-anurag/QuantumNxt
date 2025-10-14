@@ -2134,7 +2134,7 @@ def download_resume(request, resume_id):
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
 
 
-
+@login_required
 def view_parse_resumes_page(request):
     """
     View to render the resume parsing page.
@@ -2142,6 +2142,95 @@ def view_parse_resumes_page(request):
     name = request.session.get('name', 'Guest')
     user_role = request.session.get('role', 'Guest')
     return render(request, 'view_parse_resumes.html', {'name': name, 'user_role': user_role})
+
+def get_resume_list_and_data(request):
+    """
+    """
+    print("get_resume_list_and_data -> Request method:", request.method)
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
+    
+    jd_id = request.GET.get('jd_id')
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        cursor.close()
+        conn.close()
+        return JsonResponse({'error': 'Employee ID not found for user.'}, status=404)
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    valid_teams = []
+
+    if not jd_id:
+        return JsonResponse({'error': 'JD ID required'}, status=400)
+
+    if user_role in ["Team_Lead", "User"]:        
+        cursor.execute("""
+            SELECT DISTINCT team_id from team_members
+            WHERE emp_id=%s
+        """, [emp_id])
+        valid_teams = [row['team_id'] for row in cursor.fetchall()]
+        if not valid_teams:
+            cursor.close()
+            conn.close()
+            return JsonResponse({'error': 'No teams found for the user.'}, status=403)
+    
+    cursor.execute("""
+        SELECT jd_id, team_id FROM recruitment_jds
+        WHERE jd_id=%s;
+    """, [jd_id])
+    jd_row = cursor.fetchone()
+    if not jd_row:
+        cursor.close()
+        conn.close()
+        return JsonResponse({'error': 'JD not found.'}, status=404)
+    elif jd_row and valid_teams:
+        if jd_row['team_id'] not in valid_teams:
+            cursor.close()
+            conn.close()
+            return JsonResponse({'error': 'Access denied to this JD.'}, status=403)
+    else:
+        # JD is valid and user has access
+        resume_list = []
+        cursor.execute("""
+            SELECT
+                r.resume_id,
+                r.file_name,
+                r.status AS resume_status,
+                c.candidate_id,
+                c.name AS candidate_name,
+                c.phone,
+                c.email,
+                c.hr_member_id
+            FROM
+                resumes r
+            INNER JOIN
+                candidates c ON r.resume_id = c.resume_id
+            WHERE
+                c.hr_member_id = %s AND
+                c.jd_id = %s;
+        """, [emp_id, jd_id])
+        for row in cursor.fetchall():
+            from .utils import get_display_filename
+            display_name = get_display_filename(row['file_name'], jd_id)
+            resume_list.append({
+                'resume_id': row['resume_id'],
+                'file_name': display_name,
+                'status': row['resume_status'],
+                'candidate_id': row['candidate_id'],
+                'candidate_name': row['candidate_name'],
+                'phone': row['phone'],
+                'email': row['email']
+            })
+        cursor.close()
+        conn.close()
+        return JsonResponse({'resumes': resume_list})
+
+        
+
 
 @csrf_exempt
 def view_parse_resumes(request):
@@ -2173,7 +2262,7 @@ def view_parse_resumes(request):
             display_name = get_display_filename(r['file_name'], r['jd_id'])
             parsed_resumes.append({
                 'resume_id': r['resume_id'],
-                    'file_name': display_name,
+                'file_name': display_name,
                 'name': name.group(1) if name else '',
                 'email': email.group(0) if email else '',
                 'phone': phone.group(1) if phone else '',
@@ -2312,6 +2401,80 @@ def parse_resumes(request):
     if not parsed_resumes:
         return JsonResponse({'success': False, 'error': 'No resumes found for this JD'}, status=404)
     return JsonResponse({'success': True, 'resumes': parsed_resumes})
+
+@login_required 
+def parse_individual_resume(request):
+    """
+    API endpoint to parse an individual resume for a specific job description.
+    """
+    jd_id = request.GET.get('jd_id')
+    resume_id = request.GET.get('resume_id')
+    
+    if not jd_id or not resume_id:
+        return JsonResponse({'success': False, 'error': 'JD ID and Resume ID are required'}, status=400)
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    try:
+        # Get the specific resume
+        cursor.execute("SELECT * FROM resumes WHERE resume_id=%s AND jd_id=%s", (resume_id, jd_id))
+        resume = cursor.fetchone()
+        
+        if not resume:
+            return JsonResponse({'success': False, 'error': 'Resume not found'}, status=404)
+        
+        file_path = resume['file_path']
+        if not os.path.exists(file_path):
+            return JsonResponse({'success': False, 'error': 'Resume file not found'}, status=404)
+        
+        # Parse the resume
+        parser = ResumeParser()
+        result = parser.parse_resume(file_path)
+        
+        from .utils import get_display_filename
+        display_name = get_display_filename(resume['file_name'], resume['jd_id'])
+        
+        parsed_resume = {
+            'resume_id': resume['resume_id'],
+            'file_name': display_name,
+            'name': result.get('Name', ''),
+            'email': result.get('Email', ''),
+            'phone': result.get('Contact Number', ''),
+            'experience': result.get('Work Experience (Years)', ''),
+            'status': resume['status'],
+            'file_url': f"/download_resume/{resume['resume_id']}/"
+        }
+        
+        return JsonResponse({'success': True, 'resume': parsed_resume})
+        
+    except Exception as e:
+        print(f"Error parsing individual resume: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error parsing resume: {str(e)}'}, status=500)
+    finally:
+        cursor.close()
+        conn.close()
+
+@login_required
+def parse_single_resume(request, resume_id):
+    """
+    View to parse a single resume.
+    """
+    if request.method == 'GET':
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM resumes WHERE resume_id=%s", (resume_id,))
+        resume = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not resume:
+            return JsonResponse({'success': False, 'error': 'Resume not found'}, status=404)
+        parser = ResumeParser()
+        try:
+            result = parser.parse_resume(resume['file_path'])
+            return JsonResponse({'success': True, 'resume': result})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @csrf_exempt
 def save_candidate_details(request):
@@ -2592,6 +2755,10 @@ def get_candidate_details(request):
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM candidates WHERE resume_id=%s ORDER BY candidate_id DESC LIMIT 1", (resume_id,))
     candidate = cursor.fetchone()
+    if not candidate:
+        cursor.close()
+        conn.close()
+        return JsonResponse({'success': False, 'error': 'Candidate not found', 'candidate': {}})
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})
@@ -2663,8 +2830,8 @@ def search_jds(request):
     # --- 1. Base Query Structure ---
     # Start with the SELECT and FROM clauses
     SQL_SELECT_FROM = """
-        SELECT 
-            j.jd_id, j.jd_summary, c.company_name 
+        SELECT DISTINCT
+            j.jd_id, j.jd_summary, c.company_name, j.updated_at
         FROM recruitment_jds j
         LEFT JOIN customers c ON j.company_id = c.company_id
     """
