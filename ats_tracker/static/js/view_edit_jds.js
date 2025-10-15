@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     good_to_have_skills: jd.good_to_have_skills || '',
                     budget_ctc: jd.budget_ctc || '',
                     education_required: jd.education_required || '',
-                    closure_date: jd.closure_date || ''
+                    closure_date: jd.closure_date || '',
+                    created_at: jd.created_at || '',
                 }));
                 return allJDs;
             } else {
@@ -278,7 +279,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="text-ellipsis" style="max-width: 150px; display: inline-block;" title="${jd.team_name || ''}">${jd.team_name || 'N/A'}</span>
                     <span class="tooltip-text">${jd.team_name || ''}</span>
                 </td>
-                <td>${jd.closure_date || 'N/A'}</td>
+                <td>${jd.closure_date || 'Not closed yet'}</td>
                 <td>
                     <div style="display: flex; gap: 5px; align-items: center;">
                         <button class="jd-btn-view" data-jd="${jd.jd_id}" title="View JD"><i class="fas fa-eye"></i></button>
