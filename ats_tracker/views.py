@@ -1287,7 +1287,8 @@ def get_all_jds(request):
                 j.profiles_rejected,
                 j.profiles_selected,
                 j.profiles_on_hold,
-                j.updated_at
+                j.updated_at,
+                j.created_at
             FROM recruitment_jds j
             LEFT JOIN customers c ON j.company_id = c.company_id
             LEFT JOIN teams t ON j.team_id = t.team_id
@@ -1318,7 +1319,8 @@ def get_all_jds(request):
                 j.profiles_rejected,
                 j.profiles_selected,
                 j.profiles_on_hold,
-                j.updated_at
+                j.updated_at,
+                j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
@@ -1350,7 +1352,8 @@ def get_all_jds(request):
                 j.profiles_rejected,
                 j.profiles_selected,
                 j.profiles_on_hold,
-                j.updated_at
+                j.updated_at,
+                j.created_at
             FROM recruitment_jds j
             LEFT JOIN teams t ON j.team_id = t.team_id
             LEFT JOIN team_members tm ON t.team_id = tm.team_id
@@ -1412,7 +1415,8 @@ def get_all_jds(request):
             'location': row['location'],
             'experience_required': row['experience_required'],
             'education_required': row['education_required'],
-            'closure_date': row['closure_date'].isoformat() if row['closure_date'] else ''
+            'closure_date': row['closure_date'].isoformat() if row['closure_date'] else '',
+            'created_at': row['created_at'].isoformat() if row['created_at'] else '',
         }
         jds.append(jd)
 
