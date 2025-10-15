@@ -583,25 +583,31 @@ function createCurrentCustomersChart(customers) {
     const labels = customers.map(customer => customer.company_name);
     const data = customers.map(customer => customer.JDs_Added_This_Month);
     
-    // Create gradient colors
+    // Get canvas context
     const ctx = canvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(86, 97, 210, 0.8)');
-    gradient.addColorStop(1, 'rgba(86, 97, 210, 0.3)');
+    
+    // Create dynamic colors for pie chart
+    const colors = [
+        '#5661d2', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1',
+        '#14b8a6', '#eab308', '#dc2626', '#7c3aed', '#0ea5e9'
+    ];
+    
+    const backgroundColors = data.map((_, index) => colors[index % colors.length]);
+    const borderColors = backgroundColors.map(color => color);
     
     // Chart configuration
     const config = {
-        type: 'bar',
+        type: 'pie',
         data: {
             labels: labels,
             datasets: [{
-                label: 'JDs Added This Month',
+                label: 'JDs Added',
                 data: data,
-                backgroundColor: gradient,
-                borderColor: '#5661d2',
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
                 borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false,
+                hoverOffset: 10
             }]
         },
         options: {
@@ -610,7 +616,7 @@ function createCurrentCustomersChart(customers) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'New Customers - JDs Added This Month',
+                    text: 'New Customers - JDs Distribution This Month',
                     font: {
                         size: 16,
                         weight: 'bold'
@@ -621,7 +627,37 @@ function createCurrentCustomersChart(customers) {
                     }
                 },
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'right',
+                    labels: {
+                        padding: 15,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        font: {
+                            size: 12
+                        },
+                        color: '#374151',
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    
+                                    return {
+                                        text: `${label} (${value} JDs - ${percentage}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        strokeStyle: data.datasets[0].borderColor[i],
+                                        lineWidth: data.datasets[0].borderWidth,
+                                        hidden: false,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -635,54 +671,9 @@ function createCurrentCustomersChart(customers) {
                             return context[0].label;
                         },
                         label: function(context) {
-                            return `JDs Added: ${context.parsed.y}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#6b7280',
-                        font: {
-                            size: 12
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(107, 114, 128, 0.1)',
-                        drawBorder: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Number of JDs',
-                        color: '#374151',
-                        font: {
-                            size: 13,
-                            weight: 'bold'
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: '#6b7280',
-                        font: {
-                            size: 11
-                        },
-                        maxRotation: 45,
-                        minRotation: 0
-                    },
-                    grid: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Company Names',
-                        color: '#374151',
-                        font: {
-                            size: 13,
-                            weight: 'bold'
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `JDs: ${context.parsed} (${percentage}%)`;
                         }
                     }
                 }
@@ -692,8 +683,7 @@ function createCurrentCustomersChart(customers) {
                 easing: 'easeInOutQuart'
             },
             interaction: {
-                intersect: false,
-                mode: 'index'
+                intersect: false
             }
         }
     };
