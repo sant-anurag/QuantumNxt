@@ -664,11 +664,92 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleUploadFormSubmission(event) {
         event.preventDefault(); // Prevent default form submission
         const form = document.getElementById('resume-upload-form');
-        url = '/api/upload_resume/';
         const formData = new FormData(form);
-        console.log(formData.get('resume_file'));       // form = document.getElementById('resume-upload-form');
+        const files = formData.getAll('resume-file');
+        
+        if (files.length === 0) {
+            showUploadMessage('Please select at least one resume file', 'error');
+            return;
+        }
+
+        // Get JD ID from hidden field
+        const jdId = document.getElementById('upload-jd-id').value;
+        if (!jdId) {
+            showUploadMessage('JD ID is missing. Please close and reopen the upload modal.', 'error');
+            return;
+        }
+
+        // Create FormData for multiple file upload
+        const uploadFormData = new FormData();
+        uploadFormData.append('jd_id', jdId);
+        
+        // Append all files with the correct key name expected by backend
+        files.forEach(file => {
+            uploadFormData.append('resume_file', file);
+        });
+
+        // Show upload progress
+        const progressBar = document.querySelector('.upload-progress');
+        const progressBarFill = document.querySelector('.upload-progress-bar');
+        if (progressBar && progressBarFill) {
+            progressBar.style.display = 'block';
+            progressBarFill.style.width = '0%';
+        }
+
+        // Disable upload button during upload
+        const uploadBtn = document.getElementById('upload-save-btn');
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+        }
+
+        // Clear any previous messages
+        clearUploadMessage();
+
+        // Upload files
+        fetch('/api/upload_multiple_resumes/', {
+            method: 'POST',
+            body: uploadFormData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showUploadMessage(`Successfully uploaded ${files.length} file(s)`, 'success');
+                
+                // Refresh the resumes table
+                const selectedJD = jdselect_dropdown.value;
+                if (selectedJD) {
+                    fetchAndDisplayResumes(selectedJD);
+                }
+                
+                // Close modal after a short delay
+                setTimeout(() => {
+                    closeUploadModal();
+                }, 1500);
+            } else {
+                showUploadMessage(`Upload failed: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            showUploadMessage('Upload failed due to network error', 'error');
+        })
+        .finally(() => {
+            // Hide progress bar and re-enable button
+            if (progressBar) {
+                progressBar.style.display = 'none';
+            }
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+            }
+        });
     }
 
+    // url = '/api/upload_resume/';
 
     if (save_candidate_button) {
         save_candidate_button.addEventListener('click', save_candidate_data);

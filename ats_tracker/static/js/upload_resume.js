@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         messageDiv.textContent = '';
         const formData = new FormData(form);
+        console.log('Uploading resumes to /api/upload_resume/', formData);
         fetch('/api/upload_resume/', {
             method: 'POST',
             body: formData

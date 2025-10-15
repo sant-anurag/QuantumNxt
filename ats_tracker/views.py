@@ -2060,6 +2060,107 @@ def upload_resume(request):
 
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
+@csrf_exempt
+@login_required
+def upload_multiple_resumes(request):
+    """
+    API endpoint to upload one or more resumes against a single JD ID.
+    All successful uploads are given the 'toBeScreened' status.
+    """
+    if request.method == 'POST':
+        conn = None
+        cursor = None
+        uploaded_resume_ids = []
+        
+        try:
+            # Validate JD ID and retrieve multiple files
+            data = request.POST
+            jd_id = data.get('jd_id')
+            # IMPORTANT CHANGE: Use getlist to handle multiple files under the same key
+            resume_files = request.FILES.getlist('resume_file') 
+            
+            if not jd_id:
+                return JsonResponse({'success': False, 'error': 'JD ID is required.'}, status=400)
+            
+            if not resume_files: 
+                return JsonResponse({'success': False, 'error': 'At least one resume file is required.'}, status=400)
+
+            # Check if JD exists (Done once)
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT company_id FROM recruitment_jds WHERE jd_id=%s", (jd_id,))
+            jd_row = cursor.fetchone()
+            if not jd_row:
+                return JsonResponse({'success': False, 'error': 'Invalid JD ID.'}, status=404)
+            customer_id = jd_row['company_id']
+
+            # Determine base folder path once
+            # Safely get static directory path
+            static_dir = settings.STATICFILES_DIRS[0] if hasattr(settings, 'STATICFILES_DIRS') and settings.STATICFILES_DIRS else os.path.join(settings.BASE_DIR, 'static')
+            base_folder = os.path.join(static_dir, 'resumes', jd_id, 'to_be_screened')
+            os.makedirs(base_folder, exist_ok=True)
+            
+            # --- Iterate through each uploaded file ---
+            for resume_file in resume_files:
+                # 1. Validate file type
+                allowed_extensions = ['pdf', 'doc', 'docx']
+                file_extension = resume_file.name.split('.')[-1].lower()
+                
+                if file_extension not in allowed_extensions:
+                    # Fail the entire batch if any file is invalid (for transactional integrity)
+                    return JsonResponse({'success': False, 'error': f'File validation failed. Invalid file type ({file_extension}) found in batch. Only PDF, DOC, and DOCX are allowed.'}, status=400)
+
+                # 2. Prepare file path and name
+                import uuid
+                import re
+                orig_name, ext = os.path.splitext(resume_file.name)
+                # Sanitize original name to be URL/filesystem-safe
+                orig_name_sanitized = re.sub(r'[^\w\s-]', '', orig_name.strip()).replace(' ', '_')
+                unique_str = uuid.uuid4().hex[:8]
+                # Format: JDID__OriginalName__Unique.ext
+                file_name = f"{jd_id}__{orig_name_sanitized}__{unique_str}{ext}"
+                file_path = os.path.join(base_folder, file_name)
+                
+                # 3. Save file to disk
+                with open(file_path, 'wb+') as destination:
+                    for chunk in resume_file.chunks():
+                        destination.write(chunk)
+                
+                # 4. Save metadata in the database
+                cursor.execute("""
+                    INSERT INTO resumes (jd_id, file_name, file_path, status, customer_id)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (jd_id, file_name, file_path, 'toBeScreened', customer_id))
+                
+                resume_id = cursor.lastrowid
+                uploaded_resume_ids.append(resume_id)
+
+            # Commit the transaction only after all files are successfully saved and inserted
+            conn.commit()
+            
+            # Return all successful IDs
+            return JsonResponse({'success': True, 'resume_ids': uploaded_resume_ids})
+
+        except mysql.connector.Error as db_error:
+            print("upload_resume -> Database error:", str(db_error))
+            if 'conn' in locals() and conn:
+                conn.rollback() 
+            return JsonResponse({'success': False, 'error': f'Database error: {str(db_error)}'}, status=500)
+        except Exception as e:
+            print("upload_resume -> Unexpected error:", str(e))
+            if 'conn' in locals() and conn:
+                conn.rollback() 
+            return JsonResponse({'success': False, 'error': f'Unexpected error: {str(e)}'}, status=500)
+        finally:
+            # Ensure resources are closed
+            if 'cursor' in locals() and cursor:
+                cursor.close()
+            if 'conn' in locals() and conn:
+                conn.close()
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+
 def recent_resumes(request):
     """
     View to list recent resumes.
