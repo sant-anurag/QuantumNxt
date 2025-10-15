@@ -28,6 +28,9 @@
             </li>
             {% if user_role == "Admin" or user_role == "SuperUser" %}
                 <li>
+                    <a href="{% url 'admin_dashboard' %}"><i class="fas fa-chart-line"></i> <span>Admin Dashboard</span></a>
+                </li>
+                <li>
                     <a href="#"><i class="fas fa-users"></i> <span>Teams</span></a>
                     <ul class="submenu">
                         <li><a href="{% url 'add_member' %}"><i class="fas fa-user-plus"></i> <span>Add Member</span></a></li>
@@ -114,7 +117,7 @@
     <!-- ats_tracker/templates/home.html -->
     <div class="main-content">
         <div class="qnxt-header-gradient">
-            <h1>QuantumNxt</h1>
+            <h1>ProtonNxt</h1>
         </div>
         <div class="qnxt-body">
             {% block content %}

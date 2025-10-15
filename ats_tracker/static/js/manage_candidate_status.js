@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tr.innerHTML = `
                             <td>${candidate.name || '-'}</td>
                             <td>${candidate.email || '-'}</td>
-                            <td>${candidate.jd_summary || '-'}</td>
+                            <td>${candidate.jd_id || '-'} - ${candidate.jd_summary || '-'}</td>
                             <td>
                                 <select class="status-dropdown" data-candidate="${candidate.candidate_id}" data-level="l1">
                                     ${statusOptions(candidate.l1_result)}

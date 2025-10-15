@@ -2497,6 +2497,7 @@ def save_candidate_details(request):
             skills = data.get('skills')
             education = data.get('education')
             experience = data.get('experience')
+            relevant_experience = data.get('relevant_experience')
             previous_job_profile = data.get('prev_job_profile')
             current_ctc = data.get('current_ctc')
             expected_ctc = data.get('expected_ctc')
@@ -2598,14 +2599,14 @@ def save_candidate_details(request):
 
                 cursor.execute("""
                     UPDATE candidates
-                    SET name=%s, phone=%s, email=%s, skills=%s, education=%s, experience=%s,
+                    SET name=%s, phone=%s, email=%s, skills=%s, education=%s, experience=%s, relevant_experience=%s,
                         previous_job_profile=%s, current_ctc=%s, expected_ctc=%s, notice_period=%s, 
                         location=%s, screened_on=%s, screen_status=%s, screened_remarks=%s,
                         team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s, recruiter_comments=%s
                     WHERE resume_id=%s
                 """, [
                     name, phone, email, skills, education, 
-                    experience, previous_job_profile, current_ctc, 
+                    experience, relevant_experience, previous_job_profile, current_ctc, 
                     expected_ctc, notice_period, location, screened_on,
                     screen_status, screened_remarks, screening_team, hr_member_id,
                     shared_on, recruiters_comment, resume_id
@@ -2631,17 +2632,17 @@ def save_candidate_details(request):
                 cursor.execute("""
                     INSERT INTO candidates (
                                 jd_id, resume_id, name, phone, email, skills,
-                                education, experience, previous_job_profile, 
+                                education, experience, relevant_experience, previous_job_profile, 
                                 current_ctc, expected_ctc, notice_period, 
                                 location, screened_on, screen_status, screened_remarks,
                                 recruiter_comments, team_id, hr_member_id, shared_on
                             )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
                     email, skills, education, experience,
-                    previous_job_profile, current_ctc, 
-                    expected_ctc, notice_period, location, 
+                    relevant_experience, previous_job_profile, current_ctc,
+                    expected_ctc, notice_period, location,
                     screened_on, screen_status, screened_remarks, recruiters_comment,
                     screening_team, hr_member_id, shared_on
                 ])
@@ -2763,57 +2764,6 @@ def get_candidate_details(request):
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})
 
-# @login_required
-# def search_jds(request):
-#     user_id = request.session.get('user_id', None)
-#     user_role = request.session.get('role', 'Guest')
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-
-#     emp_id = DataOperations.get_emp_id_from_user_id(user_id)
-#     jds = []
-
-#     # Implement search functionality
-#     search_query = request.GET.get('search', '').strip()
-
-#     SQL_QUERY = """
-#         SELECT 
-#             j.jd_id, j.jd_summary, c.company_name 
-#         FROM recruitment_jds j
-#         LEFT JOIN customers c ON j.company_id = c.company_id
-#     """
-#     params = []
-#     if user_role in ['Team_Lead', 'User']:
-#         SQL_QUERY += """
-#             LEFT JOIN teams t ON j.team_id = t.team_id
-#             LEFT JOIN team_members tm ON t.team_id = tm.team_id
-#             WHERE t.lead_emp_id=%s OR tm.emp_id=%s
-#         """
-#         params.extend([emp_id, emp_id])
-
-#     if search_query:
-#         query_filter = "j.jd_id LIKE %s OR j.jd_summary LIKE %s OR j.jd_description LIKE %s OR c.company_name LIKE %s"
-#         query = f"""
-#             {SQL_QUERY}
-#             WHERE {query_filter} AND j.jd_status='active'
-#             ORDER BY j.jd_id DESC
-#             LIMIT 10
-#         """
-#         params = [*params, f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%']
-#         cursor.execute(query, (*params,))
-#     else:
-#         query = f"""
-#             {SQL_QUERY}
-#             WHERE j.jd_status='active'
-#             ORDER BY j.updated_at DESC
-#             LIMIT 10
-#         """
-#         cursor.execute(query, params)
-
-#     jds = cursor.fetchall()
-#     cursor.close()
-#     conn.close()
-#     return JsonResponse({'success': True, 'jds': jds})
 
 @login_required
 def search_jds(request):
@@ -3278,95 +3228,6 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
     finally:
         DataOperations.close_db_connection(conn, cursor)
 
-
-# def advanced_to_next_stage(request, candidate_id, comment=None, notify_candidate=False):
-#     """
-
-#     """
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-#     # TODO: Implement advancing to the next stage logic
-#     # - Determine current stage
-#     cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
-#     candidate = cursor.fetchone()
-#     if not candidate:
-#         DataOperations.close_db_connection(conn, cursor)
-#         return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
-#     current_stage = {
-#         'screen_status': candidate['screen_status'],
-#         'l1_result': candidate['l1_result'],
-#         'l2_result': candidate['l2_result'],
-#         'l3_result': candidate['l3_result'],
-#         'offer_status': candidate['offer_status']
-#     }
-    
-
-#     # - Validate if advancement is possible
-#     anywhere_rejected = current_stage['screen_status'] == 'rejected' or \
-#         current_stage['l1_result'] == 'rejected' or \
-#         current_stage['l2_result'] == 'rejected' or \
-#         current_stage['l3_result'] == 'rejected'
-
-#     if anywhere_rejected:
-#         DataOperations.close_db_connection(conn, cursor)
-#         return JsonResponse({'success': False, 'error': 'Cannot advance candidate who has been rejected in any stage'}, status=400)
-    
-#     if current_stage['l3_result'] == 'selected':
-#         DataOperations.close_db_connection(conn, cursor)
-#         return JsonResponse({'success': False, 'error': 'Cannot advance candidate who is at last stage'}, status=400)
-
-#     # - Get last completed stage
-#     last_completed_stage = None
-#     next_stage = None
-#     if current_stage['l3_result'] in ['selected', 'rejected']:
-#         last_completed_stage = 'l3'
-#         next_stage = None
-
-#     elif current_stage['l2_result'] in ['selected', 'rejected']:
-#         last_completed_stage = 'l2'
-#         next_stage = 'l3'
-#     elif current_stage['l1_result'] in ['selected', 'rejected']:
-#         last_completed_stage = 'l1'
-#         next_stage = 'l2'
-#     elif current_stage['screen_status'] == 'selected':
-#         last_completed_stage = 'screen'
-#         next_stage = 'l1'
-#     else:
-#         last_completed_stage=None
-#         next_stage = 'screen'
-
-#     # - Update candidate status
-#     if next_stage == 'screen':
-#         screen_status = 'selected'
-#         screen_remarks = comment
-#         screened_on = datetime.now().date().format('%Y-%m-%d')
-#         cursor.execute("""
-#             UPDATE candidates
-#             SET screen_status=%s,
-#                 screened_remarks=%s,
-#                 screened_on=%s,
-#                 updated_at=NOW()
-#             WHERE candidate_id=%s
-#         """, (screen_status, screen_remarks, screened_on, candidate_id))
-    
-#     elif next_stage=='l1':
-#         l1_result = 'selected'
-#         l1_remarks = comment
-#         l1_interviewed_on = datetime.now().date().format('%Y-%m-%d')
-#         cursor.execute("""
-#             UPDATE candidates
-#             SET l1_result=%s,
-#                 l2_comments=%s,
-#                 l1_date=%s,
-#                 updated_at=NOW()
-#             WHERE candidate_id=%s
-#         """, (l1_result, l1_remarks, l1_interviewed_on, candidate_id))
-
-#     # - Add comments if provided
-#     # - Update candidate Mustor
-#     # - Notify candidate if required
-#     return JsonResponse({'success': True, 'message': 'Advanced to next stage successfully.'})
-
 @login_required
 def reject_candidate(request, candidate_id: int, rejection_reason: str = None, comment: str = None, notify_candidate: bool = False):
     """
@@ -3502,20 +3363,6 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         
     finally:
         DataOperations.close_db_connection(conn, cursor)
-
-
-# def reject_candidate(request, candidate_id, rejection_reason=None, comment=None, notify_candidate=False):
-#     """
-
-#     """
-#     # TODO: Implement rejection logic
-#     # - Check current candidate status
-#     # - Validate rejection reason
-#     # - Update candidate status to rejected
-#     # - Record rejection reason and comments
-#     # - Notify candidate if required
-
-#     return JsonResponse({'success': True, 'message': 'Candidate rejected successfully.'})
 
 @login_required
 def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, comment: str = None, notify_candidate: bool = False):
@@ -4251,7 +4098,7 @@ def manage_candidate_status_data(request):
 
     # Build base query and params
     params = []
-    if user_role == 'Admin':
+    if user_role in ['Admin', 'SuperUser']:
         query = """
             SELECT c.*, jd.jd_summary, jd.jd_id
             FROM candidates c
@@ -4260,9 +4107,9 @@ def manage_candidate_status_data(request):
         """
         count_query = "SELECT COUNT(*) as total FROM candidates c LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id WHERE c.screen_status = 'selected'"
         if search:
-            query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
-            count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
-            params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+            query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s OR jd.jd_id LIKE %s)"
+            count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s OR jd.jd_id LIKE %s)"
+            params = [f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"]
     else:
         # Team_Lead or User: restrict to JDs associated with their teams
         # Get emp_id for user
@@ -4281,13 +4128,20 @@ def manage_candidate_status_data(request):
                 SELECT c.*, jd.jd_summary, jd.jd_id
                 FROM candidates c
                 LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
-                WHERE c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})
+                WHERE c.hr_member_id = %s AND c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})
             """
-            count_query = f"SELECT COUNT(*) as total FROM candidates c LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id WHERE c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})"
+            count_query = f"""
+                SELECT COUNT(*) as total 
+                FROM candidates c 
+                LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id 
+                WHERE 
+                    c.hr_member_id = %s AND c.screen_status = 'selected' AND jd.team_id IN ({team_ids_str})
+            """
+            params.extend([emp_id])
             if search:
-                query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
-                count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s)"
-                params = [f"%{search}%", f"%{search}%", f"%{search}%"]
+                query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s OR jd.jd_id LIKE %s)"
+                count_query += " AND (c.name LIKE %s OR c.email LIKE %s OR jd.jd_summary LIKE %s OR jd.jd_id LIKE %s)"
+                params.extend([f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"])
         else:
             # No teams, return empty
             cursor.close()
@@ -4298,8 +4152,19 @@ def manage_candidate_status_data(request):
     params += [limit, offset]
     cursor.execute(query, params)
     candidates = cursor.fetchall()
-    # For count, only use search params if present
-    count_params = params[:3] if search else []
+    
+    # For count query, we need to handle params differently based on user role and search
+    if user_role in ['Admin', 'SuperUser']:
+        count_params = [f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"] if search else []
+    else:
+        # For Team_Lead/User, always include emp_id first, then search params if present
+        if team_ids:
+            count_params = [emp_id]
+            if search:
+                count_params.extend([f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"])
+        else:
+            count_params = []
+    
     cursor.execute(count_query, count_params)
     total = cursor.fetchone()['total']
     num_pages = (total // limit) + (1 if total % limit else 0)
@@ -5363,6 +5228,298 @@ def dashboard_data(request):
         "closed_jds_bar": closed_jds_bar,
         "in_progress_candidates": in_progress_candidates
     })
+
+@role_required(['Admin'], is_api=False)
+def admin_dashboard(request):
+    """
+    View to render the admin dashboard page.
+    """
+    name = request.session.get('name', 'Guest')
+    user_role = request.session.get('role', 'Guest')
+    return render(request, 'admin-dashboard.html', {'name': name, 'user_role': user_role})
+
+@role_required(['Admin'], is_api=True)
+def api_admin_dashboard(request):
+    name = request.session.get('name', 'Guest')
+    admin_dashboard_data = {
+        "name": name,
+    }
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Overall Pipeline Health & Workload (High-Level KPIs).
+    cursor.execute("""
+        SELECT
+        -- 1. TOTAL OPEN POSITIONS (Workload)
+            (SELECT SUM(no_of_positions - profiles_selected)
+            FROM recruitment_jds
+            WHERE jd_status = 'active') AS Total_Open_Positions,
+
+            -- 2. TOTAL CANDIDATES IN PIPELINE (Workload)
+            (SELECT COUNT(candidate_id)
+            FROM candidates
+            WHERE offer_status = 'in_progress'
+            AND joining_status = 'in_progress'
+            AND (screen_status != 'rejected' OR screen_status IS NULL)
+            AND (l1_result != 'rejected' OR l1_result IS NULL)
+            AND (l2_result != 'rejected' OR l2_result IS NULL)
+            AND (l3_result != 'rejected' OR l3_result IS NULL)
+            -- Exclude 'joined' or 'withdrawn' candidates
+            AND joining_status NOT IN ('joined', 'withdrawn')
+            ) AS Total_Candidates_In_Pipeline,
+
+            -- 3. AVERAGE TIME TO FILL (Efficiency/Health)
+            (SELECT AVG(DATEDIFF(closure_date, created_at))
+            FROM recruitment_jds
+            WHERE jd_status = 'closed'
+            AND closure_date IS NOT NULL) AS Avg_Time_To_Fill_Days,
+
+            -- 4. OFFER ACCEPTANCE RATE (%) (Health)
+            (SELECT
+                (SUM(CASE WHEN offer_status = 'accepted' THEN 1 ELSE 0 END) * 100.0) /
+                SUM(CASE WHEN offer_status IN ('accepted', 'declined') THEN 1 ELSE 0 END)
+            FROM candidates
+            WHERE offer_status IN ('accepted', 'declined')
+            ) AS Offer_Acceptance_Rate_Percent;
+    """)
+    kpi_row = cursor.fetchone()
+    admin_dashboard_data.update(kpi_row)
+
+    return JsonResponse({'success': True, 'data': admin_dashboard_data})
+
+@role_required(['Admin'], is_api=True)
+def api_admin_customer_jd_stats(request):
+    """
+    API endpoint to get JD counts per customer with pagination.
+    """
+    # Get pagination parameters
+    page = int(request.GET.get('page', 1))
+    limit = 5  # Fixed limit of 5 companies per page
+    offset = (page - 1) * limit
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get total count for pagination info
+    cursor.execute("""
+        SELECT COUNT(DISTINCT c.company_id) as total_companies
+        FROM customers c
+        JOIN recruitment_jds j ON c.company_id = j.company_id
+    """)
+    total_companies = cursor.fetchone()['total_companies']
+    
+    # Calculate total pages
+    total_pages = (total_companies + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated data
+    cursor.execute("""
+        SELECT
+            c.company_id,
+            c.company_name,
+            -- Count JDs where the status is 'active'
+            COUNT(CASE WHEN j.jd_status = 'active' THEN 1 END) AS Active_JD_Count,
+            -- Count JDs where the status is 'on hold'
+            COUNT(CASE WHEN j.jd_status = 'on hold' THEN 1 END) AS Onhold_JD_Count,
+            -- Count JDs where the status is 'closed'
+            COUNT(CASE WHEN j.jd_status = 'closed' THEN 1 END) AS Closed_JD_Count
+        FROM
+            customers c
+        JOIN
+            recruitment_jds j ON c.company_id = j.company_id
+        GROUP BY
+            c.company_id, c.company_name
+        ORDER BY
+            c.company_name
+        LIMIT %s OFFSET %s
+    """, (limit, offset))
+    
+    customer_jd_counts = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return JsonResponse({
+        'success': True, 
+        'data': customer_jd_counts,
+        'pagination': {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_companies': total_companies,
+            'companies_per_page': limit,
+            'has_next': page < total_pages,
+            'has_previous': page > 1
+        }
+    })
+
+@role_required(['Admin'], is_api=True)
+def api_admin_current_customers(request):
+    """
+    API endpoint to get a list of current customers (companies) with active JDs.
+    """
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT
+            c.company_name,
+            c.created_at AS Company_Creation_Date,
+            COUNT(j.jd_id) AS JDs_Added_This_Month
+        FROM
+            customers c
+        JOIN
+            recruitment_jds j ON c.company_id = j.company_id
+        WHERE
+            -- 1. Filter: Company must have been created in the current month
+            YEAR(c.created_at) = YEAR(CURRENT_DATE()) 
+            AND MONTH(c.created_at) = MONTH(CURRENT_DATE())
+            
+            -- 2. Filter: The counted JD must also have been created in the current month
+            AND YEAR(j.created_at) = YEAR(CURRENT_DATE()) 
+            AND MONTH(j.created_at) = MONTH(CURRENT_DATE())
+        GROUP BY
+            c.company_name, c.created_at -- Group by both name and creation date to ensure uniqueness
+        ORDER BY
+            JDs_Added_This_Month DESC, c.company_name ASC;
+    """)
+    current_customers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'data': current_customers})
+
+@role_required(['Admin'], is_api=True)
+def api_admin_jd_info(request):
+    """
+    Retrieves a list of Job Descriptions (JDs) based on provided filters (status and company_id) with pagination.
+    
+    Expected request parameters (from query string):
+    - jd_status (string): 'active', 'closed', or 'onhold'. Optional.
+    - company_id (int): The ID of the company. Optional.
+    - page (int): Page number (default: 1). Optional.
+    - limit (int): Number of records per page (default: 10). Optional.
+    """
+    
+    # 1. Parse Request Parameters
+    try:
+        if request.method == 'GET':
+            status_filter = request.GET.get('jd_status', '').lower()
+            company_id_filter = request.GET.get('company_id')
+            page = int(request.GET.get('page', 1))
+            limit = int(request.GET.get('limit', 10))
+        else:
+             return JsonResponse({'success': False, 'message': 'Only GET requests supported for this endpoint'}, status=405)
+
+        # Basic validation for company_id
+        if company_id_filter:
+            company_id_filter = int(company_id_filter)
+        
+        # Validate pagination parameters
+        if page < 1:
+            page = 1
+        if limit < 1 or limit > 100:  # Max limit of 100
+            limit = 10
+            
+        offset = (page - 1) * limit
+        
+    except ValueError:
+        return JsonResponse({'success': False, 'message': 'Invalid format for pagination or company_id parameters.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error processing request parameters: {str(e)}'}, status=400)
+
+    # 2. Build the Dynamic SQL Queries
+    
+    # Base query for counting total records
+    count_sql = """
+        SELECT COUNT(*) as total_count
+        FROM recruitment_jds j
+        LEFT JOIN teams t ON j.team_id = t.team_id
+        WHERE 1=1
+    """
+    
+    # Base query for fetching data
+    base_sql = """
+        SELECT
+            j.jd_id,
+            j.jd_summary,
+            j.jd_status,
+            t.team_name,
+            j.no_of_positions,
+            j.total_profiles,
+            j.profiles_completed,
+            j.profiles_in_progress,
+            j.created_at,
+            j.closure_date
+        FROM
+            recruitment_jds j
+        LEFT JOIN
+            teams t ON j.team_id = t.team_id
+        WHERE 1=1
+    """
+    
+    conditions = []
+    params = []
+    count_params = []
+
+    # Add JD Status filter
+    if status_filter and status_filter in ('active', 'closed', 'onhold'):
+        conditions.append("j.jd_status = %s")
+        params.append(status_filter)
+        count_params.append(status_filter)
+    elif status_filter:
+        return JsonResponse({'success': False, 'message': 'Invalid jd_status provided. Valid values: active, closed, onhold'}, status=400)
+
+    # Add Company ID filter
+    if company_id_filter is not None:
+        conditions.append("j.company_id = %s")
+        params.append(company_id_filter)
+        count_params.append(company_id_filter)
+
+    # Append conditions to both queries
+    if conditions:
+        condition_clause = " AND " + " AND ".join(conditions)
+        base_sql += condition_clause
+        count_sql += condition_clause
+    
+    # Add ordering and pagination to main query
+    base_sql += " ORDER BY j.created_at DESC LIMIT %s OFFSET %s"
+    params.extend([limit, offset])
+    
+    # 3. Execute the Queries
+    try:
+        conn = DataOperations.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get total count first
+        cursor.execute(count_sql, count_params)
+        total_count = cursor.fetchone()['total_count']
+        
+        # Calculate pagination info
+        total_pages = (total_count + limit - 1) // limit  # Ceiling division
+        
+        # Execute the main query
+        cursor.execute(base_sql, params)
+        jd_list = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+
+        # 4. Return Results with pagination info
+        return JsonResponse({
+            'success': True, 
+            'data': jd_list,
+            'pagination': {
+                'current_page': page,
+                'total_pages': total_pages,
+                'total_records': total_count,
+                'records_per_page': limit,
+                'has_next': page < total_pages,
+                'has_previous': page > 1,
+                'showing_from': offset + 1 if total_count > 0 else 0,
+                'showing_to': min(offset + limit, total_count)
+            }
+        }, status=200)
+        
+    except Exception as e:
+        # Log the error for admin purposes
+        print(f"Database Error in api_admin_jd_info: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'A server error occurred while fetching JD information.'}, status=500)
 
 def offer_letter_page(request):
     """
@@ -6803,6 +6960,7 @@ def status_report_page(request):
     View to render the status report page.
     """
     role = request.session.get("role")
+    name = request.session.get("name", "Guest")
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     if role == "Team_Lead":
@@ -6840,7 +6998,7 @@ def status_report_page(request):
     ]
     cursor.close()
     conn.close()
-    return render(request, 'status_report.html', {"teams": teams, "members": members, "user_role": role})
+    return render(request, 'status_report.html', {"teams": teams, "members": members, "user_role": role, "name":name})
 
 def _validate_report_params(request_data, role, user_id):
     """Validates and sanitizes report parameters."""
@@ -7331,7 +7489,7 @@ def save_email_config(request):
         # Check email credentials by sending a test mail
         from .utils import encrypt_password
 
-        test_subject = "[QuantumNxt] Email Configuration Test"
+        test_subject = "[ProtonNxt] Email Configuration Test"
         test_body = "<p>Your email configuration was tested and is working! If you did not request this, please ignore.</p>"
         test_result = MessageProviders.send_email(
             from_email=email,

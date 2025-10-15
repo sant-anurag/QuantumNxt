@@ -11,8 +11,8 @@
             <select id="jd-select"></select>
             <span id="jd-id"></span>
         </h2>
-        <button id="start-parse-btn" class="icon-btn" title="Start Parsing">
-            &#128269; Start Parsing
+        <button id="upload-btn" class="icon-btn upload-btn" title="Upload Resume">
+            &#x1F4E4; Upload Resume
         </button>
         <button id="export-btn" class="icon-btn export-btn" title="Export to Excel">
             &#x1F4C3; Export
@@ -38,74 +38,75 @@
 <div id="candidate-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>Record Candidate Details</h3>
-        <form id="candidate-form">
+        <form id="candidate-form" class="candidate-form">
             <input type="hidden" id="modal-resume-id">
             <input type="hidden" id="modal-jd-id">
             <input type="hidden" id="modal-team-id">
 
-            <!-- Name, Phone, Email -->
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-name">Name:</label>
+            <!-- Personal Information Section -->
+            <div class="form-section personal-info">
+                <div class="form-field">
+                    <label for="modal-name">Name<span class="required">*</span></label>
                     <input type="text" id="modal-name" maxlength="100">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-phone">Phone:</label>
+                <div class="form-field">
+                    <label for="modal-phone">Phone<span class="required">*</span></label>
                     <input type="text" id="modal-phone" maxlength="20">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-email">Email:</label>
+                <div class="form-field">
+                    <label for="modal-email">Email<span class="required">*</span></label>
                     <input type="email" id="modal-email" maxlength="100">
                 </div>
             </div>
 
-            <!-- Skills, Education, Experience, Previous Job profile  -->
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-skills">Skills:</label>
-                    <input type="text" id="modal-skills" maxlength="255">
+            <!-- Professional Information Section -->
+            <div class="form-section professional-info">
+                <div class="form-field">
+                    <label for="modal-skills">Skills</label>
+                    <textarea id="modal-skills" maxlength="500" rows="3" placeholder="Enter skills separated by commas or new lines"></textarea>
                 </div>
-
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-education">Education:</label>
-                    <input type="text" id="modal-education" maxlength="255">
+                <div class="form-field">
+                    <label for="modal-education">Education</label>
+                    <textarea id="modal-education" maxlength="500" rows="3" placeholder="Enter education details"></textarea>
                 </div>
-
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-experience">Experience (years):</label>
+                <div class="form-field">
+                    <label for="modal-experience">Experience (years)</label>
                     <input type="number" id="modal-experience" min="0" step="0.1" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-prev-job-profile">Previous Job Profile:</label>
+                <div class="form-field">
+                    <label for="modal-relevant-experience">Relevant Experience (years)</label>
+                    <input type="number" id="modal-relevant-experience" min="0" step="0.1" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
+                </div>
+                <div class="form-field">
+                    <label for="modal-prev-job-profile">Previous Job Profile</label>
                     <input type="text" id="modal-prev-job-profile" maxlength="255">
                 </div>
             </div>
 
-            <!-- Current CTC, Expected CTC, Notice Period, Job location -->
-           <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-current-ctc">Current CTC:</label>
+            <!-- Compensation & Location Section -->
+            <div class="form-section compensation-info">
+                <div class="form-field">
+                    <label for="modal-current-ctc">Current CTC</label>
                     <input type="number" id="modal-current-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-expected-ctc">Expected CTC:</label>
+                <div class="form-field">
+                    <label for="modal-expected-ctc">Expected CTC</label>
                     <input type="number" id="modal-expected-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-notice-period">Notice Period (days):</label>
+                <div class="form-field">
+                    <label for="modal-notice-period">Notice Period (days)</label>
                     <input type="number" id="modal-notice-period" min="0" step="1" maxlength="3" oninput="this.value = this.value.replace(/[^\d]/g, '')">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-location">Location:</label>
+                <div class="form-field">
+                    <label for="modal-location">Location</label>
                     <input type="text" id="modal-location" maxlength="100">
                 </div>
             </div>
 
-
-            <!-- Screen Status, Screening Team, HR Member ID -->
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-screen-status">Screen Status:</label>
+            <!-- Screening Information Section -->
+            <div class="form-section screening-info">
+                <div class="form-field">
+                    <label for="modal-screen-status">Screen Status<span class="required">*</span></label>
                     <select id="modal-screen-status">
                         <option value="toBeScreened">To Be Screened</option>
                         <option value="selected">Selected</option>
@@ -113,42 +114,36 @@
                         <option value="onHold">On Hold</option>
                     </select>
                 </div>
-                <!-- Screening Team (readonly, auto-filled) -->
-                <div style="flex:1; display:flex; flex-direction:column; margin-right:12px;">
-                    <label for="modal-screening-team">Screening Team:</label>
+                <div class="form-field">
+                    <label for="modal-screening-team">Screening Team<span class="required">*</span></label>
                     <input type="text" id="modal-screening-team" readonly>
                 </div>
-
-                <!-- Assigned To (HR Member dropdown) -->
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-hr-member-id">Assigned To:</label>
+                <div class="form-field">
+                    <label for="modal-hr-member-id">Assigned To<span class="required">*</span></label>
                     <select id="modal-hr-member-id"></select>
                 </div>
             </div>
 
-            <div class="modal-row">
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-screened-on">Screened On:</label>
+            <!-- Date Information Section -->
+            <div class="form-section date-info">
+                <div class="form-field">
+                    <label for="modal-screened-on">Screened On</label>
                     <input type="date" id="modal-screened-on">
                 </div>
-                <div style="flex:1; display:flex; flex-direction:column;">
-                    <label for="modal-shared-on">Shared On:</label>
+                <div class="form-field">
+                    <label for="modal-shared-on">Shared On</label>
                     <input type="date" id="modal-shared-on">
                 </div>
             </div>
 
-            <!-- Screened Remarks -->
-            <div class="modal-row">
-                <div style="flex:3; display:flex; flex-direction:column;">
-                    <label for="modal-screened-remarks">Screened Remarks:</label>
+            <!-- Comments Section -->
+            <div class="form-section comments-info">
+                <div class="form-field form-field-full">
+                    <label for="modal-screened-remarks">Screened Remarks</label>
                     <textarea id="modal-screened-remarks" maxlength="500"></textarea>
                 </div>
-            </div>
-
-            <!-- Recruiter Comments -->
-            <div class="modal-row">
-                <div style="flex:3; display:flex; flex-direction:column;">
-                    <label for="modal-recruiter-comments">Recruiter Comments:</label>
+                <div class="form-field form-field-full">
+                    <label for="modal-recruiter-comments">Recruiter Comments</label>
                     <textarea id="modal-recruiter-comments" maxlength="200"></textarea>
                 </div>
             </div>
@@ -160,6 +155,34 @@
         </form>
     </div>
 </div>
+
+<!-- Resume upload Overlay -->
+<div id="resume-upload-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Upload Resume</h3>
+        <form id="resume-upload-form" class="candidate-form" enctype="multipart/form-data">
+            <input type="hidden" id="upload-jd-id">
+            <input type="hidden" id="upload-team-id">
+            <div class="form-field">
+                <label for="resume-file">Select Resume File(s)<span class="required">*</span></label>
+                <input type="file" id="resume-file" name="resume-file" multiple accept=".pdf,.doc,.docx,.txt">
+                <div class="file-selected-indicator"></div>
+                <div class="upload-progress">
+                    <div class="upload-progress-bar"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" id="upload-save-btn" class="modal-btn save-btn">Upload</button>
+                <button type="button" id="upload-close-btn" class="modal-btn close-btn">Close</button>
+            </div>
+            <div id="upload-message" style="margin-top:10px;"></div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Include SheetJS library for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="{% static 'js/view_parse_resumes.js' %}"></script>
 <script>
 </script>

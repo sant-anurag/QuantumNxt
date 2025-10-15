@@ -1,0 +1,165 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/admin-dashboard.css' %}">
+
+<div class="admin-dashboard-container">
+    <div class="dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <p>Key Performance Indicators & System Overview</p>
+    </div>
+    
+    <!-- Two Column Layout -->
+    <div class="dashboard-layout">
+        <!-- Left Column -->
+        <div class="dashboard-left-column">
+            <!-- KPI Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Key Performance Indicators</h2>
+                </div>
+                <div class="kpi-grid">
+                    <!-- KPI Card 1: Total Open Positions -->
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Total Open Positions</h3>
+                            <div class="kpi-value" id="total-open-positions">
+                                <span class="loading">Loading...</span>
+                            </div>
+                            <p class="kpi-description">Active positions awaiting candidates</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI Card 2: Total Candidates in Pipeline -->
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Candidates in Pipeline</h3>
+                            <div class="kpi-value" id="total-candidates">
+                                <span class="loading">Loading...</span>
+                            </div>
+                            <p class="kpi-description">Candidates currently being processed</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI Card 3: Average Time to Fill -->
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Avg. Time to Fill</h3>
+                            <div class="kpi-value" id="avg-time-fill">
+                                <span class="loading">Loading...</span>
+                            </div>
+                            <p class="kpi-description">Average days to close positions</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI Card 4: Offer Acceptance Rate -->
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Offer Acceptance Rate</h3>
+                            <div class="kpi-value" id="offer-acceptance-rate">
+                                <span class="loading">Loading...</span>
+                            </div>
+                            <p class="kpi-description">Percentage of accepted offers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer JD Statistics Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Customer JD Statistics</h2>
+                </div>
+                <div class="customer-stats-container">
+                    <div class="stats-table-container">
+                        <table class="stats-table" id="customer-jd-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Company Name</th>
+                                    <th>Active</th>
+                                    <th>On Hold</th>
+                                    <th>Closed</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-stats-tbody">
+                                <tr>
+                                    <td colspan="5" class="loading-cell">Loading customer data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    <div class="pagination-container" id="customer-stats-pagination" style="display: none;">
+                        <div class="pagination-info">
+                            <span id="pagination-info-text">Page 1 of 1</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" id="prev-page-btn" disabled>
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <span class="pagination-pages" id="pagination-pages"></span>
+                            <button class="pagination-btn" id="next-page-btn" disabled>
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Future sections will be added here -->
+        </div>
+
+        <!-- Right Column -->
+        <div class="dashboard-right-column">
+            <!-- Current Customers Chart -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Current Month New Customers</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="currentCustomersChart" width="400" height="300"></canvas>
+                    <div class="chart-loading" id="chart-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading customer data...</span>
+                    </div>
+                    <div class="chart-no-data" id="chart-no-data" style="display: none;">
+                        <i class="fas fa-chart-line"></i>
+                        <span>No customer data available for this month</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Placeholder for future content -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Additional Analytics</h2>
+                </div>
+                <div class="placeholder-content">
+                    <p>Future charts and analytics will be added here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="jd-data" style="display: none;"></div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/admin-dashboard.js' %}"></script>
+{% endblock %}

@@ -170,7 +170,7 @@ class ATSDatabaseInitializer:
                 phone VARCHAR(20),
                 email VARCHAR(100),
                 skills TEXT,
-                education VARCHAR(255),
+                education VARCHAR(500),
                 experience VARCHAR(20),
                 current_ctc DECIMAL(10, 2),
                 expected_ctc DECIMAL(10, 2),
@@ -264,7 +264,6 @@ class ATSDatabaseInitializer:
                 )
             """)
         
-        
         self.conn.commit()
 
         print("Database, HR team members, and teams tables created.")
@@ -273,7 +272,31 @@ class ATSDatabaseInitializer:
         self.cursor.close()
         self.conn.close()
 
+    def update(self):
+        self.cursor.execute("USE ats")
+        try:
+            self.cursor.execute(
+                """
+                ALTER TABLE candidates
+                MODIFY COLUMN education VARCHAR(500),
+                ADD COLUMN relevant_experience VARCHAR(20) AFTER experience,
+                ADD COLUMN joining_status ENUM('in_progress', 'joined', 'onHold', 'withdrawn') NOT NULL DEFAULT 'in_progress' AFTER offer_status,
+                ADD COLUMN joining_date DATE NULL AFTER joining_status,
+                ADD COLUMN joining_comments TEXT NULL AFTER joining_date;
+                """)
+        except mysql.connector.Error as err:
+            print(f"Error: {err}")
+        try:
+            self.cursor.execute("""
+                ALTER TABLE candidates
+                    
+                
+            """)
+        except mysql.connector.Error as err:
+            print(f"Error: {err}")
 
+        self.conn.commit()
+        print("Database schema updated.")
 # Usage
 # initializer = ATSDatabaseInitializer()
 # initializer.initialize()

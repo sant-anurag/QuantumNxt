@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
     resume_table = document.getElementById('resumes-table');
     resume_table_body = document.getElementById('resumes-tbody');
     save_candidate_button = document.getElementById('modal-save-btn');
+    export_button = document.getElementById('export-btn');
+    upload_button = document.getElementById('upload-btn');
     
     // candidate modal elements
 
@@ -48,8 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="exp-col">${resume.experience || '-'}</td>
                 <td class="status-col">${statusText || '-'}</td>
                 <td class="actions-col">
-                    <button class="icon-btn parse-btn" data-resume-id="${resume.resume_id}"><i class="fas fa-upload"></i></button>
-                    <button class="icon-btn edit-btn" data-resume-id="${resume.resume_id}"><i class="fas fa-edit"></i></button>
+                    <button class="icon-btn parse-btn" data-resume-id="${resume.resume_id}" title="Parse Resume"><i class="fas fa-upload"></i></button>
+                    <button class="icon-btn edit-btn" data-resume-id="${resume.resume_id}" title="Edit Resume"><i class="fas fa-edit"></i></button>
                 </td>
 
             `
@@ -175,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modal-shared-on').value = '';
         document.getElementById('modal-screened-remarks').value = '';
         document.getElementById('modal-recruiter-comments').value = '';
+        document.getElementById('modal-relevant-experience').value = '';
         
         // Clear screening team display field and attributes
         const screeningTeamField = document.getElementById('modal-screening-team');
@@ -348,6 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('modal-shared-on').value = candidate.shared_on || '';
                         document.getElementById('modal-screened-remarks').value = candidate.screened_remarks || '';
                         document.getElementById('modal-recruiter-comments').value = candidate.recruiter_comments || '';
+                        document.getElementById('modal-relevant-experience').value = candidate.relevant_experience || '';
                         
                         // For existing candidates, update screening team display if we have team info
                         if (candidate.team_id) {
@@ -379,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function closeModal() {
+    function closeCandidateModal() {
         const candidateModal = document.getElementById('candidate-modal');
         if (candidateModal) {
             candidateModal.style.display = 'none';
@@ -387,24 +391,146 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function openUploadModal() {
+        const selectedJD = jdselect_dropdown.value;
+        if (!selectedJD) {
+            alert('Please select a JD first before uploading resumes.');
+            return;
+        }
+        
+        const uploadModal = document.getElementById('resume-upload-modal');
+        if (uploadModal) {
+            // Set the JD ID in the upload form
+            document.getElementById('upload-jd-id').value = selectedJD;        
+            uploadModal.style.display = 'flex';
+            clearUploadMessage();
+        }
+    }
+
+    function closeUploadModal() {
+        const uploadModal = document.getElementById('resume-upload-modal');
+        if (uploadModal) {
+            uploadModal.style.display = 'none';
+            clearUploadForm();
+        }
+    }
+
+    function clearUploadForm() {
+        const uploadForm = document.getElementById('resume-upload-form');
+        if (uploadForm) {
+            uploadForm.reset();
+        }
+        
+        // Clear hidden fields
+        document.getElementById('upload-jd-id').value = '';
+        document.getElementById('upload-team-id').value = '';
+        
+        // Hide file selection indicator and progress bar
+        const fileIndicator = document.querySelector('.file-selected-indicator');
+        if (fileIndicator) {
+            fileIndicator.classList.remove('show');
+        }
+        
+        const progressBar = document.querySelector('.upload-progress');
+        if (progressBar) {
+            progressBar.classList.remove('show');
+            const progressBarFill = document.querySelector('.upload-progress-bar');
+            if (progressBarFill) {
+                progressBarFill.style.width = '0%';
+            }
+        }
+        
+        clearUploadMessage();
+    }
+
+    function clearUploadMessage() {
+        const uploadMessage = document.getElementById('upload-message');
+        if (uploadMessage) {
+            uploadMessage.textContent = '';
+            uploadMessage.className = '';
+            uploadMessage.style.display = 'none';
+        }
+    }
+
+    function showUploadMessage(message, type = 'info') {
+        const uploadMessage = document.getElementById('upload-message');
+        if (uploadMessage) {
+            uploadMessage.textContent = message;
+            uploadMessage.className = type;
+            uploadMessage.style.display = 'block';
+        }
+    }
+
+    function handleFileSelection() {
+        const fileInput = document.getElementById('resume-file');
+        const fileIndicator = document.querySelector('.file-selected-indicator');
+        
+        if (fileInput && fileInput.files.length > 0) {
+            const fileCount = fileInput.files.length;
+            const fileNames = Array.from(fileInput.files).map(file => file.name).join(', ');
+            
+            if (fileIndicator) {
+                fileIndicator.textContent = `${fileCount} file(s) selected: ${fileNames}`;
+                fileIndicator.classList.add('show');
+            }
+            
+            clearUploadMessage();
+        } else {
+            if (fileIndicator) {
+                fileIndicator.classList.remove('show');
+            }
+        }
+    }
+
     // Add event listeners for modal close functionality
     function setupModalCloseListeners() {
-        // Close button click
+        // Close button click for candidate modal
         const modalCloseBtn = document.getElementById('modal-close-btn');
         if (modalCloseBtn) {
-            modalCloseBtn.addEventListener('click', closeModal);
+            modalCloseBtn.addEventListener('click', closeCandidateModal);
         }
 
-        // Click on modal overlay to close
+        // Click on candidate modal overlay to close
         const candidateModal = document.getElementById('candidate-modal');
         if (candidateModal) {
             candidateModal.addEventListener('click', function(event) {
                 // Only close if clicking on the overlay (not the modal content)
                 if (event.target === candidateModal) {
-                    closeModal();
+                    closeCandidateModal();
                 }
             });
         }
+
+        // Close button click for upload modal
+        const uploadCloseBtn = document.getElementById('upload-close-btn');
+        if (uploadCloseBtn) {
+            uploadCloseBtn.addEventListener('click', closeUploadModal);
+        }
+
+        // Click on upload modal overlay to close
+        const uploadModal = document.getElementById('resume-upload-modal');
+        if (uploadModal) {
+            uploadModal.addEventListener('click', function(event) {
+                // Only close if clicking on the overlay (not the modal content)
+                if (event.target === uploadModal) {
+                    closeUploadModal();
+                }
+            });
+        }
+
+        // ESC key to close modals
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                // Close candidate modal if open
+                if (candidateModal && candidateModal.style.display === 'flex') {
+                    closeCandidateModal();
+                }
+                // Close upload modal if open
+                if (uploadModal && uploadModal.style.display === 'flex') {
+                    closeUploadModal();
+                }
+            }
+        });
     }
 
     function save_candidate_data(){
@@ -430,7 +556,8 @@ document.addEventListener('DOMContentLoaded', function() {
             screened_on: document.getElementById('modal-screened-on').value,
             shared_on: document.getElementById('modal-shared-on').value,
             screened_remarks: document.getElementById('modal-screened-remarks').value,
-            recruiter_comments: document.getElementById('modal-recruiter-comments').value
+            recruiter_comments: document.getElementById('modal-recruiter-comments').value,
+            relevant_experience: document.getElementById('modal-relevant-experience').value
         };
 
         fetch('/save_candidate_details/', {
@@ -445,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 alert('Candidate details saved successfully!');
-                closeModal();
+                closeCandidateModal();
                 // Refresh the resumes display to reflect any changes
                 const selectedJD = jdselect_dropdown.value;
                 if (selectedJD) {
@@ -461,22 +588,124 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function exportToExcel() {
+        // Check if there's data to export
+        const table = document.getElementById('resume-table');
+        const tbody = document.getElementById('resumes-tbody');
+        
+        if (!tbody || tbody.children.length === 0) {
+            alert('No data to export. Please select a JD with resumes first.');
+            return;
+        }
+        
+        // Get the selected JD for filename
+        const selectedJD = jdselect_dropdown.value;
+        const selectedJDText = jdselect_dropdown.options[jdselect_dropdown.selectedIndex]?.text || 'Unknown_JD';
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare data array for export
+        const exportData = [];
+        
+        // Add header row
+        const headers = ['File Name', 'Name', 'Contact No', 'Email', 'Total Experience (years)', 'Status'];
+        exportData.push(headers);
+        
+        // Add data rows
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            if (row.children.length >= 6) { // Ensure row has enough columns
+                const rowData = [];
+                // Extract text content from each cell (excluding Actions column)
+                for (let i = 0; i < 6; i++) {
+                    const cell = row.children[i];
+                    if (i === 0) {
+                        // For file name, extract just the text without the link
+                        const link = cell.querySelector('a');
+                        rowData.push(link ? link.textContent : cell.textContent);
+                    } else {
+                        rowData.push(cell.textContent.trim());
+                    }
+                }
+                exportData.push(rowData);
+            }
+        });
+        
+        // Create worksheet from data
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        
+        // Set column widths for better formatting
+        const colWidths = [
+            { wch: 25 }, // File Name
+            { wch: 20 }, // Name
+            { wch: 15 }, // Contact No
+            { wch: 25 }, // Email
+            { wch: 15 }, // Experience
+            { wch: 15 }  // Status
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Resumes');
+        
+        // Generate filename with current date and JD info
+        const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const filename = `Resumes_${selectedJDText.replace(/[^a-zA-Z0-9-_]/g, '_')}_${currentDate}.xlsx`;
+        
+        // Save the file
+        XLSX.writeFile(wb, filename);
+        
+        // Show success message
+        alert(`Excel file "${filename}" has been downloaded successfully!`);
+    }
+
+    
+    function handleUploadFormSubmission(event) {
+        event.preventDefault(); // Prevent default form submission
+        const form = document.getElementById('resume-upload-form');
+        url = '/api/upload_resume/';
+        const formData = new FormData(form);
+        console.log(formData.get('resume_file'));       // form = document.getElementById('resume-upload-form');
+    }
+
+
+    if (save_candidate_button) {
+        save_candidate_button.addEventListener('click', save_candidate_data);
+    }
+
+    if (export_button) {
+        export_button.addEventListener('click', exportToExcel);
+    }
+
+    if (upload_button) {
+        upload_button.addEventListener('click', openUploadModal);
+    }
+
+    // JD dropdown change listener - this was missing!
     if (jdselect_dropdown) {
         jdselect_dropdown.addEventListener('change', function() {
             const selectedJD = jdselect_dropdown.value;
             if (selectedJD) {
                 fetchAndDisplayResumes(selectedJD);
                 setAssignmentMembers(selectedJD);
-            }
-            else {
+            } else {
                 // Clear resumes display if no JD is selected
+                resume_table_body.innerHTML = '<tr><td colspan="7">Please select a JD to view resumes.</td></tr>';
             }
         });
     }
-    
 
-    if (save_candidate_button) {
-        save_candidate_button.addEventListener('click', save_candidate_data);
+    // File input change listener for upload modal
+    const resumeFileInput = document.getElementById('resume-file');
+    if (resumeFileInput) {
+        resumeFileInput.addEventListener('change', handleFileSelection);
+    }
+
+    // Upload form submission listener
+    const uploadForm = document.getElementById('resume-upload-form');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', handleUploadFormSubmission);
     }
 
     function getCSRFToken() {
