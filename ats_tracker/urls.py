@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/admin-dashboard-data/customer-jd-stats/', views.api_admin_customer_jd_stats, name='api_admin_customer_jd_stats'),
     path('api/admin-dashboard-data/jd-info/', views.api_admin_jd_info, name='api_admin_jd_info'),
     path('api/admin-dashboard-data/current-customers/', views.api_admin_current_customers, name='api_admin_current_customers'),
+    path('api/admin-dashboard-data/recruitment_funnel/', views.api_admin_recruitment_funnel, name='api_admin_recruitment_funnel'),
     path('teams/add-member/', views.add_member, name='add_member'),
     path('create-team/', views.create_team, name='create_team'),
     path('team-members/<int:team_id>/', views.team_members, name='team_members'),

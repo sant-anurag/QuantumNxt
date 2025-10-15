@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAdminDashboardData();
     loadCustomerJDStats(1); // Load first page
     loadCurrentCustomersChart(); // Load current customers chart
+    loadRecruitmentFunnelChart(); // Load recruitment funnel chart
 });
 
 function loadAdminDashboardData() {
@@ -696,6 +697,238 @@ function showChartError(message) {
     const chartLoading = document.getElementById('chart-loading');
     const chartNoData = document.getElementById('chart-no-data');
     const canvas = document.getElementById('currentCustomersChart');
+    
+    chartLoading.style.display = 'none';
+    canvas.style.display = 'none';
+    
+    // Update no-data message to show error
+    chartNoData.innerHTML = `
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>${message}</span>
+    `;
+    chartNoData.style.display = 'flex';
+}
+
+// Recruitment Funnel Chart
+let recruitmentFunnelChart = null;
+
+// Load Recruitment Funnel Chart
+function loadRecruitmentFunnelChart() {
+    fetch('/api/admin-dashboard-data/recruitment_funnel/', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Raw funnel data:', data.data); // Debug log
+            createRecruitmentFunnelChart(data.data);
+        } else {
+            showFunnelChartError('Failed to load funnel data');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching recruitment funnel data:', error);
+        showFunnelChartError('Error loading funnel data');
+    });
+}
+
+function createRecruitmentFunnelChart(funnelData) {
+    const chartLoading = document.getElementById('funnel-chart-loading');
+    const chartNoData = document.getElementById('funnel-chart-no-data');
+    const canvas = document.getElementById('recruitmentFunnelChart');
+    
+    // Hide loading state
+    chartLoading.style.display = 'none';
+    
+    console.log('Raw funnel data:', funnelData); // Debug log
+    
+    if (!funnelData || funnelData.length === 0) {
+        chartNoData.style.display = 'flex';
+        canvas.style.display = 'none';
+        return;
+    }
+    
+    // Show canvas and hide no-data message
+    canvas.style.display = 'block';
+    chartNoData.style.display = 'none';
+    
+    // Destroy existing chart if it exists
+    if (recruitmentFunnelChart) {
+        recruitmentFunnelChart.destroy();
+    }
+    
+    // Calculate totals for funnel stages
+    const totals = funnelData.reduce((acc, jd) => {
+        acc.total_sourced += parseInt(jd.Total_Sourced) || 0;
+        acc.screened_selected += parseInt(jd.Screened_Selected) || 0;
+        acc.l1_selected += parseInt(jd.L1_Selected) || 0;
+        acc.l2_selected += parseInt(jd.L2_Selected) || 0;
+        acc.l3_selected += parseInt(jd.L3_Selected) || 0;
+        acc.offer_released += parseInt(jd.Offer_Released) || 0;
+        acc.offer_accepted += parseInt(jd.Offer_Accepted) || 0;
+        acc.joined += parseInt(jd.Joined) || 0;
+        return acc;
+    }, {
+        total_sourced: 0,
+        screened_selected: 0,
+        l1_selected: 0,
+        l2_selected: 0,
+        l3_selected: 0,
+        offer_released: 0,
+        offer_accepted: 0,
+        joined: 0
+    });
+    
+    console.log('Funnel totals:', totals); // Debug log
+    
+    // Get canvas context
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare funnel data
+    const labels = [
+        'Total Sourced',
+        'Screened Selected', 
+        'L1 Selected',
+        'L2 Selected',
+        'L3 Selected',
+        'Offer Released',
+        'Offer Accepted',
+        'Joined'
+    ];
+    
+    const data = [
+        totals.total_sourced,
+        totals.screened_selected,
+        totals.l1_selected,
+        totals.l2_selected,
+        totals.l3_selected,
+        totals.offer_released,
+        totals.offer_accepted,
+        totals.joined
+    ];
+    
+    // Create gradient colors for funnel effect
+    const colors = [
+        '#5661d2', '#4f46e5', '#4338ca', '#3730a3',
+        '#312e81', '#1e1b4b', '#1e3a8a', '#1e40af'
+    ];
+    
+    // Chart configuration
+    const config = {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Candidates',
+                data: data,
+                backgroundColor: colors,
+                borderColor: colors,
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Horizontal bar chart
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Recruitment Funnel - Overall Pipeline',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    color: '#374151',
+                    padding: {
+                        bottom: 20
+                    }
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#5661d2',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            const value = parseInt(context.parsed.x) || 0;
+                            const total = parseInt(data[0]) || 1; // Total sourced as base
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                            return `Candidates: ${value.toLocaleString()} (${percentage}% of sourced)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#6b7280',
+                        font: {
+                            size: 12
+                        },
+                        callback: function(value) {
+                            return parseInt(value).toLocaleString();
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(107, 114, 128, 0.1)',
+                        drawBorder: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Number of Candidates',
+                        color: '#374151',
+                        font: {
+                            size: 13,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#6b7280',
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1200,
+                easing: 'easeInOutQuart'
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    };
+    
+    // Create the chart
+    recruitmentFunnelChart = new Chart(ctx, config);
+}
+
+function showFunnelChartError(message) {
+    const chartLoading = document.getElementById('funnel-chart-loading');
+    const chartNoData = document.getElementById('funnel-chart-no-data');
+    const canvas = document.getElementById('recruitmentFunnelChart');
     
     chartLoading.style.display = 'none';
     canvas.style.display = 'none';

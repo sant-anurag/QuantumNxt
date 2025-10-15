@@ -5525,6 +5525,38 @@ def api_admin_jd_info(request):
         print(f"Database Error in api_admin_jd_info: {str(e)}")
         return JsonResponse({'success': False, 'message': 'A server error occurred while fetching JD information.'}, status=500)
 
+@role_required(['Admin'], is_api=True)
+def api_admin_recruitment_funnel(request):
+    """API endpoint to get recruitment funnel data.
+    """
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+            SELECT
+                r.jd_id,
+                r.jd_summary AS Job_Title,
+                COUNT(c.candidate_id) AS Total_Sourced,
+                SUM(CASE WHEN c.screen_status = 'selected' THEN 1 ELSE 0 END) AS Screened_Selected,
+                SUM(CASE WHEN c.l1_result = 'selected' THEN 1 ELSE 0 END) AS L1_Selected,
+                SUM(CASE WHEN c.l2_result = 'selected' THEN 1 ELSE 0 END) AS L2_Selected,
+                SUM(CASE WHEN c.l3_result = 'selected' THEN 1 ELSE 0 END) AS L3_Selected,
+                SUM(CASE WHEN c.offer_status = 'released' THEN 1 ELSE 0 END) AS Offer_Released,
+                SUM(CASE WHEN c.offer_status = 'accepted' THEN 1 ELSE 0 END) AS Offer_Accepted,
+                SUM(CASE WHEN c.joining_status = 'joined' THEN 1 ELSE 0 END) AS Joined
+            FROM
+                candidates c
+            JOIN
+                recruitment_jds r ON c.jd_id = r.jd_id
+            GROUP BY
+                r.jd_id, r.jd_summary
+            ORDER BY
+                r.created_at DESC;
+        """)
+    funnel_data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({'success': True, 'data': funnel_data})
+
 def offer_letter_page(request):
     """
     View to render the offer letter page.

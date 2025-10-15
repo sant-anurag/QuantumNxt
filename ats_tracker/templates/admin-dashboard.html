@@ -147,10 +147,18 @@
             <!-- Placeholder for future content -->
             <div class="dashboard-section">
                 <div class="section-header">
-                    <h2>Additional Analytics</h2>
+                    <h2>Recruitment Funnel</h2>
                 </div>
-                <div class="placeholder-content">
-                    <p>Future charts and analytics will be added here</p>
+                <div class="chart-container" id="funnel-chart-container">
+                    <canvas id="recruitmentFunnelChart" width="400" height="300"></canvas>
+                    <div class="chart-loading" id="funnel-chart-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading funnel data...</span>
+                    </div>
+                    <div class="chart-no-data" id="funnel-chart-no-data" style="display: none;">
+                        <i class="fas fa-funnel-dollar"></i>
+                        <span>No recruitment funnel data available</span>
+                    </div>
                 </div>
             </div>
         </div>
