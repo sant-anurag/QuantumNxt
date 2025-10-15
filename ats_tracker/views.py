@@ -5462,12 +5462,12 @@ def api_admin_jd_info(request):
     count_params = []
 
     # Add JD Status filter
-    if status_filter and status_filter in ('active', 'closed', 'onhold'):
+    if status_filter and status_filter in ('active', 'closed', 'on hold'):
         conditions.append("j.jd_status = %s")
         params.append(status_filter)
         count_params.append(status_filter)
     elif status_filter:
-        return JsonResponse({'success': False, 'message': 'Invalid jd_status provided. Valid values: active, closed, onhold'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Invalid jd_status provided. Valid values: active, closed, on hold'}, status=400)
 
     # Add Company ID filter
     if company_id_filter is not None:
