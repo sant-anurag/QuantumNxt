@@ -298,6 +298,10 @@
 .stats-table tbody td:first-child {
     font-weight: 600;
     color: #1f2937;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .stats-table tbody td:not(:first-child) {

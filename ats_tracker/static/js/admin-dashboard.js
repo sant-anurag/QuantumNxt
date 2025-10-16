@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadAdminDashboardData();
     loadCustomerJDStats(1); // Load first page
+    loadTeamwiseStats(1); // Load team-wise stats first page
     loadCurrentCustomersChart(); // Load current customers chart
     loadRecruitmentFunnelChart(); // Load recruitment funnel chart
 });
@@ -51,6 +52,29 @@ function loadCustomerJDStats(page = 1) {
     });
 }
 
+function loadTeamwiseStats(page = 1) {
+    fetch(`/api/admin-dashboard-data/teamwise-stats/?page=${page}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateTeamStatsTable(data.data, data.pagination);
+        } else {
+            console.error('Failed to load team-wise stats:', data.message);
+            showTeamStatsError();
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching team-wise stats:', error);
+        showTeamStatsError();
+    });
+}
+
 function updateCustomerStatsTable(customers, pagination) {
     const tbody = document.getElementById('customer-stats-tbody');
     
@@ -66,7 +90,7 @@ function updateCustomerStatsTable(customers, pagination) {
         
         return `
             <tr>
-                <td>${companyName}</td>
+                <td title="${companyName}">${companyName}</td>
                 <td>
                     <button class="count-btn btn-active" 
                             data-company-id="${companyId}" 
@@ -466,6 +490,181 @@ function showCustomerStatsError() {
     tbody.innerHTML = '<tr><td colspan="5" class="loading-cell" style="color: #ef4444;">Error loading customer data</td></tr>';
     
     const paginationContainer = document.getElementById('customer-stats-pagination');
+    paginationContainer.style.display = 'none';
+}
+
+function updateTeamStatsTable(teams, pagination) {
+    const tbody = document.getElementById('team-stats-tbody');
+    
+    if (!teams || teams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">No team data available</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = teams.map(team => {
+        const total = team.active_jds_count + team.on_hold_jds_count + team.closed_jds_count;
+        
+        return `
+            <tr>
+                <td style="font-weight: 600; color: #1f2937;" title="${team.team_name}">${team.team_name}</td>
+                <td>
+                    <button class="count-btn btn-active" 
+                            data-team-id="${team.team_id}" 
+                            data-status="active" 
+                            data-team-name="${team.team_name}"
+                            onclick="handleTeamCountClick(this)">
+                        ${team.active_jds_count}
+                    </button>
+                </td>
+                <td>
+                    <button class="count-btn btn-onhold" 
+                            data-team-id="${team.team_id}" 
+                            data-status="on hold" 
+                            data-team-name="${team.team_name}"
+                            onclick="handleTeamCountClick(this)">
+                        ${team.on_hold_jds_count}
+                    </button>
+                </td>
+                <td>
+                    <button class="count-btn btn-closed" 
+                            data-team-id="${team.team_id}" 
+                            data-status="closed" 
+                            data-team-name="${team.team_name}"
+                            onclick="handleTeamCountClick(this)">
+                        ${team.closed_jds_count}
+                    </button>
+                </td>
+                <td>
+                    <button class="count-btn btn-total" 
+                            data-team-id="${team.team_id}" 
+                            data-status="total" 
+                            data-team-name="${team.team_name}"
+                            onclick="handleTeamCountClick(this)">
+                        ${total}
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Update pagination
+    updateTeamPagination(pagination);
+}
+
+function handleTeamCountClick(button) {
+    const teamId = button.getAttribute('data-team-id');
+    const status = button.getAttribute('data-status');
+    const teamName = button.getAttribute('data-team-name');
+    const count = button.textContent.trim();
+    
+    console.log('Team count clicked:', {
+        teamId: teamId,
+        teamName: teamName,
+        status: status,
+        count: count
+    });
+    
+    // Map status values for API call
+    let jdStatus = '';
+    if (status === 'active') {
+        jdStatus = 'active';
+    } else if (status === 'on hold') {
+        jdStatus = 'on hold';
+    } else if (status === 'closed') {
+        jdStatus = 'closed';
+    }
+    
+    // Only proceed if it's not the total button and count > 0
+    if (status !== 'total' && parseInt(count) > 0) {
+        showTeamJDDetails(teamId, jdStatus, teamName, count);
+    } else if (status === 'total' && parseInt(count) > 0) {
+        showTeamJDDetails(teamId, '', teamName, count);
+    } else {
+        console.log('No JDs to show for this team');
+    }
+}
+
+function showTeamJDDetails(teamId, jdStatus, teamName, count) {
+    // Build API URL with filters
+    let apiUrl = `/api/admin-dashboard-data/jd-info/?team_id=${teamId}&page=1&limit=10`;
+    if (jdStatus) {
+        apiUrl += `&jd_status=${jdStatus}`;
+    }
+    
+    // Show loading state
+    const modalTitle = jdStatus ? 
+        `${jdStatus.charAt(0).toUpperCase() + jdStatus.slice(1)} JDs for Team: ${teamName}` : 
+        `All JDs for Team: ${teamName}`;
+    
+    // Create and show modal (reuse the existing JD modal function)
+    showJDModal(modalTitle, apiUrl, teamName, jdStatus);
+}
+
+function updateTeamPagination(pagination) {
+    const paginationContainer = document.getElementById('team-stats-pagination');
+    const paginationInfo = document.getElementById('team-pagination-info-text');
+    const prevBtn = document.getElementById('team-prev-page-btn');
+    const nextBtn = document.getElementById('team-next-page-btn');
+    const paginationPages = document.getElementById('team-pagination-pages');
+
+    if (pagination.total_pages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+
+    paginationContainer.style.display = 'flex';
+    
+    // Update info text
+    paginationInfo.textContent = `Page ${pagination.current_page} of ${pagination.total_pages} (${pagination.total_teams} teams)`;
+    
+    // Update previous button
+    prevBtn.disabled = !pagination.has_previous;
+    prevBtn.onclick = pagination.has_previous ? () => loadTeamwiseStats(pagination.current_page - 1) : null;
+    
+    // Update next button
+    nextBtn.disabled = !pagination.has_next;
+    nextBtn.onclick = pagination.has_next ? () => loadTeamwiseStats(pagination.current_page + 1) : null;
+    
+    // Update page numbers
+    paginationPages.innerHTML = generateTeamPageNumbers(pagination);
+}
+
+function generateTeamPageNumbers(pagination) {
+    const current = pagination.current_page;
+    const total = pagination.total_pages;
+    let pages = [];
+
+    if (total <= 7) {
+        // Show all pages if total is 7 or less
+        for (let i = 1; i <= total; i++) {
+            pages.push(i);
+        }
+    } else {
+        // Show pages with ellipsis
+        if (current <= 4) {
+            pages = [1, 2, 3, 4, 5, '...', total];
+        } else if (current >= total - 3) {
+            pages = [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+        } else {
+            pages = [1, '...', current - 1, current, current + 1, '...', total];
+        }
+    }
+
+    return pages.map(page => {
+        if (page === '...') {
+            return '<span class="page-ellipsis">...</span>';
+        } else {
+            const isActive = page === current ? 'active' : '';
+            return `<span class="page-number ${isActive}" onclick="loadTeamwiseStats(${page})">${page}</span>`;
+        }
+    }).join('');
+}
+
+function showTeamStatsError() {
+    const tbody = document.getElementById('team-stats-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-cell" style="color: #ef4444;">Error loading team data</td></tr>';
+    
+    const paginationContainer = document.getElementById('team-stats-pagination');
     paginationContainer.style.display = 'none';
 }
 

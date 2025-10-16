@@ -120,6 +120,49 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Team-wise Statistics Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Team-wise JD Statistics</h2>
+                </div>
+                <div class="customer-stats-container">
+                    <div class="stats-table-container">
+                        <table class="stats-table" id="team-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Team Name</th>
+                                    <th>Active</th>
+                                    <th>On Hold</th>
+                                    <th>Closed</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-stats-tbody">
+                                <tr>
+                                    <td colspan="5" class="loading-cell">Loading team data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Team Pagination Controls -->
+                    <div class="pagination-container" id="team-stats-pagination" style="display: none;">
+                        <div class="pagination-info">
+                            <span id="team-pagination-info-text">Page 1 of 1</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" id="team-prev-page-btn" disabled>
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <span class="pagination-pages" id="team-pagination-pages"></span>
+                            <button class="pagination-btn" id="team-next-page-btn" disabled>
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <!-- Future sections will be added here -->
         </div>

@@ -2071,7 +2071,7 @@ def upload_multiple_resumes(request):
         conn = None
         cursor = None
         uploaded_resume_ids = []
-        
+
         try:
             # Validate JD ID and retrieve multiple files
             data = request.POST
@@ -5361,16 +5361,18 @@ def api_admin_dashboard(request):
             WHERE jd_status = 'active') AS Total_Open_Positions,
 
             -- 2. TOTAL CANDIDATES IN PIPELINE (Workload)
-            (SELECT COUNT(candidate_id)
-            FROM candidates
-            WHERE offer_status = 'in_progress'
-            AND joining_status = 'in_progress'
-            AND (screen_status != 'rejected' OR screen_status IS NULL)
-            AND (l1_result != 'rejected' OR l1_result IS NULL)
-            AND (l2_result != 'rejected' OR l2_result IS NULL)
-            AND (l3_result != 'rejected' OR l3_result IS NULL)
-            -- Exclude 'joined' or 'withdrawn' candidates
-            AND joining_status NOT IN ('joined', 'withdrawn')
+            (SELECT COUNT(c.candidate_id)
+                FROM candidates c
+                left join recruitment_jds r on c.jd_id = r.jd_id
+                WHERE c.offer_status in ('in_progress', 'not_initiated')
+                AND c.joining_status = 'in_progress'
+                AND (c.screen_status NOT IN ('rejected', 'onHold') OR c.screen_status IS NULL)
+                AND (c.l1_result NOT IN ('rejected', 'onHold') OR c.l1_result IS NULL)
+                AND (c.l2_result NOT IN ('rejected', 'onHold') OR c.l2_result IS NULL)
+                AND (c.l3_result NOT IN ('rejected', 'onHold') OR c.l3_result IS NULL)
+                -- Exclude 'joined' or 'withdrawn' candidates
+                AND c.joining_status NOT IN ('joined', 'withdrawn')
+                AND r.jd_status = 'active'
             ) AS Total_Candidates_In_Pipeline,
 
             -- 3. AVERAGE TIME TO FILL (Efficiency/Health)
@@ -5492,11 +5494,12 @@ def api_admin_current_customers(request):
 @role_required(['Admin'], is_api=True)
 def api_admin_jd_info(request):
     """
-    Retrieves a list of Job Descriptions (JDs) based on provided filters (status and company_id) with pagination.
+    Retrieves a list of Job Descriptions (JDs) based on provided filters (status, company_id, and team_id) with pagination.
     
     Expected request parameters (from query string):
-    - jd_status (string): 'active', 'closed', or 'onhold'. Optional.
+    - jd_status (string): 'active', 'closed', or 'on hold'. Optional.
     - company_id (int): The ID of the company. Optional.
+    - team_id (int): The ID of the team. Optional.
     - page (int): Page number (default: 1). Optional.
     - limit (int): Number of records per page (default: 10). Optional.
     """
@@ -5506,14 +5509,18 @@ def api_admin_jd_info(request):
         if request.method == 'GET':
             status_filter = request.GET.get('jd_status', '').lower()
             company_id_filter = request.GET.get('company_id')
+            team_id_filter = request.GET.get('team_id')
             page = int(request.GET.get('page', 1))
             limit = int(request.GET.get('limit', 10))
         else:
              return JsonResponse({'success': False, 'message': 'Only GET requests supported for this endpoint'}, status=405)
 
-        # Basic validation for company_id
+        # Basic validation for company_id and team_id
         if company_id_filter:
             company_id_filter = int(company_id_filter)
+        
+        if team_id_filter:
+            team_id_filter = int(team_id_filter)
         
         # Validate pagination parameters
         if page < 1:
@@ -5524,7 +5531,7 @@ def api_admin_jd_info(request):
         offset = (page - 1) * limit
         
     except ValueError:
-        return JsonResponse({'success': False, 'message': 'Invalid format for pagination or company_id parameters.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Invalid format for pagination, company_id, or team_id parameters.'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'message': f'Error processing request parameters: {str(e)}'}, status=400)
 
@@ -5575,6 +5582,12 @@ def api_admin_jd_info(request):
         conditions.append("j.company_id = %s")
         params.append(company_id_filter)
         count_params.append(company_id_filter)
+
+    # Add Team ID filter
+    if team_id_filter is not None:
+        conditions.append("j.team_id = %s")
+        params.append(team_id_filter)
+        count_params.append(team_id_filter)
 
     # Append conditions to both queries
     if conditions:
@@ -5657,6 +5670,64 @@ def api_admin_recruitment_funnel(request):
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'data': funnel_data})
+
+def api_admin_teamwise_stats(request):
+    """
+    API endpoint to get team-wise recruitment statistics with pagination.
+    """
+    # Get pagination parameters
+    page = int(request.GET.get('page', 1))
+    limit = 5  # Fixed limit of 5 teams per page
+    offset = (page - 1) * limit
+    
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Get total count for pagination info
+    cursor.execute("""
+        SELECT COUNT(DISTINCT t.team_id) as total_teams
+        FROM teams t
+    """)
+    total_teams = cursor.fetchone()['total_teams']
+    
+    # Calculate total pages
+    total_pages = (total_teams + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated data
+    cursor.execute("""
+        SELECT
+            t.team_name,
+            t.team_id,
+            COUNT(CASE WHEN j.jd_status = 'active' THEN 1 END) AS active_jds_count,
+            COUNT(CASE WHEN j.jd_status = 'closed' THEN 1 END) AS closed_jds_count,
+            COUNT(CASE WHEN j.jd_status = 'on hold' THEN 1 END) AS on_hold_jds_count
+        FROM
+            teams t
+        LEFT JOIN
+            recruitment_jds j ON t.team_id = j.team_id
+        GROUP BY
+            t.team_id, t.team_name
+        ORDER BY
+            t.team_name
+        LIMIT %s OFFSET %s
+    """, (limit, offset))
+    team_stats = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return JsonResponse({
+        'success': True, 
+        'data': team_stats,
+        'pagination': {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_teams': total_teams,
+            'teams_per_page': limit,
+            'has_next': page < total_pages,
+            'has_previous': page > 1
+        }
+    })
+
 
 def offer_letter_page(request):
     """
