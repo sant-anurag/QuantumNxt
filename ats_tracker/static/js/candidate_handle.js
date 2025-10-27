@@ -1020,7 +1020,7 @@ function handleTakeAction() {
         }
     }
     
-    if (actionType === 'manageHiringStatus') {
+    if (actionType === 'manage_hiring_status') {
         const hiringStatus = formData.get('hiringStatus');
         if (!hiringStatus) {
             showNotification('Please select a hiring status', 'error');
@@ -1059,7 +1059,7 @@ function handleTakeAction() {
         actionData.joiningDate = formData.get('joiningDate');
     } else if (actionType === 'manage_offer_status') {
         actionData.offerStatus = formData.get('offerStatus');
-    } else if (actionType === 'manageHiringStatus') {
+    } else if (actionType === 'manage_hiring_status') {
         actionData.hiringStatus = formData.get('hiringStatus');
     }
     
@@ -1180,7 +1180,7 @@ function handleActionTypeChange(actionType) {
             // Add required attributes for offer status fields
             setOfferStatusRequiredFields();
             break;
-        case 'manageHiringStatus':
+        case 'manage_hiring_status':
             document.getElementById('hiringStatusManageGroup').style.display = 'block';
             // Add required attributes for hiring status fields
             setHiringStatusRequiredFields();

@@ -3198,14 +3198,10 @@ def candidate_action_handler(request):
             offer_status = data.get('offerStatus')
             return manage_offer_status(request, candidate_id, offer_status, comment, notify_status)
             
-        elif action == 'mark_hired':
-            # TODO: Call mark_candidate_as_hired method
-            return mark_candidate_as_hired(request, candidate_id)
-            
-        elif action == 'mark_resigned':
-            # TODO: Call mark_candidate_as_resigned method
-            return mark_candidate_as_resigned(request, candidate_id)
-            
+        elif action == 'manage_hiring_status':
+            hiring_status = data.get('hiringStatus')
+            return manage_hiring_status(request, candidate_id, hiring_status, comment, notify_status)
+
         else:
             return JsonResponse({'success': False, 'error': f'Unknown action type: {action}'}, status=400)
             
@@ -3943,10 +3939,16 @@ def manage_offer_status(request, candidate_id: int, offer_status: str, comment: 
         return JsonResponse({'success': False, 'error': 'Cannot manage offer: Candidate has already joined.'}, status=400)
 
     try:
+        joining_status_line = ""
+        if offer_status == 'accepted':
+            joining_status_line="joining_status='in_progress',"
+            
         # Update offer status
-        cursor.execute("""
+        cursor.execute(f""" 
             UPDATE candidates
-            SET offer_status = %s,
+            SET 
+                offer_status = %s,
+                {joining_status_line}
                 recruiter_comments = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE candidate_id = %s
@@ -3968,34 +3970,72 @@ def manage_offer_status(request, candidate_id: int, offer_status: str, comment: 
         return JsonResponse({'success': False, 'error': 'Database error while updating offer status'}, status=500)
 
 
-
-@login_required
-def mark_candidate_as_hired(request, candidate_id):
+def manage_hiring_status(request, candidate_id: int, hiring_status: str, comment: str = "", notify_status: bool = False):
     """
-    Mark a candidate as hired.
+    Manage the hiring status of a candidate (e.g., mark as joined, on hold,
+    resigned).
     """
-    # TODO: Implement hired marking logic
-
+    # check valid hiring status
+    valid_hiring_statuses = ['in_progress','onHold','joined','resigned','not_joined']
+    if hiring_status not in valid_hiring_statuses:
+        return JsonResponse({'success': False, 'error': f'Invalid hiring status: {hiring_status}'}, status=400)
     conn = DataOperations.get_db_connection()
-    #  - Get all statuses of candidate
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            offer_status,
+            joining_status,
+            name,
+            email,
+            jd_id
+        FROM candidates
+        WHERE candidate_id=%s
+    """, (candidate_id,))
 
-    # - Update candidate status to hired
-    # - Move candidate to hired candidates table
-    # - Send welcome email
-    # - Notify HR and relevant teams
-    return JsonResponse({'success': True, 'message': 'Candidate marked as hired successfully.'})
+    candidate_data = cursor.fetchone()
+    if not candidate_data:
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+    if candidate_data['offer_status'] != 'accepted':
+        return JsonResponse({'success': False, 'error': f'Cannot manage hiring status: Offer {candidate_data["offer_status"]} for this candidate.'}, status=400)
+    if candidate_data['joining_status'] == 'resigned':
+        return JsonResponse({'success': False, 'error': 'Cannot manage hiring status: Candidate has resigned.'}, status=400)
+    if candidate_data['joining_status'] == hiring_status:
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': f'Hiring status is already set to {hiring_status} for this candidate.'}, status=400)
+    if hiring_status == 'resigned' and candidate_data['joining_status'] != 'joined':
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Cannot mark as resigned: Candidate has not yet joined.'}, status=400)
+ 
+    
+    try:
+        # Update hiring status
+        cursor.execute(f"""
+            UPDATE candidates
+            SET 
+                joining_status = %s,
+                recruiter_comments = %s
+            WHERE
+                candidate_id = %s
+        """, (hiring_status, comment, candidate_id))
 
-@login_required
-def mark_candidate_as_resigned(request, candidate_id):
-    """
-    Mark a candidate as resigned.
-    """
-    # TODO: Implement resignation marking logic
-    # - Update candidate status to resigned
-    # - Record resignation date and reason
-    # - Notify relevant teams
-    # - Update reporting systems
-    return JsonResponse({'success': True, 'message': 'Candidate marked as resigned successfully.'})
+        current_data = candidate_data.copy()
+        current_data['joining_status'] = hiring_status
+        check = DataOperations.update_recruitment_jds(cursor, candidate_data, current_data)
+        if not check:
+            conn.rollback()
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+        
+        conn.commit()
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': True, 'message': f'Hiring status updated to {hiring_status} for candidate {candidate_id}.'})
+    except Exception as e:
+        print(f"manage_hiring_status -> Error: {str(e)}")
+        conn.rollback()
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Database error while updating hiring status'}, status=500)
+
 
 @login_required
 def schedule_interviews_page(request):
