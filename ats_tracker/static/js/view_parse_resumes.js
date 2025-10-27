@@ -43,12 +43,12 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (statusText === 'rejected') statusText = 'Rejected';
             else if (statusText === 'onHold') statusText = 'On Hold';
             row.innerHTML = `
-                <td class="file-name-col"><a href="${resume.file_url}">${resume.file_name || 'N/A'}</a></td>
-                <td class="name-col">${resume.candidate_name || '-'}</td>
-                <td class="phone-col">${resume.phone || '-'}</td>
-                <td class="email-col">${resume.email || '-'}</td>
-                <td class="exp-col">${resume.experience || '-'}</td>
-                <td class="status-col">${statusText || '-'}</td>
+                <td class="file-name-col" title="${resume.file_name || 'N/A'}"><a href="${resume.file_url}">${resume.file_name || 'N/A'}</a></td>
+                <td class="name-col" title="${resume.candidate_name || '-'}">${resume.candidate_name || '-'}</td>
+                <td class="phone-col" title="${resume.phone || '-'}">${resume.phone || '-'}</td>
+                <td class="email-col" title="${resume.email || '-'}">${resume.email || '-'}</td>
+                <td class="exp-col" title="${resume.experience || '-'}">${resume.experience || '-'}</td>
+                <td class="status-col" title="${statusText || '-'}">${statusText || '-'}</td>
                 <td class="actions-col">
                     <button class="icon-btn parse-btn" data-resume-id="${resume.resume_id}" title="Parse Resume"><i class="fas fa-upload"></i></button>
                     <button class="icon-btn edit-btn" data-resume-id="${resume.resume_id}" title="Edit Resume"><i class="fas fa-edit"></i></button>
@@ -170,7 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modal-experience').value = '';
         document.getElementById('modal-prev-job-profile').value = '';
         document.getElementById('modal-current-ctc').value = '';
+        document.getElementById('modal-current-ctc-basis').value = 'annual';
         document.getElementById('modal-expected-ctc').value = '';
+        document.getElementById('modal-expected-ctc-basis').value = 'annual';
         document.getElementById('modal-notice-period').value = '';
         document.getElementById('modal-location').value = '';
         document.getElementById('modal-screened-on').value = '';
@@ -344,7 +346,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('modal-experience').value = candidate.experience || '';
                         document.getElementById('modal-prev-job-profile').value = candidate.previous_job_profile || '';
                         document.getElementById('modal-current-ctc').value = candidate.current_ctc || '';
+                        document.getElementById('modal-current-ctc-basis').value = candidate.current_ctc_basis || 'annual';
                         document.getElementById('modal-expected-ctc').value = candidate.expected_ctc || '';
+                        document.getElementById('modal-expected-ctc-basis').value = candidate.expected_ctc_basis || 'annual';
                         document.getElementById('modal-notice-period').value = candidate.notice_period || '';
                         document.getElementById('modal-location').value = candidate.location || '';
                         document.getElementById('modal-screened-on').value = candidate.screened_on || '';
@@ -547,7 +551,9 @@ document.addEventListener('DOMContentLoaded', function() {
             experience: document.getElementById('modal-experience').value,
             prev_job_profile: document.getElementById('modal-prev-job-profile').value,
             current_ctc: document.getElementById('modal-current-ctc').value,
+            current_ctc_basis: document.getElementById('modal-current-ctc-basis').value,
             expected_ctc: document.getElementById('modal-expected-ctc').value,
+            expected_ctc_basis: document.getElementById('modal-expected-ctc-basis').value,
             notice_period: document.getElementById('modal-notice-period').value,
             location: document.getElementById('modal-location').value,
             screen_status: document.getElementById('modal-screen-status').value,

@@ -21,13 +21,13 @@
     <table id="resume-table" class="resume-table">
         <thead>
             <tr>
-                <th class="file-name-col" style="width:180px;">File Name</th>
-                <th style="width:160px;">Name</th>
-                <th style="width:120px;">Contact No</th>
-                <th style="width:180px;">Email</th>
-                <th style="width:80px;">Tot. Exp (years)</th>
-                <th style="width:90px;">Status</th>
-                <th style="width:160px;">Actions</th>
+                <th class="file-name-col" style="width:180px;" title="File Name">File Name</th>
+                <th style="width:160px;" title="Name">Name</th>
+                <th style="width:120px;" title="Contact No">Contact No</th>
+                <th style="width:180px;" title="Email">Email</th>
+                <th style="width:80px;" title="Tot. Exp (years)">Tot. Exp (years)</th>
+                <th style="width:90px;" title="Status">Status</th>
+                <th style="width:160px;" title="Actions">Actions</th>
             </tr>
         </thead>
         <tbody id="resumes-tbody"></tbody>
@@ -85,13 +85,29 @@
 
             <!-- Compensation & Location Section -->
             <div class="form-section compensation-info">
-                <div class="form-field">
+                <div class="form-field form-field-ctc">
                     <label for="modal-current-ctc">Current CTC</label>
-                    <input type="number" id="modal-current-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
+                    <div class="ctc-input-group">
+                        <input type="number" id="modal-current-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')" placeholder="Amount">
+                        <select id="modal-current-ctc-basis" class="ctc-basis-select">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual" selected>Annual</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-field">
+                <div class="form-field form-field-ctc">
                     <label for="modal-expected-ctc">Expected CTC</label>
-                    <input type="number" id="modal-expected-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')">
+                    <div class="ctc-input-group">
+                        <input type="number" id="modal-expected-ctc" min="0" step="0.01" maxlength="20" oninput="this.value = this.value.replace(/[^\d.]/g, '')" placeholder="Amount">
+                        <select id="modal-expected-ctc-basis" class="ctc-basis-select">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual" selected>Annual</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-field">
                     <label for="modal-notice-period">Notice Period (days)</label>

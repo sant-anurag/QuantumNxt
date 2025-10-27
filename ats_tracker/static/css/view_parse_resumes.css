@@ -86,6 +86,9 @@
     font-size: 0.875em;
     color: #475569;
     border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .resume-table tr:nth-child(even) td {
@@ -102,23 +105,26 @@
     background: #ffffff;
     vertical-align: middle;
     white-space: nowrap;
-    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
     border-left: none;
     border-right: none;
 }
 
 .resume-table td.name-col {
     max-width: 30ch;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 500;
     color: #2d3748;
 }
 
 .resume-table td.file-name-col {
     max-width: 28ch;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .resume-table tr:last-child td {
@@ -603,6 +609,38 @@ border-bottom: 2px solid #e3e8f7;
     cursor: not-allowed;
 }
 
+/* CTC Input Group Styling */
+.form-field-ctc .ctc-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ctc-input-group input {
+    flex: 2;
+    min-width: 0;
+}
+
+.ctc-basis-select {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 8px !important;
+    border-radius: 7px !important;
+    border: 1.5px solid #7280ff !important;
+    font-size: 0.9em !important;
+    font-family: inherit !important;
+    background: #fff !important;
+    color: #2a2e4a !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box;
+}
+
+.ctc-basis-select:focus {
+    border-color: #5661d2 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(86, 97, 210, 0.1) !important;
+}
+
 /* =============================================================================
    RESPONSIVE BREAKPOINTS
    ============================================================================= */
@@ -638,6 +676,13 @@ border-bottom: 2px solid #e3e8f7;
         padding: 7px 10px;
         font-size: 0.9em;
     }
+    
+    /* CTC Input Group for Tablets */
+    .ctc-basis-select {
+        font-size: 0.9em !important;
+        padding: 7px 8px !important;
+        min-width: 90px;
+    }
 }
 
 /* Mobile Phones */
@@ -661,6 +706,24 @@ border-bottom: 2px solid #e3e8f7;
     .form-field textarea {
         padding: 6px 8px;
         font-size: 0.85em;
+    }
+    
+    /* CTC Input Group Responsive */
+    .form-field-ctc .ctc-input-group {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .ctc-input-group input,
+    .ctc-basis-select {
+        flex: none;
+        width: 100%;
+    }
+    
+    .ctc-basis-select {
+        min-width: auto;
+        font-size: 0.85em !important;
+        padding: 6px 8px !important;
     }
 }
 

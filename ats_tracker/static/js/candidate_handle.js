@@ -220,8 +220,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function createCandidateCard(candidate) {
+        console.log('Creating card for candidate:', candidate);
         const cardDiv = document.createElement('div');
         cardDiv.className = 'candidate-card';
+        cardDiv.setAttribute('data-candidate-id', candidate.candidate_id);
         
         // Generate background color class for initials
         const bgClasses = ['bg-blue', 'bg-purple', 'bg-brown', 'bg-green', 'bg-red'];
@@ -588,10 +590,12 @@ function viewResume(candidateId, resume_id) {
 }
 
 function addNote(candidateId) {
+    console.log('Adding note for candidate:', candidateId);
     openAddNoteModal(candidateId);
 }
 
 function takeAction(candidateId) {
+    console.log('Taking action for candidate:', candidateId);
     openTakeActionModal(candidateId);
 }
 
@@ -756,25 +760,22 @@ function findCandidateData(candidateId) {
     // For now, we'll create a mock function
     // In a real implementation, you'd maintain the candidates array or fetch from API
     
-    // Try to extract from DOM first
-    const candidateCards = document.querySelectorAll('.candidate-card');
-    for (let card of candidateCards) {
-        const viewResumeBtn = card.querySelector('.view-resume');
-        if (viewResumeBtn && viewResumeBtn.onclick && viewResumeBtn.onclick.toString().includes(candidateId)) {
-            return {
-                candidate_id: candidateId,
-                name: card.querySelector('.candidate-name').textContent,
-                jd_id: card.querySelector('.role-title').textContent.split(' - ')[0],
-                job_summary: card.querySelector('.role-title').textContent.split(' - ')[1] || card.querySelector('.role-title').textContent,
-                initials: card.querySelector('.initials-circle').textContent,
-                screen_status: 'toBeScreened', // Default values - should be fetched from API
-                l1_result: 'toBeScreened',
-                l2_result: 'toBeScreened', 
-                l3_result: 'toBeScreened',
-                offer_status: 'not_initiated',
-                joining_status: 'in_progress'
-            };
-        }
+    // Try to extract from DOM using data-candidate-id attribute
+    const candidateCard = document.querySelector(`.candidate-card[data-candidate-id="${candidateId}"]`);
+    if (candidateCard) {
+        return {
+            candidate_id: candidateId,
+            name: candidateCard.querySelector('.candidate-name').textContent,
+            jd_id: candidateCard.querySelector('.role-title').textContent.split(' - ')[0],
+            job_summary: candidateCard.querySelector('.role-title').textContent.split(' - ')[1] || candidateCard.querySelector('.role-title').textContent,
+            initials: candidateCard.querySelector('.initials-circle').textContent,
+            screen_status: 'toBeScreened', // Default values - should be fetched from API
+            l1_result: 'toBeScreened',
+            l2_result: 'toBeScreened', 
+            l3_result: 'toBeScreened',
+            offer_status: 'not_initiated',
+            joining_status: 'in_progress'
+        };
     }
     
     // Fallback mock data
