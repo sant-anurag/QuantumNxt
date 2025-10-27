@@ -250,23 +250,32 @@ class DataOperations:
         """Determines the single, final category for a candidate based on their statuses."""
         
         # 1. Hired (Highest Priority based on 'profiles_completed' definition)
-        if data.get('offer_status') == 'accepted':
+        if data.get('offer_status') == 'accepted' and data.get('joining_status') == 'joined':
             return 'completed'
+        
+        if data.get('offer_status') in ['released', 'accepted']:
+            return 'released'
         
         # 2. Rejected (Second Highest Priority)
         rejection_statuses = ['rejected', 'declined']
-        if any(data.get(f'{level}_result') == 'rejected' for level in ['screen', 'l1', 'l2', 'l3']):
-            return 'rejected'
-        if data.get('offer_status') == 'declined':
+        if (data.get('screen_status') == 'rejected' or 
+            any(data.get(f'{level}_result') == 'rejected' for level in ['l1', 'l2', 'l3'])):
             return 'rejected'
 
-        # 3. Selected (Post L3, Pre-Offer Acceptance)
+        if data.get('offer_status') in rejection_statuses or data.get('joining_status') in ['not_joined', 'resigned']:
+            return 'rejected'
+        
+        # 3. On Hold
+        if (data.get('screen_status') == 'onHold' or 
+            any(data.get(f'{level}_result') == 'onHold' for level in ['l1', 'l2', 'l3'])):
+            return 'on_hold'
+
+        if data.get('offer_status') == 'onHold' or data.get('joining_status') == 'onHold':
+            return 'on_hold'
+
+        # 4. Selected (Post L3, Pre-Offer Acceptance)
         if data.get('l3_result') == 'selected':
             return 'selected'
-        
-        # 4. On Hold
-        if any(data.get(f'{level}_result') == 'onHold' for level in ['screen', 'l1', 'l2', 'l3']):
-            return 'on_hold'
             
         # 5. In Progress
         # A candidate is in progress if selected at screening but L3 is not yet done/selected.
@@ -299,6 +308,7 @@ class DataOperations:
             'rejected': 'profiles_rejected',   # Rejected at any level or offer declined/withdrawn
             'on_hold': 'profiles_on_hold',     # On hold at any level
             'in_progress': 'profiles_in_progress', # Screened selected, but not L3 selected
+            'released': 'profiles_offered', # Offer released
             'new': None # Default state, doesn't increment a special counter
         }
         
