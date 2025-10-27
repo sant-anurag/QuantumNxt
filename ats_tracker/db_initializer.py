@@ -346,6 +346,21 @@ class ATSDatabaseInitializer:
                 ALTER TABLE recruitment_jds
                 ADD COLUMN profiles_offered INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Number of profiles offered for this JD' AFTER profiles_in_progress;
             """)
+
+            # 3rd instance update
+            self.cursor.execute("""
+                -- 1. Add current_ctc_basis after current_ctc
+                    ALTER TABLE candidates
+                    ADD COLUMN current_ctc_basis ENUM('hourly', 'daily', 'monthly', 'annual')
+                        NOT NULL DEFAULT 'annual'
+                        AFTER current_ctc;
+
+                    -- 2. Add expected_ctc_basis after expected_ctc
+                    ALTER TABLE candidates
+                    ADD COLUMN expected_ctc_basis ENUM('hourly', 'daily', 'monthly', 'annual')
+                        NOT NULL DEFAULT 'annual'
+                        AFTER expected_ctc;
+            """)
         except mysql.connector.Error as err:
             print(f"Error: {err}")
 

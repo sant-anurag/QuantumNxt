@@ -2604,7 +2604,9 @@ def save_candidate_details(request):
             relevant_experience = data.get('relevant_experience')
             previous_job_profile = data.get('prev_job_profile')
             current_ctc = data.get('current_ctc')
+            current_ctc_basis = data.get('current_ctc_basis', 'annual')
             expected_ctc = data.get('expected_ctc')
+            expected_ctc_basis = data.get('expected_ctc_basis', 'annual')
             notice_period = data.get('notice_period')
             location = data.get('location')
             resume_id = data.get('resume_id')
@@ -2704,15 +2706,16 @@ def save_candidate_details(request):
                 cursor.execute("""
                     UPDATE candidates
                     SET name=%s, phone=%s, email=%s, skills=%s, education=%s, experience=%s, relevant_experience=%s,
-                        previous_job_profile=%s, current_ctc=%s, expected_ctc=%s, notice_period=%s, 
+                        previous_job_profile=%s, current_ctc=%s, current_ctc_basis=%s, expected_ctc=%s, notice_period=%s, 
                         location=%s, screened_on=%s, screen_status=%s, screened_remarks=%s,
                         team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s, recruiter_comments=%s
                     WHERE resume_id=%s
                 """, [
                     name, phone, email, skills, education, 
-                    experience, relevant_experience, previous_job_profile, current_ctc, 
-                    expected_ctc, notice_period, location, screened_on,
-                    screen_status, screened_remarks, screening_team, hr_member_id,
+                    experience, relevant_experience, previous_job_profile, 
+                    current_ctc, current_ctc_basis, expected_ctc, expected_ctc_basis,
+                    notice_period, location, 
+                    screened_on, screen_status, screened_remarks, screening_team, hr_member_id,
                     shared_on, recruiters_comment, resume_id
                 ])
 
@@ -2737,16 +2740,16 @@ def save_candidate_details(request):
                     INSERT INTO candidates (
                                 jd_id, resume_id, name, phone, email, skills,
                                 education, experience, relevant_experience, previous_job_profile, 
-                                current_ctc, expected_ctc, notice_period, 
+                                current_ctc, current_ctc_basis, expected_ctc, expected_ctc_basis, notice_period, 
                                 location, screened_on, screen_status, screened_remarks,
                                 recruiter_comments, team_id, hr_member_id, shared_on
                             )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, [
                     jd_id, resume_id, name, phone,
                     email, skills, education, experience,
-                    relevant_experience, previous_job_profile, current_ctc,
-                    expected_ctc, notice_period, location,
+                    relevant_experience, previous_job_profile, current_ctc, current_ctc_basis,
+                    expected_ctc, expected_ctc_basis, notice_period, location,
                     screened_on, screen_status, screened_remarks, recruiters_comment,
                     screening_team, hr_member_id, shared_on
                 ])
