@@ -62,6 +62,7 @@
                     <div class="stage upcoming"></div>
                     <div class="stage upcoming"></div>
                     <div class="stage upcoming"></div>
+                    <div class="stage upcoming"></div>
                 </div>
 
                 <div class="current-stage-status">
@@ -180,9 +181,8 @@
                         <option value="back_to_previous_stage">Back to Previous Stage</option>
                         <option value="schedule_interview">Schedule Interview</option>
                         <option value="send_offer">Send Offer</option>
-                        <option value="withdraw_offer">Withdraw Offer</option>
-                        <option value="mark_hired">Mark as Hired</option>
-                        <option value="mark_resigned">Mark as Resigned</option>
+                        <option value="manage_offer_status">Manage Offer Status</option>
+                        <option value="manageHiringStatus">Manage Hiring Status</option>
                     </select>
                 </div>
                 
@@ -243,7 +243,77 @@
                     <label for="interviewLink">Interview Link</label>
                     <input type="text" id="interviewLink" name="interviewLink" placeholder="Enter interview link (Zoom, Teams, etc.)">
                 </div>
-                
+
+                <div class="form-group" id="offerDetailsGroup" style="display: none;">
+                    <h4 style="margin: 0 0 16px 0; color: #374151; font-size: 1.1rem;">Salary Breakdown</h4>
+                    
+                    <div class="salary-row">
+                        <div>
+                            <label for="basicSalary">Basic Salary *</label>
+                            <input type="number" id="basicSalary" name="basicSalary" placeholder="Enter basic salary">
+                        </div>
+                        <div>
+                            <label for="hra">HRA *</label>
+                            <input type="number" id="hra" name="hra" placeholder="Enter HRA">
+                        </div>
+                    </div>
+                    
+                    <div class="salary-row">
+                        <div>
+                            <label for="specialAllowance">Special Allowance</label>
+                            <input type="number" id="specialAllowance" name="specialAllowance" placeholder="Enter Special Allowance">
+                        </div>
+                        <div>
+                            <label for="pf">PF Contribution *</label>
+                            <input type="number" id="pf" name="pf" placeholder="Enter PF">
+                        </div>
+                    </div>
+                    <div class="salary-row">
+                        <div>
+                            <label for="gratuity">Gratuity</label>
+                            <input type="number" id="gratuity" name="gratuity" placeholder="Enter Gratuity">
+                        </div>
+                        <div>
+                            <label for="bonus">Bonus</label>
+                            <input type="number" id="bonus" name="bonus" placeholder="Enter bonus amount">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="other">Other Benefits</label>
+                        <input type="number" id="other" name="other" placeholder="Enter Other allowances">
+                    </div>
+                    
+                    <div class="salary-total">
+                        <label for="totalSalary">Total Annual Package</label>
+                        <input type="number" id="totalSalary" name="totalSalary" placeholder="Auto-calculated total" readonly>
+                    </div>
+                    <div class="joining-date">
+                        <label for="joiningDate">Joining Date *</label>
+                        <input type="date" id="joiningDate" name="joiningDate">
+                    </div>
+                </div>
+
+                <div class="form-group" id="offerStatusManageGroup" style="display: none;">
+                    <label for="offerStatus">Offer Status</label>
+                    <select id="offerStatus" name="offerStatus">
+                        <option value="withdraw">Withdraw</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="onHold">On Hold</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="hiringStatusManageGroup" style="display: none;">
+                    <label for="hiringStatus">Hiring Status</label>
+                    <select id="hiringStatus" name="hiringStatus">
+                        <option value="in_progress">In Progress</option>
+                        <option value="joined">Joined</option>
+                        <option value="not_joined">Not Joined</option>
+                        <option value="resigned">Resigned</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label for="actionComments">Comments</label>
                     <textarea id="actionComments" name="actionComments" rows="4" placeholder="Add any additional comments..."></textarea>

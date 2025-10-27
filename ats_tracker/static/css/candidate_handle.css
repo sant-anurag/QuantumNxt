@@ -915,6 +915,109 @@
     position: relative;
 }
 
+/* Offer Details Styling */
+#offerDetailsGroup {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+#offerDetailsGroup label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+#offerDetailsGroup input[type="number"] {
+    background: white;
+    border: 1px solid #d1d5db;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+}
+
+#offerDetailsGroup input[type="number"]:focus {
+    border-color: #4e54c8;
+    box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
+}
+
+#offerDetailsGroup input[readonly] {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.salary-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.salary-total {
+    background: #e0f2fe;
+    border: 2px solid #4e54c8;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.salary-total label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.salary-total input {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: white !important;
+}
+
+.joining-date {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+}
+
+.joining-date label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0c4a6e;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.joining-date input[type="date"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #0ea5e9;
+    border-radius: 6px;
+    background: white;
+    font-size: 1rem;
+    color: #1e3a8a;
+    transition: all 0.2s ease;
+}
+
+.joining-date input[type="date"]:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    outline: none;
+}
+
+.joining-date input[type="date"]::-webkit-calendar-picker-indicator {
+    color: #0ea5e9;
+    cursor: pointer;
+}
+
 /* Button Styles */
 .btn {
     padding: 10px 20px;

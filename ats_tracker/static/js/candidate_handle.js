@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/api/candidate_pipeline/?${params.toString()}`)
             .then(response => response.json())
             .then(data => {
+                console.log("checked data:", data);
                 if (data.success) {
                     updateCandidatesList(data.candidates);
                 } else {
@@ -256,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="stage ${stageTracker.l2}" title="L2 Interview: ${getStageTooltipText('l2', candidate.l2_result)}"></div>
                 <div class="stage ${stageTracker.l3}" title="L3 Interview: ${getStageTooltipText('l3', candidate.l3_result)}"></div>
                 <div class="stage ${stageTracker.offer}" title="Offer: ${getStageTooltipText('offer', candidate.offer_status)}"></div>
+                <div class="stage ${stageTracker.joining}" title="Joining: ${getStageTooltipText('joining', candidate.joining_status)}"></div>
             </div>
 
             <div class="current-stage-status">
@@ -306,7 +308,8 @@ function getStageTracker(candidate) {
         l1: 'upcoming',
         l2: 'upcoming',
         l3: 'upcoming',
-        offer: 'upcoming'
+        offer: 'upcoming',
+        joining: 'upcoming'
     };
     
     let completedStages = 0;
@@ -398,8 +401,26 @@ function getStageTracker(candidate) {
         }
     }
     
+    // Joining stage
+    if (!currentStageFound && candidate.offer_status === 'accepted') {
+        if (candidate.joining_status === 'joined') {
+            stages.joining = 'completed';
+            completedStages++;
+        } else if (candidate.joining_status === 'withdrawn' || candidate.joining_status === 'resigned') {
+            stages.joining = 'rejected';
+            currentStageFound = true;
+        } else if (candidate.joining_status === 'onHold') {
+            stages.joining = 'on-hold';
+            currentStageFound = true;
+        } else if (candidate.joining_status === 'in_progress' || !candidate.joining_status) {
+            // Set as active if in_progress or if joining_status is not set yet
+            stages.joining = 'active';
+            currentStageFound = true;
+        }
+    }
+    
     // Calculate progress percentage
-    const progressPercentage = Math.round((completedStages / 5) * 100);
+    const progressPercentage = Math.round((completedStages / 6) * 100);
     
     return {
         ...stages,
@@ -441,11 +462,20 @@ function getCurrentStageInfo(candidate) {
         };
     }
     
-    // If all interviews are selected, show offer status
+    // If all interviews are selected, check offer status
+    if (candidate.offer_status !== 'accepted') {
+        return {
+            stage: 'Offer',
+            statusText: getOfferStatusDisplayText(candidate.offer_status),
+            statusClass: getOfferStatusClass(candidate.offer_status)
+        };
+    }
+    
+    // If offer is accepted, show joining status
     return {
-        stage: 'Offer',
-        statusText: getOfferStatusDisplayText(candidate.offer_status),
-        statusClass: getOfferStatusClass(candidate.offer_status)
+        stage: 'Joining',
+        statusText: getJoiningStatusDisplayText(candidate.joining_status),
+        statusClass: getJoiningStatusClass(candidate.joining_status)
     };
 }
 
@@ -481,13 +511,41 @@ function getOfferStatusClass(offerStatus) {
     }
 }
 
+function getJoiningStatusDisplayText(joiningStatus) {
+    switch (joiningStatus) {
+        case 'in_progress': return 'Joining In Progress';
+        case 'joined': return 'Joined';
+        case 'onHold': return 'Joining On Hold';
+        case 'withdrawn': return 'Joining Withdrawn';
+        case 'resigned': return 'Resigned';
+        default: return 'Joining Pending';
+    }
+}
+
+function getJoiningStatusClass(joiningStatus) {
+    switch (joiningStatus) {
+        case 'joined': return 'highlight-green';
+        case 'resigned': return 'highlight-red';
+        case 'withdrawn': return 'highlight-red';
+        case 'onHold': return 'highlight-orange';
+        case 'in_progress': return 'highlight-blue';
+        default: return 'highlight-blue';
+    }
+}
+
 function getStageTooltipText(stage, status) {
     if (!status || status === 'toBeScreened') {
-        return stage === 'offer' ? 'Offer not initiated' : 'Pending';
+        if (stage === 'offer') return 'Offer not initiated';
+        if (stage === 'joining') return 'Joining pending';
+        return 'Pending';
     }
     
     if (stage === 'offer') {
         return getOfferStatusDisplayText(status);
+    }
+    
+    if (stage === 'joining') {
+        return getJoiningStatusDisplayText(status);
     }
     
     return getStatusDisplayText(status);
@@ -637,9 +695,59 @@ function resetTakeActionForm() {
 }
 
 function hideAllActionGroups() {
+    // Remove required attributes from all form fields that might be hidden
+    removeRequiredAttributes();
+    
     document.getElementById('rejectionReasonGroup').style.display = 'none';
     document.getElementById('holdReasonGroup').style.display = 'none';
     document.getElementById('interviewDetailsGroup').style.display = 'none';
+    document.getElementById('offerDetailsGroup').style.display = 'none';
+    document.getElementById('offerStatusManageGroup').style.display = 'none';
+    document.getElementById('hiringStatusManageGroup').style.display = 'none';
+}
+
+function removeRequiredAttributes() {
+    // Remove required attributes from all form fields that might be hidden
+    const allRequiredFields = document.querySelectorAll('#takeActionForm [required]');
+    allRequiredFields.forEach(field => {
+        field.removeAttribute('required');
+    });
+}
+
+function setOfferRequiredFields() {
+    const basicSalaryField = document.getElementById('basicSalary');
+    const hraField = document.getElementById('hra');
+    const pfField = document.getElementById('pf');
+    const joiningDateField = document.getElementById('joiningDate');
+    
+    if (basicSalaryField) basicSalaryField.setAttribute('required', 'required');
+    if (hraField) hraField.setAttribute('required', 'required');
+    if (pfField) pfField.setAttribute('required', 'required');
+    if (joiningDateField) joiningDateField.setAttribute('required', 'required');
+}
+
+function setInterviewRequiredFields() {
+    const interviewRequiredFields = ['interviewDate', 'interviewLevel', 'interviewer', 'interviewerEmail'];
+    interviewRequiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.setAttribute('required', 'required');
+        }
+    });
+}
+
+function setOfferStatusRequiredFields() {
+    const offerStatusField = document.getElementById('offerStatus');
+    if (offerStatusField) {
+        offerStatusField.setAttribute('required', 'required');
+    }
+}
+
+function setHiringStatusRequiredFields() {
+    const hiringStatusField = document.getElementById('hiringStatus');
+    if (hiringStatusField) {
+        hiringStatusField.setAttribute('required', 'required');
+    }
 }
 
 // Helper function to find candidate data
@@ -663,7 +771,8 @@ function findCandidateData(candidateId) {
                 l1_result: 'toBeScreened',
                 l2_result: 'toBeScreened', 
                 l3_result: 'toBeScreened',
-                offer_status: 'not_initiated'
+                offer_status: 'not_initiated',
+                joining_status: 'in_progress'
             };
         }
     }
@@ -679,7 +788,8 @@ function findCandidateData(candidateId) {
         l1_result: 'toBeScreened',
         l2_result: 'toBeScreened',
         l3_result: 'toBeScreened', 
-        offer_status: 'not_initiated'
+        offer_status: 'not_initiated',
+        joining_status: 'in_progress'
     };
 }
 
@@ -733,6 +843,9 @@ function setupModalEventListeners() {
             handleActionTypeChange(this.value);
         });
     }
+    
+    // Setup salary calculation for offer details
+    setupSalaryCalculation();
     
     // Close modals when clicking outside
     window.addEventListener('click', function(e) {
@@ -868,6 +981,53 @@ function handleTakeAction() {
         }
     }
     
+    if (actionType === 'send_offer') {
+        const basicSalary = formData.get('basicSalary');
+        const totalSalary = formData.get('totalSalary');
+        const joiningDate = formData.get('joiningDate');
+        
+        if (!basicSalary || parseFloat(basicSalary) <= 0) {
+            showNotification('Please enter a valid basic salary', 'error');
+            return;
+        }
+        
+        if (!totalSalary || parseFloat(totalSalary) <= 0) {
+            showNotification('Total salary must be greater than 0', 'error');
+            return;
+        }
+        
+        if (!joiningDate) {
+            showNotification('Please select a joining date', 'error');
+            return;
+        }
+        
+        // Validate joining date is not in the past
+        const selectedDate = new Date(joiningDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        
+        if (selectedDate < today) {
+            showNotification('Joining date cannot be in the past', 'error');
+            return;
+        }
+    }
+    
+    if (actionType === 'manage_offer_status') {
+        const offerStatus = formData.get('offerStatus');
+        if (!offerStatus) {
+            showNotification('Please select an offer status', 'error');
+            return;
+        }
+    }
+    
+    if (actionType === 'manageHiringStatus') {
+        const hiringStatus = formData.get('hiringStatus');
+        if (!hiringStatus) {
+            showNotification('Please select a hiring status', 'error');
+            return;
+        }
+    }
+    
     const actionData = {
         candidate_id: currentCandidateId,
         actionType: actionType,
@@ -887,6 +1047,20 @@ function handleTakeAction() {
         actionData.interviewer = formData.get('interviewer');
         actionData.interviewerEmail = formData.get('interviewerEmail');
         actionData.interviewLink = formData.get('interviewLink');
+    } else if (actionType === 'send_offer') {
+        actionData.basicSalary = formData.get('basicSalary');
+        actionData.hra = formData.get('hra');
+        actionData.specialAllowance = formData.get('specialAllowance');
+        actionData.pf = formData.get('pf');
+        actionData.gratuity = formData.get('gratuity');
+        actionData.bonus = formData.get('bonus');
+        actionData.other = formData.get('other');
+        actionData.totalSalary = formData.get('totalSalary');
+        actionData.joiningDate = formData.get('joiningDate');
+    } else if (actionType === 'manage_offer_status') {
+        actionData.offerStatus = formData.get('offerStatus');
+    } else if (actionType === 'manageHiringStatus') {
+        actionData.hiringStatus = formData.get('hiringStatus');
     }
     
     console.log('Taking action:', actionData);
@@ -912,20 +1086,25 @@ function handleTakeAction() {
         },
         body: JSON.stringify(actionData)
     })
-    .then(response => {
+    .then(async response => {
         // Check if the response is ok
         if (!response.ok) {
-            // Handle HTTP errors
-            if (response.status === 404) {
-                throw new Error('Candidate not found');
-            } else if (response.status === 403) {
-                throw new Error('You are not authorized to perform this action');
-            } else if (response.status === 400) {
-                throw new Error('Invalid request data');
-            } else if (response.status >= 500) {
-                throw new Error('Server error. Please try again later');
-            } else {
+            // Always try to get the exact backend error message first
+            try {
+                const data = await response.json();
+                // Use the exact backend error message
+                const backendError = data.error || data.message;
+                if (backendError) {
+                    throw new Error(backendError);
+                }
+
+                // Only use generic message if absolutely no backend message available
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (jsonError) {
+                // If JSON parsing fails, still try to use status text or minimal fallback
+                if (jsonError) {
+                    throw new Error(`HTTP ${response.status}: ${jsonError}`); // Use the JSON parsing error if available
+                }
             }
         }
         return response.json();
@@ -986,6 +1165,25 @@ function handleActionTypeChange(actionType) {
             break;
         case 'schedule_interview':
             document.getElementById('interviewDetailsGroup').style.display = 'block';
+            // Add required attributes for interview fields
+            setInterviewRequiredFields();
+            break;
+        case 'send_offer':
+            document.getElementById('offerDetailsGroup').style.display = 'block';
+            // Add required attributes for offer fields
+            setOfferRequiredFields();
+            // Set default joining date to 30 days from today
+            setDefaultJoiningDate();
+            break;
+        case 'manage_offer_status':
+            document.getElementById('offerStatusManageGroup').style.display = 'block';
+            // Add required attributes for offer status fields
+            setOfferStatusRequiredFields();
+            break;
+        case 'manageHiringStatus':
+            document.getElementById('hiringStatusManageGroup').style.display = 'block';
+            // Add required attributes for hiring status fields
+            setHiringStatusRequiredFields();
             break;
     }
 }
@@ -1119,4 +1317,52 @@ function showNotification(message, type = 'info') {
     
     // Also log to console for debugging
     console.log(`${type.toUpperCase()}: ${message}`);
+}
+
+// Salary calculation functionality
+function setupSalaryCalculation() {
+    const salaryInputs = ['basicSalary', 'hra', 'specialAllowance', 'pf', 'gratuity', 'bonus', 'other'];
+    const totalSalaryInput = document.getElementById('totalSalary');
+    
+    salaryInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', calculateTotalSalary);
+            input.addEventListener('change', calculateTotalSalary);
+        }
+    });
+    
+    function calculateTotalSalary() {
+        let total = 0;
+        
+        salaryInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input && input.value) {
+                const value = parseFloat(input.value) || 0;
+                // convert it to annual salary
+                total += value * 12;
+            }
+        });
+        
+        if (totalSalaryInput) {
+            totalSalaryInput.value = total.toFixed(2);
+        }
+    }
+}
+
+// Set default joining date
+function setDefaultJoiningDate() {
+    const joiningDateInput = document.getElementById('joiningDate');
+    if (joiningDateInput && !joiningDateInput.value) {
+        // Set default to 30 days from today
+        const today = new Date();
+        const defaultDate = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from now
+        
+        // Format date as YYYY-MM-DD for date input
+        const year = defaultDate.getFullYear();
+        const month = String(defaultDate.getMonth() + 1).padStart(2, '0');
+        const day = String(defaultDate.getDate()).padStart(2, '0');
+        
+        joiningDateInput.value = `${year}-${month}-${day}`;
+    }
 }
