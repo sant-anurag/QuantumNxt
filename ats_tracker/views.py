@@ -7390,6 +7390,8 @@ def _validate_report_params(request_data, role, user_id):
 
 def _build_where_clause(params):
     """Builds the dynamic WHERE clause for the SQL query."""
+    share_count_clause = ""
+    share_count_params = []
     where_clauses = []
     sql_params = []
 
@@ -7409,26 +7411,32 @@ def _build_where_clause(params):
 
     # Filter by date range
     if params["report_type"] == "daily" and params["date"]:
-        where_clauses.append("DATE(c.shared_on)=%s")
+        share_count_clause = " CASE WHEN DATE(c.shared_on)=%s THEN 1 ELSE 0 END "
+        share_count_params.append(params["date"])
+        where_clauses.append("DATE(c.updated_at)=%s")
         sql_params.append(params["date"])
     elif params["report_type"] == "weekly" and params["date"]:
-        where_clauses.append("YEARWEEK(c.shared_on, 1)=YEARWEEK(%s, 1)")
+        share_count_clause = " CASE WHEN YEARWEEK(c.shared_on, 1)=YEARWEEK(%s, 1) THEN 1 ELSE 0 END "
+        share_count_params.append(params["date"])
+        where_clauses.append("YEARWEEK(c.updated_at, 1)=YEARWEEK(%s, 1)")
         sql_params.append(params["date"])
     elif params["report_type"] == "custom" and params["from_date"] and params["to_date"]:
-        where_clauses.append("DATE(c.shared_on) BETWEEN %s AND %s")
+        share_count_clause = " CASE WHEN DATE(c.shared_on) BETWEEN %s AND %s THEN 1 ELSE 0 END "
+        share_count_params.extend([params["from_date"], params["to_date"]])
+        where_clauses.append("DATE(c.updated_at) BETWEEN %s AND %s")
         sql_params.extend([params["from_date"], params["to_date"]])
 
     where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
-    return where_clause, tuple(sql_params)
+    return where_clause, tuple(sql_params), share_count_clause, tuple(share_count_params)
 
-def _get_report_summary(cursor, where_clause, sql_params):
+def _get_report_summary(cursor, where_clause, sql_params, share_count_clause, share_count_params):
     """Fetches and processes data to create the main report and summary."""
     query = f"""
         SELECT
             cu.company_name,
             j.jd_summary,
             c.jd_id,
-            COUNT(c.candidate_id) AS profile_count,
+            SUM({share_count_clause}) AS profile_count,
             GROUP_CONCAT(c.screened_remarks SEPARATOR ', ') AS feedback
         FROM candidates c
         JOIN recruitment_jds j ON c.jd_id = j.jd_id
@@ -7437,7 +7445,7 @@ def _get_report_summary(cursor, where_clause, sql_params):
         GROUP BY cu.company_name, j.jd_summary, c.jd_id
         ORDER BY MAX(c.shared_on) DESC
     """
-    cursor.execute(query, sql_params)
+    cursor.execute(query, share_count_params + sql_params)
     rows = cursor.fetchall()
     
     report = []
@@ -7473,7 +7481,7 @@ def _get_detailed_candidate_list(cursor, report_summary, params):
     list_of_candidates = []
     
     date_or_date_range = params["date"] if params["report_type"] != "custom" else f"{params['from_date']} to {params['to_date']}"
-    date_filtering_clause = "AND DATE(shared_on)=%s" if params["report_type"] != "custom" else "AND DATE(shared_on) BETWEEN %s AND %s"
+    date_filtering_clause = "AND DATE(updated_at)=%s" if params["report_type"] != "custom" else "AND DATE(updated_at) BETWEEN %s AND %s"
     date_params = (params["date"],) if params["report_type"] != "custom" else (params["from_date"], params["to_date"])
 
     for row in report_summary[:-1]:  # Exclude summary row
@@ -7488,9 +7496,10 @@ def _get_detailed_candidate_list(cursor, report_summary, params):
                 candidate_id, name, email, phone, 
                 experience, current_ctc, expected_ctc, 
                 notice_period, previous_job_profile as profile, 
-                location, recruiter_comments
+                location, shared_on, recruiter_comments
             FROM candidates 
             WHERE jd_id=%s {date_filtering_clause}
+            ORDER BY shared_on DESC
         """
         cursor.execute(query, (row["jd_id"], *date_params))
         candidates = cursor.fetchall()
@@ -7533,11 +7542,11 @@ def generate_status_report(request):
         cursor = conn.cursor(dictionary=True)
 
         # Step 2: Build the dynamic SQL WHERE clause
-        where_clause, sql_params = _build_where_clause(params)
+        where_clause, sql_params, share_count_clause, share_count_params = _build_where_clause(params)
 
         # Step 3: Get the main report summary
-        report_summary = _get_report_summary(cursor, where_clause, sql_params)
-        
+        report_summary = _get_report_summary(cursor, where_clause, sql_params, share_count_clause, share_count_params)
+
         # Step 4: Get the detailed list of candidates
         detailed_candidates = _get_detailed_candidate_list(cursor, report_summary, params)
 
@@ -7972,8 +7981,8 @@ def generate_daily_report(report_type, user_id, **kwargs):
 
     for team in team_ids:
         request_data['team_id'] = team['team_id']
-        where_clause, sql_params = _build_where_clause(request_data)
-        report_summary = _get_report_summary(cursor, where_clause, sql_params)
+        where_clause, sql_params, share_count_clause, share_count_params = _build_where_clause(request_data)
+        report_summary = _get_report_summary(cursor, where_clause, sql_params, share_count_clause, share_count_params)
         detailed_candidates = _get_detailed_candidate_list(cursor, report_summary, request_data)
         all_teams_data.append({
             "team_name": team['team_name'],

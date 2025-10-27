@@ -44,6 +44,7 @@ function renderCandidateTables(listOfCandidates) {
                     <th>Notice Period</th>
                     <th>Profile</th>
                     <th>Location</th>
+                    <th>Shared On</th>
                     <th>Recruiter Comments</th>
                 </tr>
             </thead>
@@ -67,6 +68,7 @@ function renderCandidateTables(listOfCandidates) {
                     <td>${cand.notice_period !== null ? cand.notice_period : ''}</td>
                     <td>${cand.profile || ''}</td>
                     <td>${cand.location || ''}</td>
+                    <td>${cand.shared_on || ''}</td>
                     <td>${cand.recruiter_comments || ''}</td>
                 `;
                 tbody.appendChild(tr);
