@@ -291,6 +291,7 @@ function updateJDTable(jds, pagination, baseUrl) {
                     </div>
                 </div>
                 <div class="jd-card-body">
+                    <p class="company-name" title="${jd.company_name || 'N/A'}">${jd.company_name || 'N/A'}</p>
                     <h4 class="jd-summary" title="${jd.jd_summary || 'No summary available'}">${jd.jd_summary || 'No summary available'}</h4>
                     <div class="jd-details-grid">
                         <div class="jd-detail-item">
