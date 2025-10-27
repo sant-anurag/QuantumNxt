@@ -288,9 +288,63 @@ class ATSDatabaseInitializer:
             print(f"Error: {err}")
         try:
             self.cursor.execute("""
+                ALTER TABLE offer_letters
+                    ADD COLUMN joining_date DATE NOT NULL DEFAULT '2000-01-01',
+                    ADD CONSTRAINT fk_offer_candidate
+                        FOREIGN KEY (candidate_id)
+                        REFERENCES candidates(candidate_id)
+                        ON DELETE CASCADE
+                        ON UPDATE CASCADE;
+            """)
+            self.cursor.execute("""
                 ALTER TABLE candidates
-                    
-                
+                MODIFY COLUMN joining_status ENUM('in_progress','joined','onHold', 'resigned') NOT NULL DEFAULT 'in_progress';
+            """)
+            self.cursor.execute("""
+                ALTER TABLE candidates
+                    MODIFY COLUMN joining_status ENUM('not_initiated', 'in_progress','onHold', 'joined', 'resigned', 'not_joined') NOT NULL DEFAULT 'not_initiated'
+                    COMMENT "This field denotes joining status of candidate. 
+                    1. At start joining status will be 'not_initiated', 
+                    2. when offer status will be released then it will be 'in_progress', 
+                    3. if joining is put on hold then status will be 'onHold', 
+                    4. if candidate has joined then status will be 'joined', 
+                    5. if candidate has resigned then status will be 'resigned', 
+                    6. if candidate has not joined then status will be 'not_joined'
+
+                    'not_initiated' and 'in_progress' are considered as incomplete joining status,
+                    'onHold' is considered as on hold joining status, 
+                    'joined' is considered as completed joining status.
+                    'resigned' and 'not_joined' are considered as rejected joining status.
+                    ";
+            """)
+            self.cursor.execute("""
+                UPDATE candidates
+                    SET joining_status='not_initiated' WHERE joining_status IS NULL OR (joining_status='in_progress' AND offer_status!='accepted'),
+                    SET offer_status='not_initiated' WHERE offer_status IS NULL OR offer_status NOT IN ('not_initiated', 'released', 'accepted', 'rejected', 'onHold'),
+                    SET joining_status='in_progress' WHERE joining_status='not_initiated' AND offer_status='released';
+            """)
+            self.cursor.execute("""
+                ALTER TABLE candidates
+                    MODIFY COLUMN offer_status ENUM('not_initiated', 'released', 'accepted', 'rejected', 'onHold') NOT NULL DEFAULT 'not_initiated'
+                    COMMENT "This field denotes offer status of candidate.
+                    1. At start offer status will be 'not_initiated',
+                    2. when offer will be released then it will be 'released',
+                    3. if candidate will accept the offer then it will be 'accepted',
+                    4. if candidate will reject the offer then it will be 'rejected',
+                    5. if offer is put on hold then status will be 'onHold'
+
+                    'not_initiated' is considered as incomplete offer status,
+                    'released' is considered as pending offer status,
+                    'accepted' is considered as completed offer status,
+                    'rejected' is considered as rejected offer status,
+                    'onHold' is considered as on hold offer status.
+                    Note: If offer status is 'not_initiated' then joining status will be 'not_initiated',
+                    If offer status is 'accepted' then joining status will be 'in_progress'
+                    ";
+            """)
+            self.cursor.execute("""
+                ALTER TABLE recruitment_jds
+                ADD COLUMN profiles_offered INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Number of profiles offered for this JD' AFTER profiles_in_progress;
             """)
         except mysql.connector.Error as err:
             print(f"Error: {err}")
