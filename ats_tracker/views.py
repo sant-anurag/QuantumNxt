@@ -104,7 +104,8 @@ def login_view(request):
             request.session['email'] = username
             request.session['name'] = name
             request.session['session_id'] = session_id  # Store session_id
-
+            if role == 'Admin' or role == 'SuperUser':
+                return redirect('admin_dashboard')
             return redirect('home')
         else:
             return render(request, 'login.html', {'error': 'Invalid credentials or inactive user.'})
@@ -147,8 +148,6 @@ def home(request):
     name = request.session.get('name', 'Guest')
     user_role = request.session.get('role', 'Guest')
     return render(request, 'home.html', {'name': name, 'user_role': user_role})
-
-
 
 
 @role_required('Admin')
@@ -2999,6 +2998,7 @@ def api_candidates_pipeline(request):
             c.l2_result,
             c.l3_result,
             c.offer_status,
+            c.joining_status,
             j.jd_summary,
             comp.company_name,
             r.file_name as resume_filename,
@@ -3078,6 +3078,7 @@ def api_candidates_pipeline(request):
                 'l2_result': candidate['l2_result'],
                 'l3_result': candidate['l3_result'],
                 'offer_status': candidate['offer_status'],
+                'joining_status': candidate['joining_status'],
                 'jd_id': candidate['jd_id'],
                 'resume_filename': candidate['resume_filename'],
                 'resume_id': candidate['resume_id'],
@@ -3180,11 +3181,22 @@ def candidate_action_handler(request):
             
         elif action == 'send_offer':
             # TODO: Call send_offer_to_candidate method
-            return send_offer_to_candidate(request, candidate_id)
+            offer_data = {
+                'basicSalary': data.get('basicSalary'),
+                'hra': data.get('hra'),
+                'specialAllowance': data.get('specialAllowance'),
+                'pf': data.get('pf'),
+                'gratuity': data.get('gratuity'),
+                'bonus': data.get('bonus'),
+                'other': data.get('other'),
+                'joiningDate': data.get('joiningDate')
+            }
+            return send_offer_to_candidate(request, candidate_id, offer_data)
             
-        elif action == 'withdraw_offer':
+        elif action == 'manage_offer_status':
             # TODO: Call withdraw_candidate_offer method
-            return withdraw_candidate_offer(request, candidate_id)
+            offer_status = data.get('offerStatus')
+            return manage_offer_status(request, candidate_id, offer_status, comment, notify_status)
             
         elif action == 'mark_hired':
             # TODO: Call mark_candidate_as_hired method
@@ -3604,18 +3616,6 @@ def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, c
     finally:
         DataOperations.close_db_connection(conn, cursor)
 
-
-# def put_candidate_on_hold(request, candidate_id, hold_reason=None, comment=None, notify_candidate=False):
-    """
-
-    """
-    # TODO: Implement putting candidate on hold logic
-    # - Check current candidate status
-    # - Validate hold reason
-    # - Update candidate status to on hold
-    # - Record hold reason and comments
-    # - Notify candidate if required
-
     return JsonResponse({'success': True, 'message': 'Candidate put on hold successfully.'})
 
 @login_required
@@ -3740,98 +3740,234 @@ def schedule_interview_for_candidate(request, candidate_id, interview_data, **kw
     # - Save interview details to database
     # - Send email notifications if required
     # - Update candidate status
+
+    
+    
     return JsonResponse({'success': True, 'message': 'Interview scheduled successfully.'})
 
 @login_required
-def send_offer_to_candidate(request, candidate_id):
+def send_offer_to_candidate(request, candidate_id, offer_data, comment=""):
     """
     Send offer to a candidate.
     """
     # TODO: Implement offer sending logic
-    # - Generate offer letter
-    # - Update candidate offer status
-    # - Send offer email to candidate
-    # - Notify relevant team members
-    return JsonResponse({'success': True, 'message': 'Offer sent successfully.'})
 
-@login_required
-def withdraw_candidate_offer(request, candidate_id: int, comment: str = None, notify_candidate: bool = False):
-    """
-    Withdraw an existing offer for a candidate.
-    Sets offer_status to 'declined' and records the reason in recruiter_comments.
-    
-    :param notify_candidate: If True, triggers a notification to the candidate.
-    """
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    user_id = request.session.get('user_id', 'SYSTEM')
+    #  - check existance of candidate and their status
+    cursor.execute("""
+        SELECT 
+            screen_status, 
+            l1_result, 
+            l2_result, 
+            l3_result, 
+            offer_status,
+            joining_status,
+            name, 
+            email,
+            jd_id
+        FROM candidates
+        WHERE candidate_id=%s
+    """, (candidate_id,))
+    candidate_data = cursor.fetchone()
+    if not candidate_data:
+        return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+    # if candidate is already hired
+    if candidate_data['joining_status'] in ['joined','onHold', 'resigned']:
+        return JsonResponse({'success': False, 'error': f'Cannot send offer: Candidate is already {candidate_data["joining_status"]}.'}, status=400)
+    # if candidate is already released
 
-    # Construct the final comment for recruiter_comments
-    final_comment = f"\n[OFFER WITHDRAWAL on {date.today().isoformat()} by {user_id}]: Cause: Offer Withdrawn by us | Remarks: {comment.strip()}" if comment and comment.strip() else f"\n[OFFER WITHDRAWAL on {date.today().isoformat()} by {user_id}]: Cause: Offer Withdrawn by us | Remarks: No additional comments"
+    statuses = [candidate_data['screen_status'], candidate_data['l1_result'], candidate_data['l2_result'], candidate_data['l3_result']]
+    if 'rejected' in statuses or 'onHold' in statuses or 'toBeScreened' in statuses:
+        return JsonResponse({'success': False, 'error': 'Cannot send offer: Candidate is rejected or on hold at some stage.'}, status=400)
+    
+    if candidate_data['l3_result'] != 'selected':
+        return JsonResponse({'success': False, 'error': 'Cannot send offer: Candidate has not been selected in the final interview.'}, status=400)
+
+    # validate offer data (basic_salary, benefits, other_compensations, offer_validity, joining_date)
+    required_fields = ['basicSalary', 'hra', 'specialAllowance', 'pf', 'joiningDate']
+    for field in required_fields:
+        if field not in offer_data or offer_data[field] is None or offer_data[field] == '':
+            return JsonResponse({'success': False, 'error': f'Missing required offer field: {field}'}, status=400)
+    offer_type = None
+    if candidate_data['offer_status'] in ['not_initiated', None]:
+        offer_type = 'initial'
+    else:
+        offer_type = 'revised'
+    
+    # calculate total ctc
+    basic_salary = float(offer_data.get('basicSalary', 0) or 0)
+    hra = float(offer_data.get('hra', 0) or 0)
+    special_allowance = float(offer_data.get('specialAllowance', 0) or 0)
+    pf = float(offer_data.get('pf', 0) or 0)
+    gratuity = float(offer_data.get('gratuity', 0) or 0)
+    bonus = float(offer_data.get('bonus', 0) or 0)
+    other = float(offer_data.get('other', 0) or 0)
+    
+    total_ctc = (basic_salary + hra + special_allowance + pf + gratuity + bonus + other) * 12
+    
+    # - Generate offer letter
+    if offer_type == 'initial':
+        cursor.execute("""
+            INSERT INTO offer_letters 
+                (
+                    candidate_id, 
+                    basic, 
+                    hra, 
+                    special_allowance, 
+                    pf, 
+                    gratuity, 
+                    bonus, 
+                    other, 
+                    total_ctc,
+                    joining_date
+                )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            candidate_id,
+            basic_salary,
+            hra,
+            special_allowance,
+            pf,
+            gratuity,
+            bonus,
+            other,
+            total_ctc,
+            offer_data['joiningDate']
+        ))
+        
+        # Update candidate offer status to 'not_initiated'
+        cursor.execute("""
+            UPDATE candidates 
+            SET offer_status = 'not_initiated', updated_at = CURRENT_TIMESTAMP 
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        
+    else:  # revised offer
+        # Update existing offer letter
+        cursor.execute("""
+            UPDATE offer_letters 
+            SET 
+                basic = %s,
+                hra = %s,
+                special_allowance = %s,
+                pf = %s,
+                gratuity = %s,
+                bonus = %s,
+                other = %s,
+                total_ctc = %s,
+                joining_date = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE candidate_id = %s
+        """, (
+            basic_salary,
+            hra,
+            special_allowance,
+            pf,
+            gratuity,
+            bonus,
+            other,
+            total_ctc,
+            offer_data['joiningDate'],
+            candidate_id
+        ))
+        
+    # Update candidate offer status to 'revised'
+    cursor.execute("""
+        UPDATE candidates 
+        SET offer_status = 'released',
+        joining_date = %s,
+        recruiter_comments=%s
+        WHERE candidate_id = %s
+    """, (offer_data['joiningDate'], comment, candidate_id))
+    current_data = candidate_data.copy()
+    current_data['offer_status'] = 'released'
+    check = DataOperations.update_recruitment_jds(cursor, candidate_data, current_data)
+    if not check:
+        conn.rollback()
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+    conn.commit()
+    
+    # Close database connection
+    DataOperations.close_db_connection(conn, cursor)
+    
+    # TODO: Send offer email to candidate
+    # TODO: Notify relevant team members
+    
+    return JsonResponse({
+        'success': True, 
+        'message': f'Offer sent successfully to candidate {candidate_id}.',
+        'offer_type': offer_type,
+        'total_ctc': total_ctc
+    })
+
+def manage_offer_status(request, candidate_id: int, offer_status: str, comment: str = "", notify_status: bool = False):
+    """
+    Manage the offer status of a candidate (e.g., withdraw offer).
+    """
+
+    valid_offer_statuses = ['withdraw', 'accepted', 'rejected', 'onHold']
+    if offer_status not in valid_offer_statuses:
+        return JsonResponse({'success': False, 'error': f'Invalid offer status: {offer_status}'}, status=400)
+    
+    offer_status = 'not_initiated' if offer_status == 'withdraw' else offer_status
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            offer_status,
+            joining_status,
+            name,
+            email,
+            jd_id
+        FROM candidates
+        WHERE candidate_id=%s
+    """, (candidate_id,))
+    candidate_data = cursor.fetchone()
+    if not candidate_data:
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
+    if candidate_data['offer_status'] == offer_status:
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': f'Offer status is already set to {offer_status} for this candidate.'}, status=400)
+    elif candidate_data['offer_status'] == 'not_initiated':
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Cannot manage offer: Offer not yet initiated for this candidate.'}, status=400)
+    elif candidate_data['offer_status'] != 'released' and offer_status in ['accepted', 'rejected', 'onHold']:
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': f'Cannot manage offer: Offer is in {candidate_data['offer_status']}'}, status=400)
+    if candidate_data['joining_status'] == 'joined':
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Cannot manage offer: Candidate has already joined.'}, status=400)
 
     try:
-        # 1. Fetch current status and validate if the candidate is in the offering stage
+        # Update offer status
         cursor.execute("""
-            SELECT 
-                l3_result, offer_status, name, email
-            FROM candidates
-            WHERE candidate_id=%s
-        """, (candidate_id,))
-        candidate_data = cursor.fetchone()
-
-        if not candidate_data:
-            return JsonResponse({'success': False, 'error': 'Candidate not found'}, status=404)
-
-        # Basic validation: Check if they passed L3 (were 'selected')
-        if candidate_data['l3_result'] != 'selected':
-             return JsonResponse({'success': False, 'error': f'Cannot withdraw offer: Candidate has not successfully passed L3 (current L3 status: {candidate_data["l3_result"]}).'}, status=400)
-             
-        # Optional validation: Check if offer status is already set to declined/withdrawn
-        # Note: 'declined' is used for both candidate-declined and recruiter-withdrawn offers
-        if candidate_data['offer_status'] in ['declined', 'hired']:
-             return JsonResponse({'success': False, 'error': f'Offer is already in a final state: {candidate_data["offer_status"]}.'}, status=400)
-
-        # 2. Update candidate status
-        new_offer_status = 'declined'
-        
-        update_query = """
-            UPDATE candidates 
-            SET 
-                offer_status=%s, 
-                recruiter_comments=CONCAT(COALESCE(recruiter_comments, ''), %s),
-                updated_at=CURRENT_TIMESTAMP
-            WHERE candidate_id=%s
-        """
-        update_params = [new_offer_status, final_comment, candidate_id]
-        
-        cursor.execute(update_query, tuple(update_params))
+            UPDATE candidates
+            SET offer_status = %s,
+                recruiter_comments = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE candidate_id = %s
+        """, (offer_status, comment, candidate_id))
+        current_data = candidate_data.copy()
+        current_data['offer_status'] = offer_status
+        check = DataOperations.update_recruitment_jds(cursor, candidate_data, current_data)
+        if not check:
+            conn.rollback()
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
         conn.commit()
-
-        # 3. Handle notification
-        if notify_candidate:
-            # TODO: Implement robust email notification logic here using
-            # candidate_data['name'] and candidate_data['email'].
-            # Example: send_withdrawal_email(candidate_data['email'])
-            pass
-        
-        # Log activity
-        # TODO: Add logic to insert a record into candidate_activities table.
-        # activity_comment = f"Offer withdrawn by recruiter. Reason: {comment}"
-        # DataOperations.log_candidate_activity(candidate_id, user_id, 'OFFER_WITHDRAWN', activity_comment)
-
-        return JsonResponse({
-            'success': True, 
-            'message': f'Offer for Candidate {candidate_id} successfully withdrawn.',
-            'new_offer_status': new_offer_status
-        })
-
-    except Exception as e:
-        conn.rollback()
-        print(f"withdraw_candidate_offer -> Error: {str(e)}")
-        return JsonResponse({'success': False, 'error': 'Database or internal server error during offer withdrawal process'}, status=500)
-        
-    finally:
         DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': True, 'message': f'Offer status updated to {offer_status} for candidate {candidate_id}.'})
+    except Exception as e:
+        print(f"manage_offer_status -> Error: {str(e)}")
+        conn.rollback()
+        DataOperations.close_db_connection(conn, cursor)
+        return JsonResponse({'success': False, 'error': 'Database error while updating offer status'}, status=500)
+
+
 
 @login_required
 def mark_candidate_as_hired(request, candidate_id):
@@ -3839,6 +3975,10 @@ def mark_candidate_as_hired(request, candidate_id):
     Mark a candidate as hired.
     """
     # TODO: Implement hired marking logic
+
+    conn = DataOperations.get_db_connection()
+    #  - Get all statuses of candidate
+
     # - Update candidate status to hired
     # - Move candidate to hired candidates table
     # - Send welcome email
@@ -5364,7 +5504,7 @@ def api_admin_dashboard(request):
             (SELECT COUNT(c.candidate_id)
                 FROM candidates c
                 left join recruitment_jds r on c.jd_id = r.jd_id
-                WHERE c.offer_status in ('in_progress', 'not_initiated')
+                WHERE c.offer_status in ('not_initiated')
                 AND c.joining_status = 'in_progress'
                 AND (c.screen_status NOT IN ('rejected', 'onHold') OR c.screen_status IS NULL)
                 AND (c.l1_result NOT IN ('rejected', 'onHold') OR c.l1_result IS NULL)
@@ -5384,9 +5524,9 @@ def api_admin_dashboard(request):
             -- 4. OFFER ACCEPTANCE RATE (%) (Health)
             (SELECT
                 (SUM(CASE WHEN offer_status = 'accepted' THEN 1 ELSE 0 END) * 100.0) /
-                SUM(CASE WHEN offer_status IN ('accepted', 'declined') THEN 1 ELSE 0 END)
+                SUM(CASE WHEN offer_status IN ('accepted', 'rejected') THEN 1 ELSE 0 END)
             FROM candidates
-            WHERE offer_status IN ('accepted', 'declined')
+            WHERE offer_status IN ('accepted', 'rejected')
             ) AS Offer_Acceptance_Rate_Percent;
     """)
     kpi_row = cursor.fetchone()
@@ -5552,6 +5692,7 @@ def api_admin_jd_info(request):
             j.jd_summary,
             j.jd_status,
             t.team_name,
+            c.company_name,
             j.no_of_positions,
             j.total_profiles,
             j.profiles_completed,
@@ -5562,6 +5703,8 @@ def api_admin_jd_info(request):
             recruitment_jds j
         LEFT JOIN
             teams t ON j.team_id = t.team_id
+        LEFT JOIN
+            customers c ON j.company_id = c.company_id
         WHERE 1=1
     """
     
@@ -5756,7 +5899,7 @@ def generate_offer_letter(request):
 
         # Save to DB
         conn = DataOperations.get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             INSERT INTO offer_letters (candidate_id, basic, hra, special_allowance, pf, gratuity, bonus, other, total_ctc)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -6062,8 +6205,8 @@ def _fetch_candidate_pipeline(cursor, team_filter_clause, start_date, end_date):
             SUM(CASE WHEN c.l3_result='selected' THEN 1 ELSE 0 END) AS l3,
             SUM(CASE WHEN c.offer_status='released' THEN 1 ELSE 0 END) AS offered,
             SUM(CASE WHEN c.offer_status='accepted' THEN 1 ELSE 0 END) AS accepted,
-            SUM(CASE WHEN c.screen_status='rejected' OR c.l1_result='rejected' OR c.l2_result='rejected' OR c.l3_result='rejected' OR c.offer_status='declined' THEN 1 ELSE 0 END) AS rejected,
-            SUM(CASE WHEN c.offer_status NOT IN ('not_initiated', 'in_progress') THEN 1 ELSE 0 END) AS position_offered
+            SUM(CASE WHEN c.screen_status='rejected' OR c.l1_result='rejected' OR c.l2_result='rejected' OR c.l3_result='rejected' OR c.offer_status='rejected' THEN 1 ELSE 0 END) AS rejected,
+            SUM(CASE WHEN c.offer_status NOT IN ('not_initiated', 'onHold') THEN 1 ELSE 0 END) AS position_offered
         FROM candidates c
         JOIN teams t ON c.team_id = t.team_id
         WHERE (c.updated_at BETWEEN %s AND %s) AND ({team_filter_clause})
