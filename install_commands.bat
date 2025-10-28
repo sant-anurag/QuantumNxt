@@ -17,3 +17,4 @@ python -m pip install daphne
 pip install bleach "bleach[css]"
 pip install pdfkit
 pip install pypdf python-docx python-dateutil google-genai
+pip install google-generativeai

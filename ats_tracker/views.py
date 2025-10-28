@@ -5666,14 +5666,14 @@ def api_admin_dashboard(request):
             (SELECT COUNT(c.candidate_id)
                 FROM candidates c
                 left join recruitment_jds r on c.jd_id = r.jd_id
-                WHERE c.offer_status in ('not_initiated')
-                AND c.joining_status = 'in_progress'
+                WHERE c.joining_status in ('not_initiated', 'in_progress')
                 AND (c.screen_status NOT IN ('rejected', 'onHold') OR c.screen_status IS NULL)
                 AND (c.l1_result NOT IN ('rejected', 'onHold') OR c.l1_result IS NULL)
                 AND (c.l2_result NOT IN ('rejected', 'onHold') OR c.l2_result IS NULL)
                 AND (c.l3_result NOT IN ('rejected', 'onHold') OR c.l3_result IS NULL)
                 -- Exclude 'joined' or 'withdrawn' candidates
-                AND c.joining_status NOT IN ('joined', 'withdrawn')
+                AND c.offer_status NOT IN ('rejected', 'onHold')
+                AND c.joining_status NOT IN ('joined', 'resigned', 'not_joined')
                 AND r.jd_status = 'active'
             ) AS Total_Candidates_In_Pipeline,
 
