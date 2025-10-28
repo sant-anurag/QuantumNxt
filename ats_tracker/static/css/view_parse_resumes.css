@@ -49,18 +49,63 @@
     box-shadow: 0 0 0 2px #e6ebff;
 }
 
+/* Table Container for Horizontal Overflow */
+.resume-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    margin-top: 18px;
+    background: #ffffff;
+}
+
+/* Custom Scrollbar for Table Container */
+.resume-table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.resume-table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.resume-table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #7280ff 0%, #5661d2 100%);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.resume-table-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #5661d2 0%, #4c51bf 100%);
+}
+
+/* Firefox scrollbar styling */
+.resume-table-container {
+    scrollbar-width: thin;
+    scrollbar-color: #9bb6fd #f1f5f9;
+}
+
 /* Table styling */
 .resume-table {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
+    min-width: 900px; /* Minimum width to prevent cramped layout */
     background: #ffffff;
     border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-    margin-top: 18px;
+    overflow: visible;
     font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    border: 1px solid #e2e8f0;
+    margin: 0; /* Remove margin since container handles it */
+    border: none; /* Remove border since container handles it */
+}
+
+/* Hidden columns for parsed data */
+.resume-table .hidden-education,
+.resume-table .hidden-skills,
+.resume-table .hidden-location,
+.resume-table .hidden-prev-job {
+    display: none !important;
 }
 
 .resume-table th, .resume-table td {
@@ -374,6 +419,19 @@
     .resume-table td.file-name-col {
         max-width: 18ch;
     }
+    
+    /* Table container responsive adjustments */
+    .resume-table-container {
+        margin-top: 14px;
+    }
+    
+    .resume-table {
+        min-width: 800px;
+    }
+    
+    .resume-table-container::-webkit-scrollbar {
+        height: 6px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -406,6 +464,19 @@
         width: 28px;
         height: 28px;
         font-size: 1em;
+    }
+    
+    /* Table container responsive adjustments for tablets */
+    .resume-table-container {
+        margin-top: 12px;
+    }
+    
+    .resume-table {
+        min-width: 700px;
+    }
+    
+    .resume-table-container::-webkit-scrollbar {
+        height: 5px;
     }
 }
 
@@ -448,6 +519,25 @@
     h2 {
         font-size: 1em;
     }
+    
+    /* Table container responsive adjustments for mobile */
+    .resume-table-container {
+        margin-top: 10px;
+        border-radius: 8px;
+    }
+    
+    .resume-table {
+        min-width: 600px;
+        border-radius: 8px;
+    }
+    
+    .resume-table-container::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .resume-table-container::-webkit-scrollbar-thumb {
+        border-radius: 2px;
+    }
 }
 
 
@@ -486,6 +576,95 @@
     flex-direction: column;
     gap: 10px;
     overflow-y: auto;
+    position: relative;
+}
+
+/* Modal Loading Overlay */
+.modal-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    border-radius: 16px;
+}
+
+.modal-loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(114, 128, 255, 0.1);
+}
+
+.modal-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f0f0f0;
+    border-top: 3px solid #5661d2;
+    border-radius: 50%;
+    animation: modalSpin 1s linear infinite;
+}
+
+.modal-loading-text {
+    font-size: 0.95em;
+    font-weight: 400;
+    color: #4a5568;
+    text-align: center;
+    letter-spacing: 0.01em;
+}
+
+@keyframes modalSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments for modal loading */
+@media (max-width: 768px) {
+    .modal-loading-content {
+        padding: 20px;
+        gap: 10px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+    
+    .modal-loading-spinner {
+        width: 28px;
+        height: 28px;
+        border-width: 2px;
+    }
+    
+    .modal-loading-text {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-loading-content {
+        padding: 16px;
+        gap: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    
+    .modal-loading-spinner {
+        width: 24px;
+        height: 24px;
+        border-width: 2px;
+    }
+    
+    .modal-loading-text {
+        font-size: 0.85em;
+    }
 }
 
 .modal-content::-webkit-scrollbar {

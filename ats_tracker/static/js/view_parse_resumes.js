@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayResumes(resumes) {
         // Implement the logic to display resumes in the UI
         if(resumes.length === 0) {
-            resume_table_body.innerHTML = '<tr><td colspan="5">No resumes found for the selected JD.</td></tr>';
+            resume_table_body.innerHTML = '<tr><td colspan="11">No resumes found for the selected JD.</td></tr>';
             return;
         }
         resume_table_body.innerHTML = '';
@@ -53,6 +53,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="icon-btn parse-btn" data-resume-id="${resume.resume_id}" title="Parse Resume"><i class="fas fa-upload"></i></button>
                     <button class="icon-btn edit-btn" data-resume-id="${resume.resume_id}" title="Edit Resume"><i class="fas fa-edit"></i></button>
                 </td>
+                <td style="display:none;" class="hidden-education">${resume.education || ''}</td>
+                <td style="display:none;" class="hidden-skills">${resume.skills || ''}</td>
+                <td style="display:none;" class="hidden-location">${resume.location || ''}</td>
+                <td style="display:none;" class="hidden-prev-job">${resume.previous_job_title || ''}</td>
 
             `
             resume_table_body.appendChild(row);
@@ -104,18 +108,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         const nameCell = row.cells[1];
                         if (nameCell && data.resume.name) {
                             nameCell.textContent = data.resume.name;
+                            nameCell.setAttribute('title', data.resume.name);
                         }
                         
                         // Update Contact column (3rd column)
                         const contactCell = row.cells[2];
                         if (contactCell && data.resume.phone) {
                             contactCell.textContent = data.resume.phone;
+                            contactCell.setAttribute('title', data.resume.phone);
                         }
                         
                         // Update Email column (4th column)
                         const emailCell = row.cells[3];
                         if (emailCell && data.resume.email) {
                             emailCell.textContent = data.resume.email;
+                            emailCell.setAttribute('title', data.resume.email);
                         }
                         
                         // Update Experience column (5th column)
@@ -123,6 +130,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         // experience could be 0
                         if (expCell && data.resume.experience !== undefined) {
                             expCell.textContent = data.resume.experience;
+                            expCell.setAttribute('title', data.resume.experience);
+                        }
+                        
+                        // Update hidden columns with parsed data
+                        // Education column (8th column - hidden)
+                        const educationCell = row.cells[7];
+                        if (educationCell && data.resume.education) {
+                            educationCell.textContent = data.resume.education;
+                        }
+                        
+                        // Skills column (9th column - hidden)
+                        const skillsCell = row.cells[8];
+                        if (skillsCell && data.resume.skills) {
+                            skillsCell.textContent = data.resume.skills;
+                        }
+                        
+                        // Location column (10th column - hidden)
+                        const locationCell = row.cells[9];
+                        if (locationCell && data.resume.location) {
+                            locationCell.textContent = data.resume.location;
+                        }
+                        
+                        // Previous Job Title column (11th column - hidden)
+                        const prevJobCell = row.cells[10];
+                        if (prevJobCell && data.resume.previous_job_title) {
+                            prevJobCell.textContent = data.resume.previous_job_title;
                         }
                     }
                     
@@ -158,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearCandidateModalData() {
+        // Hide loading overlay
+        showModalLoading(false);
+        
         // Clear all form fields
         document.getElementById('modal-resume-id').value = '';
         document.getElementById('modal-jd-id').value = '';
@@ -262,44 +298,93 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fillParsedResumeData(resumeId) {
-        // Fill data from parsed resume displayed in the table
-        const row = document.querySelector(`tr[data-resume-id="${resumeId}"]`);
-        if (row) {
-            const nameCell = row.cells[1];
-            if (nameCell && nameCell.textContent && nameCell.textContent !== '-') {
-                const currentName = document.getElementById('modal-name').value;
-                if (!currentName || currentName.trim() === '') {
-                    document.getElementById('modal-name').value = nameCell.textContent;
+        // Show loading overlay when filling from table data
+        showModalLoading(true, 'Filling data from table, please wait...');
+        
+        // Add a small delay to show the loading message
+        setTimeout(() => {
+            // Fill data from parsed resume displayed in the table
+            const row = document.querySelector(`tr[data-resume-id="${resumeId}"]`);
+            if (row) {
+                const nameCell = row.cells[1];
+                if (nameCell && nameCell.textContent && nameCell.textContent !== '-') {
+                    const currentName = document.getElementById('modal-name').value;
+                    if (!currentName || currentName.trim() === '') {
+                        document.getElementById('modal-name').value = nameCell.textContent;
+                    }
+                }
+                
+                const phoneCell = row.cells[2];
+                if (phoneCell && phoneCell.textContent && phoneCell.textContent !== '-') {
+                    const currentPhone = document.getElementById('modal-phone').value;
+                    if (!currentPhone || currentPhone.trim() === '') {
+                        document.getElementById('modal-phone').value = phoneCell.textContent;
+                    }
+                }
+                
+                const emailCell = row.cells[3];
+                if (emailCell && emailCell.textContent && emailCell.textContent !== '-') {
+                    const currentEmail = document.getElementById('modal-email').value;
+                    if (!currentEmail || currentEmail.trim() === '') {
+                        document.getElementById('modal-email').value = emailCell.textContent;
+                    }
+                }
+                
+                const expCell = row.cells[4];
+                if (expCell && expCell.textContent && expCell.textContent !== '-') {
+                    const currentExp = document.getElementById('modal-experience').value;
+                    if (!currentExp || currentExp.trim() === '') {
+                        document.getElementById('modal-experience').value = expCell.textContent;
+                    }
+                }
+                
+                // Fill data from hidden columns
+                // Education from hidden column (8th column - index 7)
+                const educationCell = row.cells[7];
+                if (educationCell && educationCell.textContent && educationCell.textContent.trim() !== '') {
+                    const currentEducation = document.getElementById('modal-education').value;
+                    if (!currentEducation || currentEducation.trim() === '') {
+                        document.getElementById('modal-education').value = educationCell.textContent;
+                    }
+                }
+                
+                // Skills from hidden column (9th column - index 8)
+                const skillsCell = row.cells[8];
+                if (skillsCell && skillsCell.textContent && skillsCell.textContent.trim() !== '') {
+                    const currentSkills = document.getElementById('modal-skills').value;
+                    if (!currentSkills || currentSkills.trim() === '') {
+                        document.getElementById('modal-skills').value = skillsCell.textContent;
+                    }
+                }
+                
+                // Location from hidden column (10th column - index 9)
+                const locationCell = row.cells[9];
+                if (locationCell && locationCell.textContent && locationCell.textContent.trim() !== '') {
+                    const currentLocation = document.getElementById('modal-location').value;
+                    if (!currentLocation || currentLocation.trim() === '') {
+                        document.getElementById('modal-location').value = locationCell.textContent;
+                    }
+                }
+                
+                // Previous Job Title from hidden column (11th column - index 10)
+                const prevJobCell = row.cells[10];
+                if (prevJobCell && prevJobCell.textContent && prevJobCell.textContent.trim() !== '') {
+                    const currentPrevJob = document.getElementById('modal-prev-job-profile').value;
+                    if (!currentPrevJob || currentPrevJob.trim() === '') {
+                        document.getElementById('modal-prev-job-profile').value = prevJobCell.textContent;
+                    }
                 }
             }
             
-            const phoneCell = row.cells[2];
-            if (phoneCell && phoneCell.textContent && phoneCell.textContent !== '-') {
-                const currentPhone = document.getElementById('modal-phone').value;
-                if (!currentPhone || currentPhone.trim() === '') {
-                    document.getElementById('modal-phone').value = phoneCell.textContent;
-                }
-            }
-            
-            const emailCell = row.cells[3];
-            if (emailCell && emailCell.textContent && emailCell.textContent !== '-') {
-                const currentEmail = document.getElementById('modal-email').value;
-                if (!currentEmail || currentEmail.trim() === '') {
-                    document.getElementById('modal-email').value = emailCell.textContent;
-                }
-            }
-            
-            const expCell = row.cells[4];
-            if (expCell && expCell.textContent && expCell.textContent !== '-') {
-                const currentExp = document.getElementById('modal-experience').value;
-                if (!currentExp || currentExp.trim() === '') {
-                    document.getElementById('modal-experience').value = expCell.textContent;
-                }
-            }
-        }
+            // Hide loading overlay after filling data
+            showModalLoading(false);
+        }, 300); // 300ms delay to show loading message
     }
 
     function fillCandidateModalData(resumeId) {
+        
+        // Show loading overlay
+        showModalLoading(true, 'Loading candidate data from backend...');
         
         // First, get the JD and team information to ensure we have team_id
         const selectedJD = jdselect_dropdown.value;
@@ -331,6 +416,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Hide loading overlay
+                    showModalLoading(false);
+                    
                     if(data.success && data.candidate) {
                         const candidate = data.candidate;
                         
@@ -375,12 +463,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
+                    // Hide loading overlay on error
+                    showModalLoading(false);
                     console.error('Error in fillCandidateModalData:', error);
                     // On error, still try to fill basic fields and parsed data
                     fillHiddenFields(resumeId);
                     fillParsedResumeData(resumeId);
                 });
         } else {
+            // Hide loading overlay and fill basic fields
+            showModalLoading(false);
             // No JD selected, just fill basic fields
             fillHiddenFields(resumeId);
             fillParsedResumeData(resumeId);
@@ -390,6 +482,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeCandidateModal() {
         const candidateModal = document.getElementById('candidate-modal');
         if (candidateModal) {
+            // Hide loading overlay
+            showModalLoading(false);
             candidateModal.style.display = 'none';
             clearCandidateModalData();
         }
@@ -462,6 +556,22 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadMessage.textContent = message;
             uploadMessage.className = type;
             uploadMessage.style.display = 'block';
+        }
+    }
+
+    function showModalLoading(isLoading, message = 'Loading candidate data, please wait...') {
+        const loadingOverlay = document.getElementById('modal-loading-overlay');
+        const loadingText = document.querySelector('.modal-loading-text');
+        
+        if (loadingOverlay) {
+            if (isLoading) {
+                if (loadingText) {
+                    loadingText.textContent = message;
+                }
+                loadingOverlay.style.display = 'flex';
+            } else {
+                loadingOverlay.style.display = 'none';
+            }
         }
     }
 

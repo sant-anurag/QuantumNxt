@@ -16,3 +16,4 @@ pip install channels channels_redis
 python -m pip install daphne
 pip install bleach "bleach[css]"
 pip install pdfkit
+pip install pypdf python-docx python-dateutil google-genai

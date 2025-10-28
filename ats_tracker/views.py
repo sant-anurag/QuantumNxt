@@ -2346,45 +2346,49 @@ def view_parse_resumes(request):
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
+    
+    # Query to get resumes with candidate data if available
+    cursor.execute("""
+        SELECT 
+            r.resume_id,
+            r.file_name,
+            r.status,
+            c.name as candidate_name,
+            c.phone,
+            c.email,
+            c.experience,
+            c.education,
+            c.skills,
+            c.location,
+            c.previous_job_profile
+        FROM resumes r
+        LEFT JOIN candidates c ON r.resume_id = c.resume_id
+        WHERE r.jd_id = %s
+        ORDER BY c.updated_at, r.uploaded_on DESC
+    """, (jd_id,))
+    
     resumes = cursor.fetchall()
     parsed_resumes = []
+    
     for r in resumes:
-        file_path = r['file_path']
-        if not os.path.exists(file_path):
-            continue
-        try:
-            text = textract.process(file_path).decode('utf-8')
-            # Simple parsing logic (use regex for better extraction)
-            import re
-            name = re.search(r'Name[:\- ]*(.*)', text)
-            email = re.search(r'[\w\.-]+@[\w\.-]+', text)
-            phone = re.search(r'(\+?\d{10,13})', text)
-            experience = re.search(r'Experience[:\- ]*(.*)', text)
-            summary = text[:300]  # First 300 chars as summary
-            from .utils import get_display_filename
-            display_name = get_display_filename(r['file_name'], r['jd_id'])
-            parsed_resumes.append({
-                'resume_id': r['resume_id'],
-                'file_name': display_name,
-                'name': name.group(1) if name else '',
-                'email': email.group(0) if email else '',
-                'phone': phone.group(1) if phone else '',
-                'experience': experience.group(1) if experience else '',
-                'summary': summary,
-                'status': r['status'],
-                'file_url': f"/download_resume/{r['resume_id']}/"
-            })
-        except Exception as e:
-            from .utils import get_display_filename
-            display_name = get_display_filename(r['file_name'], r['jd_id'])
-            parsed_resumes.append({
-                'resume_id': r['resume_id'],
-                    'file_name': display_name,
-                'error': str(e),
-                'status': r['status'],
-                'file_url': f"/download_resume/{r['resume_id']}/"
-            })
+        from .utils import get_display_filename
+        display_name = get_display_filename(r['file_name'], jd_id)
+        
+        parsed_resumes.append({
+            'resume_id': r['resume_id'],
+            'file_name': display_name,
+            'candidate_name': r['candidate_name'] or '',
+            'phone': r['phone'] or '',
+            'email': r['email'] or '',
+            'experience': r['experience'] or '',
+            'education': r['education'] or '',
+            'skills': r['skills'] or '',
+            'location': r['location'] or '',
+            'previous_job_title': r['previous_job_profile'] or '',
+            'status': r['status'],
+            'file_url': f"/download_resume/{r['resume_id']}/"
+        })
+    
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'resumes': parsed_resumes})
@@ -2457,60 +2461,140 @@ def export_resumes_excel(request):
     wb.save(response)
     return response
 
-@csrf_exempt
-def parse_resumes(request):
-    """
-    API endpoint to parse resumes for a specific job description.
-    """
-    jd_id = request.GET.get('jd_id')
-    if not jd_id:
-        return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
-    resumes = cursor.fetchall()
-    parser = ResumeParser()
-    parsed_resumes = []
-    for r in resumes:
-        file_path = r['file_path']
-        if not os.path.exists(file_path):
-            continue
-        try:
-            result = parser.parse_resume(file_path)
-            from .utils import get_display_filename
-            display_name = get_display_filename(r['file_name'], r['jd_id'])
-            parsed_resumes.append({
-                'resume_id': r['resume_id'],
-                    'file_name': display_name,
-                'name': result.get('Name', ''),
-                'email': result.get('Email', ''),
-                'phone': result.get('Contact Number', ''),
-                'experience': result.get('Work Experience (Years)', ''),
-                'status': r['status'],
-                'file_url': f"/download_resume/{r['resume_id']}/"
-            })
-        except Exception as e:
-            from .utils import get_display_filename
-            display_name = get_display_filename(r['file_name'], r['jd_id'])
-            parsed_resumes.append({
-                'resume_id': r['resume_id'],
-                    'file_name': display_name,
-                'error': str(e),
-                'status': r['status'],
-                'file_url': f"/download_resume/{r['resume_id']}/"
-            })
-    cursor.close()
-    conn.close()
-    print("parse_resumes -> Parsed resumes:", parsed_resumes)
-    if not parsed_resumes:
-        return JsonResponse({'success': False, 'error': 'No resumes found for this JD'}, status=404)
-    return JsonResponse({'success': True, 'resumes': parsed_resumes})
+# @csrf_exempt
+# def parse_resumes(request):
+#     """
+#     API endpoint to parse resumes for a specific job description.
+#     """
+#     jd_id = request.GET.get('jd_id')
+#     if not jd_id:
+#         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
+#     conn = DataOperations.get_db_connection()
+#     cursor = conn.cursor(dictionary=True)
+#     cursor.execute("SELECT * FROM resumes WHERE jd_id=%s", (jd_id,))
+#     resumes = cursor.fetchall()
+#     parser = ResumeParser()
+#     parsed_resumes = []
+#     for r in resumes:
+#         file_path = r['file_path']
+#         if not os.path.exists(file_path):
+#             continue
+#         try:
+#             result = parser.parse_resume(file_path)
+#             from .utils import get_display_filename
+#             display_name = get_display_filename(r['file_name'], r['jd_id'])
+#             parsed_resumes.append({
+#                 'resume_id': r['resume_id'],
+#                     'file_name': display_name,
+#                 'name': result.get('Name', ''),
+#                 'email': result.get('Email', ''),
+#                 'phone': result.get('Contact Number', ''),
+#                 'experience': result.get('Work Experience (Years)', ''),
+#                 'status': r['status'],
+#                 'file_url': f"/download_resume/{r['resume_id']}/"
+#             })
+#         except Exception as e:
+#             from .utils import get_display_filename
+#             display_name = get_display_filename(r['file_name'], r['jd_id'])
+#             parsed_resumes.append({
+#                 'resume_id': r['resume_id'],
+#                     'file_name': display_name,
+#                 'error': str(e),
+#                 'status': r['status'],
+#                 'file_url': f"/download_resume/{r['resume_id']}/"
+#             })
+#     cursor.close()
+#     conn.close()
+#     print("parse_resumes -> Parsed resumes:", parsed_resumes)
+#     if not parsed_resumes:
+#         return JsonResponse({'success': False, 'error': 'No resumes found for this JD'}, status=404)
+#     return JsonResponse({'success': True, 'resumes': parsed_resumes})
+
+def process_resume(file_path, api_key):
+    from .parser_ai import extract_text, parse_with_gemini, compute_total_experience
+    try:
+        # Step 1: Extract text from resume file
+        resume_text = extract_text(file_path)
+        
+        # Step 2: Parse with Gemini AI
+        parsed_data = parse_with_gemini(
+            text=resume_text,
+            api_key=api_key,
+            model_name="gemini-1.5-flash-latest"
+        )
+        
+        # Step 3: Calculate total experience
+        if parsed_data.get("experience"):
+            totals = compute_total_experience(parsed_data["experience"])
+            parsed_data.update(totals)
+        return parsed_data
+        
+    except Exception as e:
+        print(f"Error processing resume: {e}")
+        return None
+
+# @login_required 
+# def parse_individual_resume(request):
+#     """
+#     API endpoint to parse an individual resume for a specific job description.
+#     """
+#     api_key = settings.GEMINI_API_KEY
+#     jd_id = request.GET.get('jd_id')
+#     resume_id = request.GET.get('resume_id')
+    
+#     if not jd_id or not resume_id:
+#         return JsonResponse({'success': False, 'error': 'JD ID and Resume ID are required'}, status=400)
+    
+#     conn = DataOperations.get_db_connection()
+#     cursor = conn.cursor(dictionary=True)
+    
+#     try:
+#         # Get the specific resume
+#         cursor.execute("SELECT * FROM resumes WHERE resume_id=%s AND jd_id=%s", (resume_id, jd_id))
+#         resume = cursor.fetchone()
+        
+#         if not resume:
+#             return JsonResponse({'success': False, 'error': 'Resume not found'}, status=404)
+        
+#         file_path = resume['file_path']
+#         if not os.path.exists(file_path):
+#             return JsonResponse({'success': False, 'error': 'Resume file not found'}, status=404)
+        
+#         # Parse the resume
+#         parser = ResumeParser()
+#         result = process_resume(file_path, api_key)
+#         result = parser.parse_resume(file_path)
+        
+#         from .utils import get_display_filename
+#         display_name = get_display_filename(resume['file_name'], resume['jd_id'])
+        
+#         parsed_resume = {
+#             'resume_id': resume['resume_id'],
+#             'file_name': display_name,
+#             'name': result.get('Name', ''),
+#             'email': result.get('Email', ''),
+#             'phone': result.get('Contact Number', ''),
+#             'experience': result.get('Work Experience (Years)', ''),
+#             'status': resume['status'],
+#             'file_url': f"/download_resume/{resume['resume_id']}/"
+#         }
+        
+#         return JsonResponse({'success': True, 'resume': parsed_resume})
+        
+#     except Exception as e:
+#         print(f"Error parsing individual resume: {str(e)}")
+#         return JsonResponse({'success': False, 'error': f'Error parsing resume: {str(e)}'}, status=500)
+#     finally:
+#         cursor.close()
+#         conn.close()
+
 
 @login_required 
 def parse_individual_resume(request):
     """
     API endpoint to parse an individual resume for a specific job description.
     """
+    api_key = settings.GEMINI_API_KEY
     jd_id = request.GET.get('jd_id')
     resume_id = request.GET.get('resume_id')
     
@@ -2533,8 +2617,20 @@ def parse_individual_resume(request):
             return JsonResponse({'success': False, 'error': 'Resume file not found'}, status=404)
         
         # Parse the resume
-        parser = ResumeParser()
-        result = parser.parse_resume(file_path)
+        parsed_data = process_resume(file_path, api_key)
+        prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
+        educations = [edu['degree'] + ' from ' + edu['institution'] + ' in ' + edu['end_year'] for edu in parsed_data.get('education', [])]
+
+        result = {
+            'name': parsed_data.get('name', ''),
+            'email': parsed_data.get('email', ''),
+            'contact_number': parsed_data.get('phone', ''),
+            'work_experience_years': parsed_data.get('total_experience_years', ''),
+            'education': ",\n".join(educations),
+            'skills': ", ".join(parsed_data.get('skills', [])),
+            'previous_job_title': ",\n".join(prev_jobs)
+
+        }
         
         from .utils import get_display_filename
         display_name = get_display_filename(resume['file_name'], resume['jd_id'])
@@ -2542,10 +2638,14 @@ def parse_individual_resume(request):
         parsed_resume = {
             'resume_id': resume['resume_id'],
             'file_name': display_name,
-            'name': result.get('Name', ''),
-            'email': result.get('Email', ''),
-            'phone': result.get('Contact Number', ''),
-            'experience': result.get('Work Experience (Years)', ''),
+            'name': result.get('name', ''),
+            'email': result.get('email', ''),
+            'phone': result.get('contact_number', ''),
+            'experience': result.get('work_experience_years', ''),
+            'education': result.get('education', ''),
+            'skills': result.get('skills', ''),
+            'previous_job_title': result.get('previous_job_title', ''),
+            'location': result.get('location', ''),
             'status': resume['status'],
             'file_url': f"/download_resume/{resume['resume_id']}/"
         }
@@ -2558,6 +2658,7 @@ def parse_individual_resume(request):
     finally:
         cursor.close()
         conn.close()
+
 
 @login_required
 def parse_single_resume(request, resume_id):
@@ -2579,6 +2680,7 @@ def parse_single_resume(request, resume_id):
             return JsonResponse({'success': True, 'resume': result})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 @csrf_exempt
 def save_candidate_details(request):
@@ -2706,7 +2808,7 @@ def save_candidate_details(request):
                 cursor.execute("""
                     UPDATE candidates
                     SET name=%s, phone=%s, email=%s, skills=%s, education=%s, experience=%s, relevant_experience=%s,
-                        previous_job_profile=%s, current_ctc=%s, current_ctc_basis=%s, expected_ctc=%s, notice_period=%s, 
+                        previous_job_profile=%s, current_ctc=%s, current_ctc_basis=%s, expected_ctc=%s, expected_ctc_basis=%s, notice_period=%s, 
                         location=%s, screened_on=%s, screen_status=%s, screened_remarks=%s,
                         team_id=%s, hr_member_id=%s, updated_at=NOW(), shared_on=%s, recruiter_comments=%s
                     WHERE resume_id=%s
@@ -2845,8 +2947,6 @@ def get_jd_team_members(request):
     conn.close()
     return JsonResponse({'success': True, 'team_id': team_id, 'team_name': team_name, 'members': members})
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 
 
 @csrf_exempt
@@ -2864,9 +2964,28 @@ def get_candidate_details(request):
     cursor.execute("SELECT * FROM candidates WHERE resume_id=%s ORDER BY candidate_id DESC LIMIT 1", (resume_id,))
     candidate = cursor.fetchone()
     if not candidate:
+        # get resume file path from resumes table
+        # cursor.execute("SELECT file_path FROM resumes WHERE resume_id=%s", (resume_id,))
+        # resume_row = cursor.fetchone()
+        # if resume_row:
+        #     parsed_data = process_resume(resume_row['file_path'], settings.GEMINI_API_KEY)
+        #     prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
+        #     educations = [edu['degree'] + ' from ' + edu['institution'] + ' in ' + edu['end_year'] for edu in parsed_data.get('education', [])]
+        #     candidate = {
+        #         'name': parsed_data.get('name', ''),
+        #         'email': parsed_data.get('email', ''),
+        #         'phone': parsed_data.get('phone', ''),
+        #         'experience': parsed_data.get('total_experience_years', ''),
+        #         'education': parsed_data.get('education', []),
+        #         'skills': ", ".join(parsed_data.get('skills', [])),
+        #         'location': parsed_data.get('location', ''),
+        #         'previous_job_profile': prev_jobs[0] if prev_jobs else '',
+        #         'education': ",\n".join(educations),
+        #     }
+        # else:
         cursor.close()
         conn.close()
-        return JsonResponse({'success': False, 'error': 'Candidate not found', 'candidate': {}})
+        return JsonResponse({'success': False, 'error': 'Candidate or resume not found', 'candidate': {}})
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'candidate': candidate})

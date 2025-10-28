@@ -32,11 +32,10 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-0*h-5z%er%q!7j00p$2f953c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'daphne',
     'django.contrib.admin',
@@ -151,3 +150,6 @@ TEMPLATES[0]['DIRS'] = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+GEMINI_API_KEY = env('GEMINI_API_KEY', default='AIzaSyBqQEtxbjlIFKR36jAWOGhzdHFqzqm9dGU')
