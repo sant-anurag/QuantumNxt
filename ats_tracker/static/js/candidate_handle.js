@@ -224,6 +224,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'candidate-card';
         cardDiv.setAttribute('data-candidate-id', candidate.candidate_id);
+        // Store complete candidate data for modal access
+        cardDiv.setAttribute('data-candidate-data', JSON.stringify(candidate));
         
         // Generate background color class for initials
         const bgClasses = ['bg-blue', 'bg-purple', 'bg-brown', 'bg-green', 'bg-red'];
@@ -770,6 +772,18 @@ function findCandidateData(candidateId) {
     // Try to extract from DOM using data-candidate-id attribute
     const candidateCard = document.querySelector(`.candidate-card[data-candidate-id="${candidateId}"]`);
     if (candidateCard) {
+        // Try to get the complete candidate data first
+        const candidateDataString = candidateCard.getAttribute('data-candidate-data');
+        if (candidateDataString) {
+            try {
+                const candidateData = JSON.parse(candidateDataString);
+                return candidateData;
+            } catch (error) {
+                console.warn('Error parsing candidate data from DOM:', error);
+            }
+        }
+        
+        // Fallback to extracting basic info from DOM if JSON data is not available
         return {
             candidate_id: candidateId,
             name: candidateCard.querySelector('.candidate-name').textContent,
@@ -1195,68 +1209,86 @@ function handleTakeAction() {
 }
 
 function handleSaveCandidate() {
-    const form = document.getElementById('candidate-form');
-    const formData = new FormData(form);
+    console.log('Saving candidate details...');
     
-    // Validate required fields before sending
-    if (!currentCandidateId) {
-        showNotification('Invalid candidate ID', 'error');
+    // Validate required fields first
+    const resumeId = document.getElementById('modal-resume-id').value;
+    const jdId = document.getElementById('modal-jd-id').value;
+    const name = document.getElementById('modal-name').value.trim();
+    const phone = document.getElementById('modal-phone').value.trim();
+    const email = document.getElementById('modal-email').value.trim();
+    const screenStatus = document.getElementById('modal-screen-status').value;
+    const screeningTeam = document.getElementById('modal-team-id').value; // This is team_id, not team name
+    const hrMemberId = document.getElementById('modal-hr-member-id').value;
+    
+    // Validate required fields
+    if (!resumeId || !jdId || !name || !phone || !email || !screenStatus || !screeningTeam || !hrMemberId) {
+        showNotification('Please fill in all required fields (Name, Phone, Email, Screen Status, Screening Team, Assigned To)', 'error');
         return;
     }
     
-    // Basic validation for required fields
-    const name = formData.get('modal-name') || document.getElementById('modal-name').value;
-    const phone = formData.get('modal-phone') || document.getElementById('modal-phone').value;
-    const email = formData.get('modal-email') || document.getElementById('modal-email').value;
-    const screenStatus = formData.get('modal-screen-status') || document.getElementById('modal-screen-status').value;
-    
-    if (!name || !phone || !email) {
-        showNotification('Please fill in all required fields (Name, Phone, Email)', 'error');
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', 'error');
         return;
     }
     
-    // Create candidate data object
+    // Create candidate data object matching backend expectations
     const candidateData = {
-        candidate_id: currentCandidateId,
-        resume_id: document.getElementById('modal-resume-id').value,
-        jd_id: document.getElementById('modal-jd-id').value,
-        team_id: document.getElementById('modal-team-id').value,
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        skills: document.getElementById('modal-skills').value,
-        education: document.getElementById('modal-education').value,
-        experience: document.getElementById('modal-experience').value,
-        relevant_experience: document.getElementById('modal-relevant-experience').value,
-        prev_job_profile: document.getElementById('modal-prev-job-profile').value,
-        current_ctc: document.getElementById('modal-current-ctc').value,
-        current_ctc_basis: document.getElementById('modal-current-ctc-basis').value,
-        expected_ctc: document.getElementById('modal-expected-ctc').value,
-        expected_ctc_basis: document.getElementById('modal-expected-ctc-basis').value,
-        notice_period: document.getElementById('modal-notice-period').value,
-        location: document.getElementById('modal-location').value,
+        resume_id: resumeId,
+        jd_id: jdId,
+        name: name,
+        phone: phone,
+        email: email,
+        skills: document.getElementById('modal-skills').value || '',
+        education: document.getElementById('modal-education').value || '',
+        experience: document.getElementById('modal-experience').value || '',
+        relevant_experience: document.getElementById('modal-relevant-experience').value || '',
+        prev_job_profile: document.getElementById('modal-prev-job-profile').value || '',
+        current_ctc: document.getElementById('modal-current-ctc').value || null,
+        current_ctc_basis: document.getElementById('modal-current-ctc-basis').value || 'annual',
+        expected_ctc: document.getElementById('modal-expected-ctc').value || null,
+        expected_ctc_basis: document.getElementById('modal-expected-ctc-basis').value || 'annual',
+        notice_period: document.getElementById('modal-notice-period').value || null,
+        location: document.getElementById('modal-location').value || '',
         screen_status: screenStatus,
-        screening_team: document.getElementById('modal-screening-team').value,
-        hr_member_id: document.getElementById('modal-hr-member-id').value,
-        screened_on: document.getElementById('modal-screened-on').value,
-        shared_on: document.getElementById('modal-shared-on').value,
-        screened_remarks: document.getElementById('modal-screened-remarks').value,
-        recruiter_comments: document.getElementById('modal-recruiter-comments').value
+        screening_team: screeningTeam, // This should be team_id
+        hr_member_id: hrMemberId,
+        screened_on: document.getElementById('modal-screened-on').value || null,
+        shared_on: document.getElementById('modal-shared-on').value || null,
+        screened_remarks: document.getElementById('modal-screened-remarks').value || '',
+        recruiter_comments: document.getElementById('modal-recruiter-comments').value || ''
     };
+    
+    // Clean up empty string values to null for numeric fields
+    if (candidateData.current_ctc === '') candidateData.current_ctc = null;
+    if (candidateData.expected_ctc === '') candidateData.expected_ctc = null;
+    if (candidateData.notice_period === '') candidateData.notice_period = null;
+    if (candidateData.experience === '') candidateData.experience = null;
+    if (candidateData.relevant_experience === '') candidateData.relevant_experience = null;
+    if (candidateData.screened_on === '') candidateData.screened_on = null;
+    if (candidateData.shared_on === '') candidateData.shared_on = null;
     
     console.log('Saving candidate data:', candidateData);
     
     // Show loading state
     const saveButton = document.getElementById('modal-save-btn');
+    const closeButton = document.getElementById('modal-close-btn');
     let originalButtonText = 'Save';
+    
     if (saveButton) {
         originalButtonText = saveButton.textContent;
         saveButton.textContent = 'Saving...';
         saveButton.disabled = true;
     }
     
-    // Send to backend
-    fetch('/api/candidate_update/', {
+    if (closeButton) {
+        closeButton.disabled = true;
+    }
+    
+    // Send to backend using the correct endpoint
+    fetch('/save_candidate_details/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1267,19 +1299,21 @@ function handleSaveCandidate() {
     .then(async response => {
         const data = await response.json();
         if (!response.ok) {
-            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
         }
         return data;
     })
     .then(data => {
         if (data.success) {
-            showNotification('Candidate details updated successfully', 'success');
+            showNotification('Candidate details saved successfully', 'success');
             closeEditCandidateModal();
             
             // Refresh the candidates list to show updated data
-            filterCandidates();
+            if (window.filterCandidates) {
+                filterCandidates();
+            }
         } else {
-            throw new Error(data.message || 'Failed to update candidate details');
+            throw new Error(data.error || 'Failed to save candidate details');
         }
     })
     .catch(error => {
@@ -1287,10 +1321,14 @@ function handleSaveCandidate() {
         showNotification(`Error: ${error.message}`, 'error');
     })
     .finally(() => {
-        // Restore button state
+        // Restore button states
         if (saveButton) {
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
+        }
+        
+        if (closeButton) {
+            closeButton.disabled = false;
         }
     });
 }
