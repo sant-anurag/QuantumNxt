@@ -336,5 +336,154 @@
     </div>
 </div>
 
+<!-- Edit candidate modal -->
+<div id="candidate-modal" class="modal">
+    <div class="modal-content">
+        <!-- Loading overlay for modal -->
+        <div id="modal-loading-overlay" class="modal-loading-overlay" style="display: none;">
+            <div class="modal-loading-content">
+                <div class="modal-loading-spinner"></div>
+                <div class="modal-loading-text">Loading candidate data, please wait...</div>
+            </div>
+        </div>
+        
+        <div class="modal-header">
+            <h3>Record Candidate Details</h3>
+            <span class="close" id="modal-close-header">&times;</span>
+        </div>
+        
+        <form id="candidate-form" class="candidate-form">
+            <input type="hidden" id="modal-resume-id">
+            <input type="hidden" id="modal-jd-id">
+            <input type="hidden" id="modal-team-id">
+
+            <!-- Personal Information Section -->
+            <div class="form-section personal-info">
+                <div class="form-field">
+                    <label for="modal-name">Name<span class="required">*</span></label>
+                    <input type="text" id="modal-name" maxlength="100">
+                </div>
+                <div class="form-field">
+                    <label for="modal-phone">Phone<span class="required">*</span></label>
+                    <input type="text" id="modal-phone" maxlength="20">
+                </div>
+                <div class="form-field">
+                    <label for="modal-email">Email<span class="required">*</span></label>
+                    <input type="email" id="modal-email" maxlength="100">
+                </div>
+            </div>
+
+            <!-- Professional Information Section -->
+            <div class="form-section professional-info">
+                <div class="form-field">
+                    <label for="modal-skills">Skills</label>
+                    <textarea id="modal-skills" maxlength="500" rows="3" placeholder="Enter skills separated by commas or new lines"></textarea>
+                </div>
+                <div class="form-field">
+                    <label for="modal-education">Education</label>
+                    <textarea id="modal-education" maxlength="500" rows="3" placeholder="Enter education details"></textarea>
+                </div>
+                <div class="form-field">
+                    <label for="modal-experience">Experience (years)</label>
+                    <input type="number" id="modal-experience" min="0" step="0.1" maxlength="20" placeholder="e.g., 2.5">
+                </div>
+                <div class="form-field">
+                    <label for="modal-relevant-experience">Relevant Experience (years)</label>
+                    <input type="number" id="modal-relevant-experience" min="0" step="0.1" maxlength="20" placeholder="e.g., 1.5">
+                </div>
+                <div class="form-field">
+                    <label for="modal-prev-job-profile">Previous Job Profile</label>
+                    <input type="text" id="modal-prev-job-profile" maxlength="255">
+                </div>
+            </div>
+
+            <!-- Compensation & Location Section -->
+            <div class="form-section compensation-info">
+                <div class="form-field form-field-ctc">
+                    <label for="modal-current-ctc">Current CTC</label>
+                    <div class="ctc-input-group">
+                        <input type="number" id="modal-current-ctc" min="0" step="0.01" maxlength="20" placeholder="e.g., 500000.50">
+                        <select id="modal-current-ctc-basis" class="ctc-basis-select">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual" selected>Annual</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field form-field-ctc">
+                    <label for="modal-expected-ctc">Expected CTC</label>
+                    <div class="ctc-input-group">
+                        <input type="number" id="modal-expected-ctc" min="0" step="0.01" maxlength="20" placeholder="e.g., 600000.75">
+                        <select id="modal-expected-ctc-basis" class="ctc-basis-select">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual" selected>Annual</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="modal-notice-period">Notice Period (days)</label>
+                    <input type="number" id="modal-notice-period" min="0" step="1" maxlength="3" oninput="this.value = this.value.replace(/[^\d]/g, '')">
+                </div>
+                <div class="form-field">
+                    <label for="modal-location">Location</label>
+                    <input type="text" id="modal-location" maxlength="100">
+                </div>
+            </div>
+
+            <!-- Screening Information Section -->
+            <div class="form-section screening-info">
+                <div class="form-field">
+                    <label for="modal-screen-status">Screen Status<span class="required">*</span></label>
+                    <select id="modal-screen-status">
+                        <option value="toBeScreened">To Be Screened</option>
+                        <option value="selected">Selected</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="onHold">On Hold</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="modal-screening-team">Screening Team<span class="required">*</span></label>
+                    <input type="text" id="modal-screening-team" readonly>
+                </div>
+                <div class="form-field">
+                    <label for="modal-hr-member-id">Assigned To<span class="required">*</span></label>
+                    <select id="modal-hr-member-id"></select>
+                </div>
+            </div>
+
+            <!-- Date Information Section -->
+            <div class="form-section date-info">
+                <div class="form-field">
+                    <label for="modal-screened-on">Screened On</label>
+                    <input type="date" id="modal-screened-on">
+                </div>
+                <div class="form-field">
+                    <label for="modal-shared-on">Shared On</label>
+                    <input type="date" id="modal-shared-on">
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="form-section comments-info">
+                <div class="form-field form-field-full">
+                    <label for="modal-screened-remarks">Screened Remarks</label>
+                    <textarea id="modal-screened-remarks" maxlength="500"></textarea>
+                </div>
+                <div class="form-field form-field-full">
+                    <label for="modal-recruiter-comments">Recruiter Comments</label>
+                    <textarea id="modal-recruiter-comments" maxlength="200"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="modal-close-btn" class="btn btn-secondary">Close</button>
+                <button type="button" id="modal-save-btn" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
 <script src="{% static 'js/candidate_handle.js' %}"></script>
 {% endblock %}

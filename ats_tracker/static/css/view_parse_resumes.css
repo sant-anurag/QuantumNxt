@@ -577,6 +577,53 @@
     gap: 10px;
     overflow-y: auto;
     position: relative;
+    /* Add padding to create distance from scrollbar */
+    padding-right: 36px;
+}
+
+/* Custom Scrollbar for Modal Content */
+.modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    margin: 8px 0; /* Add margin to create distance from modal edges */
+    border: 1px solid rgba(110, 130, 255, 0.1);
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #6a5af9 0%, #4f8cff 50%, #7280ff 100%);
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(106, 90, 249, 0.2);
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5b4fe8 0%, #4380ee 50%, #6671ee 100%);
+    box-shadow: 0 4px 12px rgba(106, 90, 249, 0.3);
+    transform: scale(1.05);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+.modal-content::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(135deg, #4c44d7 0%, #3a6fdd 50%, #5562dd 100%);
+    box-shadow: 0 2px 6px rgba(106, 90, 249, 0.4);
+    transform: scale(0.98);
+}
+
+/* Firefox scrollbar styling */
+.modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: #6a5af9 rgba(255, 255, 255, 0.6);
+}
+
+/* Enhanced scrollbar for better visibility on hover */
+.modal-content:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #6a5af9 0%, #4f8cff 50%, #7280ff 100%);
+    box-shadow: 0 4px 16px rgba(106, 90, 249, 0.4);
 }
 
 /* Modal Loading Overlay */
@@ -667,14 +714,6 @@
     }
 }
 
-.modal-content::-webkit-scrollbar {
-    width: 8px;
-}
-.modal-content::-webkit-scrollbar-thumb {
-    background: rgba(110,130,255,0.3);
-    border-radius: 4px;
-}
-
 .modal-content h3 {
 font-size: 1.6em;
 font-weight: 700;
@@ -687,6 +726,50 @@ text-align: center;
 letter-spacing: 0.04em;
 box-shadow: 0 2px 8px rgba(76,90,255,0.08);
 border-bottom: 2px solid #e3e8f7;
+}
+
+/* Additional scrollbar styling for any scrollable elements within modals */
+.modal-overlay *::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+.modal-overlay *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    margin: 2px 0;
+    border: 1px solid rgba(110, 130, 255, 0.08);
+}
+
+.modal-overlay *::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #7280ff 0%, #6a5af9 100%);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+}
+
+.modal-overlay *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #6671ee 0%, #5b4fe8 100%);
+    box-shadow: 0 2px 6px rgba(114, 128, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Ensure form elements don't interfere with scrollbar spacing */
+.modal-overlay .candidate-form,
+.modal-overlay .form-section {
+    margin-right: 8px;
+}
+
+/* Enhanced scrollbar for textareas and select elements */
+.modal-overlay textarea::-webkit-scrollbar,
+.modal-overlay select::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-overlay textarea::-webkit-scrollbar-thumb,
+.modal-overlay select::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #9bb6fd 0%, #8da5f7 100%);
+    border-radius: 6px;
 }
 
 /* =============================================================================

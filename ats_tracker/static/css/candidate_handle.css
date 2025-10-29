@@ -802,6 +802,48 @@
     overflow-y: auto;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     animation: slideIn 0.3s ease;
+    /* Add padding to create distance from scrollbar */
+    padding-right: 8px;
+}
+
+/* Custom Scrollbar for Modal Content */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 10px;
+    margin: 8px 0; /* Add margin to create distance from modal edges */
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4e54c8 0%, #6366f1 50%, #8b5cf6 100%);
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #4149b8 0%, #5856eb 50%, #7c3aed 100%);
+    box-shadow: 0 2px 4px rgba(78, 84, 200, 0.2);
+    transform: scale(1.1);
+}
+
+.modal-content::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6d28d9 100%);
+}
+
+/* Firefox scrollbar styling */
+.modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: #4e54c8 #f8fafc;
+}
+
+/* Enhanced scrollbar for better visibility on hover */
+.modal-content:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4e54c8 0%, #6366f1 50%, #8b5cf6 100%);
+    box-shadow: 0 2px 8px rgba(78, 84, 200, 0.3);
 }
 
 .modal-header {
@@ -838,6 +880,37 @@
 
 .modal-body {
     padding: 24px;
+    /* Ensure proper spacing for scrollbar if modal-body itself becomes scrollable */
+    padding-right: 32px;
+}
+
+/* Additional scrollbar styling for any scrollable elements within modals */
+.modal *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.modal *::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+    margin: 4px 0;
+}
+
+.modal *::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    box-shadow: 0 1px 3px rgba(71, 85, 105, 0.3);
+}
+
+/* Ensure form elements don't interfere with scrollbar spacing */
+.modal .candidate-form,
+.modal .form-section {
+    margin-right: 4px;
 }
 
 .modal-footer {
@@ -914,7 +987,229 @@
     border-radius: 12px;
 }
 
-/* Form Styles */
+/* =============================================================================
+   CANDIDATE FORM STYLING - MODULAR RESPONSIVE DESIGN (Matching view_parse_resumes.css)
+   ============================================================================= */
+
+/* Form Container */
+.candidate-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 24px 0 24px;
+}
+
+/* Form Sections */
+.form-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border: 1px solid #e3e8f7;
+}
+
+/* Individual Form Fields */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Full Width Fields (for textareas) */
+.form-field.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-field.form-field-full {
+    grid-column: 1 / -1;
+}
+
+/* Form Field Labels */
+.form-field label {
+    font-size: 0.95em;
+    color: #2a2e4a;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+/* Required Field Indicators */
+.required {
+    color: #dc2626;
+    font-weight: 700;
+    margin-left: 4px;
+    font-size: 1.1em;
+    display: inline-block;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Form Inputs, Selects, and Textareas */
+.form-field input,
+.form-field select,
+.form-field textarea {
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 1.5px solid #7280ff;
+    font-size: 0.95em;
+    font-family: inherit;
+    background: #fff;
+    color: #2a2e4a;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    border-color: #5661d2;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(86, 97, 210, 0.1);
+}
+
+.form-field textarea {
+    min-height: 60px;
+    max-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Readonly Inputs */
+.form-field input[readonly] {
+    background: #f8fafc;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+/* CTC Input Group Styling */
+.form-field-ctc .ctc-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ctc-input-group input {
+    flex: 2;
+    min-width: 0;
+}
+
+.ctc-basis-select {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 8px !important;
+    border-radius: 7px !important;
+    border: 1.5px solid #7280ff !important;
+    font-size: 0.9em !important;
+    font-family: inherit !important;
+    background: #fff !important;
+    color: #2a2e4a !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box;
+}
+
+.ctc-basis-select:focus {
+    border-color: #5661d2 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(86, 97, 210, 0.1) !important;
+}
+
+/* =============================================================================
+   RESPONSIVE BREAKPOINTS FOR CANDIDATE FORM
+   ============================================================================= */
+
+/* Large Tablets and Small Desktops */
+@media (max-width: 1024px) {
+    .form-section {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        padding: 14px;
+    }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+    .candidate-form {
+        gap: 16px;
+    }
+    
+    .form-section {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .form-field label {
+        font-size: 0.9em;
+    }
+    
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        padding: 7px 10px;
+        font-size: 0.9em;
+    }
+    
+    /* CTC Input Group for Tablets */
+    .ctc-basis-select {
+        font-size: 0.9em !important;
+        padding: 7px 8px !important;
+        min-width: 90px;
+    }
+}
+
+/* Mobile Phones */
+@media (max-width: 480px) {
+    .candidate-form {
+        gap: 12px;
+    }
+    
+    .form-section {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .form-field label {
+        font-size: 0.85em;
+    }
+    
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        padding: 6px 8px;
+        font-size: 0.85em;
+    }
+    
+    /* CTC Input Group Responsive */
+    .form-field-ctc .ctc-input-group {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .ctc-input-group input,
+    .ctc-basis-select {
+        flex: none;
+        width: 100%;
+    }
+    
+    .ctc-basis-select {
+        min-width: auto;
+        font-size: 0.85em !important;
+        padding: 6px 8px !important;
+    }
+}
+
+/* Form Styles (Legacy support for existing form-group elements) */
 .form-group {
     margin-bottom: 20px;
 }

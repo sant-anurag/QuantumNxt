@@ -3207,6 +3207,7 @@ def api_candidates_pipeline(request):
             
             candidate_info.append({
                 'candidate_id': candidate['candidate_id'],
+                'resume_id': candidate['resume_id'],
                 'name': candidate['name'],
                 'email': candidate['email'],
                 'phone': candidate['phone'],

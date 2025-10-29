@@ -274,6 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             
             <div class="candidate_actions">
+                <button class="action-btn primary" onclick="editCandidate(${candidate.candidate_id}, ${candidate.resume_id}, '${candidate.jd_id}')">Edit Details</button>
                 <button class="action-btn primary add-note" onclick="addNote(${candidate.candidate_id})">Add Note</button>
                 <button class="action-btn primary" onclick="takeAction(${candidate.candidate_id})">Take Action</button>
             </div>
@@ -414,7 +415,7 @@ function getStageTracker(candidate) {
         if (candidate.joining_status === 'joined') {
             stages.joining = 'completed';
             completedStages++;
-        } else if (candidate.joining_status === 'withdrawn' || candidate.joining_status === 'resigned') {
+        } else if (candidate.joining_status === 'not_joined' || candidate.joining_status === 'resigned') {
             stages.joining = 'rejected';
             currentStageFound = true;
         } else if (candidate.joining_status === 'onHold') {
@@ -524,7 +525,7 @@ function getJoiningStatusDisplayText(joiningStatus) {
         case 'in_progress': return 'Joining In Progress';
         case 'joined': return 'Joined';
         case 'onHold': return 'Joining On Hold';
-        case 'withdrawn': return 'Joining Withdrawn';
+        case 'not_joined': return 'Joining Withdrawn';
         case 'resigned': return 'Resigned';
         default: return 'Joining Pending';
     }
@@ -534,7 +535,7 @@ function getJoiningStatusClass(joiningStatus) {
     switch (joiningStatus) {
         case 'joined': return 'highlight-green';
         case 'resigned': return 'highlight-red';
-        case 'withdrawn': return 'highlight-red';
+        case 'not_joined': return 'highlight-red';
         case 'onHold': return 'highlight-orange';
         case 'in_progress': return 'highlight-blue';
         default: return 'highlight-blue';
@@ -854,6 +855,35 @@ function setupModalEventListeners() {
     // Setup salary calculation for offer details
     setupSalaryCalculation();
     
+    // Edit Candidate Modal Events
+    const editCandidateModal = document.getElementById('candidate-modal');
+    const closeEditCandidateBtn = document.getElementById('modal-close-btn');
+    const closeEditCandidateHeaderBtn = document.getElementById('modal-close-header');
+    const saveEditCandidateBtn = document.getElementById('modal-save-btn');
+    const candidateForm = document.getElementById('candidate-form');
+    
+    if (closeEditCandidateBtn) {
+        closeEditCandidateBtn.addEventListener('click', closeEditCandidateModal);
+    }
+    
+    if (closeEditCandidateHeaderBtn) {
+        closeEditCandidateHeaderBtn.addEventListener('click', closeEditCandidateModal);
+    }
+    
+    if (saveEditCandidateBtn) {
+        saveEditCandidateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleSaveCandidate();
+        });
+    }
+    
+    if (candidateForm) {
+        candidateForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleSaveCandidate();
+        });
+    }
+    
     // Close modals when clicking outside
     window.addEventListener('click', function(e) {
         if (e.target === addNoteModal) {
@@ -861,6 +891,9 @@ function setupModalEventListeners() {
         }
         if (e.target === takeActionModal) {
             closeTakeActionModal();
+        }
+        if (e.target === editCandidateModal) {
+            closeEditCandidateModal();
         }
     });
     
@@ -872,6 +905,9 @@ function setupModalEventListeners() {
             }
             if (takeActionModal && takeActionModal.classList.contains('show')) {
                 closeTakeActionModal();
+            }
+            if (editCandidateModal && editCandidateModal.classList.contains('show')) {
+                closeEditCandidateModal();
             }
         }
     });
@@ -1158,6 +1194,107 @@ function handleTakeAction() {
     });
 }
 
+function handleSaveCandidate() {
+    const form = document.getElementById('candidate-form');
+    const formData = new FormData(form);
+    
+    // Validate required fields before sending
+    if (!currentCandidateId) {
+        showNotification('Invalid candidate ID', 'error');
+        return;
+    }
+    
+    // Basic validation for required fields
+    const name = formData.get('modal-name') || document.getElementById('modal-name').value;
+    const phone = formData.get('modal-phone') || document.getElementById('modal-phone').value;
+    const email = formData.get('modal-email') || document.getElementById('modal-email').value;
+    const screenStatus = formData.get('modal-screen-status') || document.getElementById('modal-screen-status').value;
+    
+    if (!name || !phone || !email) {
+        showNotification('Please fill in all required fields (Name, Phone, Email)', 'error');
+        return;
+    }
+    
+    // Create candidate data object
+    const candidateData = {
+        candidate_id: currentCandidateId,
+        resume_id: document.getElementById('modal-resume-id').value,
+        jd_id: document.getElementById('modal-jd-id').value,
+        team_id: document.getElementById('modal-team-id').value,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        skills: document.getElementById('modal-skills').value,
+        education: document.getElementById('modal-education').value,
+        experience: document.getElementById('modal-experience').value,
+        relevant_experience: document.getElementById('modal-relevant-experience').value,
+        prev_job_profile: document.getElementById('modal-prev-job-profile').value,
+        current_ctc: document.getElementById('modal-current-ctc').value,
+        current_ctc_basis: document.getElementById('modal-current-ctc-basis').value,
+        expected_ctc: document.getElementById('modal-expected-ctc').value,
+        expected_ctc_basis: document.getElementById('modal-expected-ctc-basis').value,
+        notice_period: document.getElementById('modal-notice-period').value,
+        location: document.getElementById('modal-location').value,
+        screen_status: screenStatus,
+        screening_team: document.getElementById('modal-screening-team').value,
+        hr_member_id: document.getElementById('modal-hr-member-id').value,
+        screened_on: document.getElementById('modal-screened-on').value,
+        shared_on: document.getElementById('modal-shared-on').value,
+        screened_remarks: document.getElementById('modal-screened-remarks').value,
+        recruiter_comments: document.getElementById('modal-recruiter-comments').value
+    };
+    
+    console.log('Saving candidate data:', candidateData);
+    
+    // Show loading state
+    const saveButton = document.getElementById('modal-save-btn');
+    let originalButtonText = 'Save';
+    if (saveButton) {
+        originalButtonText = saveButton.textContent;
+        saveButton.textContent = 'Saving...';
+        saveButton.disabled = true;
+    }
+    
+    // Send to backend
+    fetch('/api/candidate_update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(candidateData)
+    })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        }
+        return data;
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Candidate details updated successfully', 'success');
+            closeEditCandidateModal();
+            
+            // Refresh the candidates list to show updated data
+            filterCandidates();
+        } else {
+            throw new Error(data.message || 'Failed to update candidate details');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving candidate:', error);
+        showNotification(`Error: ${error.message}`, 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        if (saveButton) {
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
+        }
+    });
+}
+
 function handleActionTypeChange(actionType) {
     hideAllActionGroups();
     
@@ -1370,4 +1507,432 @@ function setDefaultJoiningDate() {
         
         joiningDateInput.value = `${year}-${month}-${day}`;
     }
+}
+
+// Edit Candidate Modal Functions
+function editCandidate(candidateId, resumeId, jd_id) {
+    console.log('Opening edit modal for candidate:', candidateId, 'Resume ID:', resumeId, 'JD ID:', jd_id);
+    
+    if (!resumeId) {
+        showNotification('Resume ID is required to load candidate details', 'error');
+        return;
+    }
+    
+    currentCandidateId = candidateId;
+    
+    // Open the modal first
+    const modal = document.getElementById('candidate-modal');
+    if (!modal) {
+        showNotification('Edit modal not found', 'error');
+        return;
+    }
+    
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    
+    // Clear form initially
+    clearCandidateModal();
+    
+    // Fetch candidate details from backend and populate the form
+    getCandidateDetailsAndPopulate(null, resumeId, jd_id)
+        .then(candidate => {
+            console.log('Candidate data loaded successfully:', candidate);
+            // Data is already populated by the function
+        })
+        .catch(error => {
+            console.error('Failed to load candidate data:', error);
+            // If no candidate data found, the function will populate with empty form
+            // Show notification only for actual errors, not for "not found" cases
+            if (!error.message.includes('Candidate or resume not found')) {
+                showNotification('Failed to load candidate details: ' + error.message, 'error');
+            }
+        });
+}
+
+function closeEditCandidateModal() {
+    const modal = document.getElementById('candidate-modal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    resetEditCandidateForm();
+}
+
+function resetEditCandidateForm() {
+    const form = document.getElementById('candidate-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear hidden fields
+    document.getElementById('modal-resume-id').value = '';
+    document.getElementById('modal-jd-id').value = '';
+    document.getElementById('modal-team-id').value = '';
+}
+
+function clearCandidateModal() {
+    // Clear all form fields manually for better control
+    const form = document.getElementById('candidate-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear hidden fields
+    document.getElementById('modal-resume-id').value = '';
+    document.getElementById('modal-jd-id').value = '';
+    document.getElementById('modal-team-id').value = '';
+    
+    // Clear personal information fields
+    document.getElementById('modal-name').value = '';
+    document.getElementById('modal-phone').value = '';
+    document.getElementById('modal-email').value = '';
+    
+    // Clear professional information fields
+    document.getElementById('modal-skills').value = '';
+    document.getElementById('modal-education').value = '';
+    document.getElementById('modal-experience').value = '';
+    document.getElementById('modal-relevant-experience').value = '';
+    document.getElementById('modal-prev-job-profile').value = '';
+    
+    // Clear compensation and location fields
+    document.getElementById('modal-current-ctc').value = '';
+    document.getElementById('modal-current-ctc-basis').value = 'annual';
+    document.getElementById('modal-expected-ctc').value = '';
+    document.getElementById('modal-expected-ctc-basis').value = 'annual';
+    document.getElementById('modal-notice-period').value = '';
+    document.getElementById('modal-location').value = '';
+    
+    // Clear screening information fields
+    document.getElementById('modal-screen-status').value = 'toBeScreened';
+    document.getElementById('modal-screening-team').value = '';
+    document.getElementById('modal-screened-on').value = '';
+    document.getElementById('modal-shared-on').value = '';
+    
+    // Clear comments fields
+    document.getElementById('modal-screened-remarks').value = '';
+    document.getElementById('modal-recruiter-comments').value = '';
+    
+    // Clear HR member dropdown selection
+    const hrMemberSelect = document.getElementById('modal-hr-member-id');
+    if (hrMemberSelect) {
+        hrMemberSelect.selectedIndex = 0;
+    }
+    
+    // Remove any validation error styling if present
+    const formFields = form.querySelectorAll('input, textarea, select');
+    formFields.forEach(field => {
+        field.classList.remove('error', 'invalid', 'valid');
+        // Remove any custom validation styling
+        field.style.borderColor = '';
+        field.style.backgroundColor = '';
+    });
+    
+    // Clear any error messages
+    const errorMessages = form.querySelectorAll('.error-message, .validation-error');
+    errorMessages.forEach(error => error.remove());
+    
+    // Reset button states
+    const saveButton = document.getElementById('modal-save-btn');
+    const closeButton = document.getElementById('modal-close-btn');
+    
+    if (saveButton) {
+        saveButton.textContent = 'Save';
+        saveButton.disabled = false;
+    }
+    
+    if (closeButton) {
+        closeButton.disabled = false;
+    }
+    
+    // Hide loading overlay if visible
+    const loadingOverlay = document.getElementById('modal-loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+    
+    console.log('Candidate modal cleared successfully');
+}
+
+/**
+ * Get candidate details from backend and populate the candidate form
+ * @param {number} candidateId - The candidate ID to fetch details for
+ * @param {number} resumeId - The resume ID associated with the candidate
+ * @param {string} jdId - The job description ID
+ * @returns {Promise} - Promise that resolves when data is loaded and form is populated
+ */
+function getCandidateDetailsAndPopulate(candidateId, resumeId, jdId) {
+    return new Promise((resolve, reject) => {
+        // Show loading overlay
+        const loadingOverlay = document.getElementById('modal-loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        // Prepare the API endpoint - only using resume_id as per backend requirement
+        if (!resumeId) {
+            reject(new Error('resume_id is required'));
+            return;
+        }
+        
+        const apiUrl = `/get_candidate_details/?resume_id=${resumeId}`;
+
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading overlay
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+
+            if (data.success) {
+                const candidate = data.candidate;
+                console.log('Candidate details loaded:', candidate);
+                
+                // Populate the form with candidate data
+                populateCandidateForm(candidate, resumeId, jdId);
+                
+                resolve(candidate);
+            } else {
+                console.error('Failed to load candidate details:', data.error);
+                
+                // If no candidate found, populate with empty form but set the IDs
+                if (data.error === 'Candidate or resume not found') {
+                    populateEmptyCandidateForm(resumeId, jdId);
+                }
+                
+                reject(new Error(data.error || 'Failed to load candidate details'));
+            }
+        })
+        .catch(error => {
+            // Hide loading overlay
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            
+            console.error('Error fetching candidate details:', error);
+            showNotification('Error loading candidate details: ' + error.message, 'error');
+            reject(error);
+        });
+    });
+}
+
+/**
+ * Populate the candidate form with fetched candidate data
+ * @param {object} candidate - The candidate data object from backend
+ * @param {number} resumeId - The resume ID
+ * @param {string} jdId - The job description ID
+ */
+function populateCandidateForm(candidate, resumeId, jdId) {
+    try {
+        // Set hidden fields
+        document.getElementById('modal-resume-id').value = resumeId || candidate.resume_id || '';
+        document.getElementById('modal-jd-id').value = jdId || candidate.jd_id || '';
+        document.getElementById('modal-team-id').value = candidate.team_id || '';
+
+        // Personal Information
+        document.getElementById('modal-name').value = candidate.name || '';
+        document.getElementById('modal-phone').value = candidate.phone || '';
+        document.getElementById('modal-email').value = candidate.email || '';
+
+        // Professional Information
+        document.getElementById('modal-skills').value = candidate.skills || '';
+        document.getElementById('modal-education').value = candidate.education || '';
+        document.getElementById('modal-experience').value = candidate.experience || '';
+        document.getElementById('modal-relevant-experience').value = candidate.relevant_experience || '';
+        document.getElementById('modal-prev-job-profile').value = candidate.previous_job_profile || '';
+
+        // Compensation & Location
+        document.getElementById('modal-current-ctc').value = candidate.current_ctc || '';
+        document.getElementById('modal-current-ctc-basis').value = candidate.current_ctc_basis || 'annual';
+        document.getElementById('modal-expected-ctc').value = candidate.expected_ctc || '';
+        document.getElementById('modal-expected-ctc-basis').value = candidate.expected_ctc_basis || 'annual';
+        document.getElementById('modal-notice-period').value = candidate.notice_period || '';
+        document.getElementById('modal-location').value = candidate.location || '';
+
+        // Screening Information
+        document.getElementById('modal-screen-status').value = candidate.screen_status || 'toBeScreened';
+
+        // Date fields - format dates properly
+        if (candidate.screened_on) {
+            document.getElementById('modal-screened-on').value = formatDateForInput(candidate.screened_on);
+        }
+        if (candidate.shared_on) {
+            document.getElementById('modal-shared-on').value = formatDateForInput(candidate.shared_on);
+        }
+
+        // Comments
+        document.getElementById('modal-screened-remarks').value = candidate.screened_remarks || '';
+        document.getElementById('modal-recruiter-comments').value = candidate.recruiter_comments || '';
+
+        // Load team members and populate screening team and HR member fields
+        const currentJdId = jdId || candidate.jd_id;
+        if (currentJdId) {
+            loadTeamMembersAndPopulate(currentJdId, candidate);
+        }
+
+        console.log('Candidate form populated successfully');
+        
+    } catch (error) {
+        console.error('Error populating candidate form:', error);
+        showNotification('Error populating form data', 'error');
+    }
+}
+
+/**
+ * Populate the candidate form with empty values but set the required IDs
+ * @param {number} resumeId - The resume ID
+ * @param {string} jdId - The job description ID
+ */
+function populateEmptyCandidateForm(resumeId, jdId) {
+    try {
+        // Clear the form first
+        clearCandidateModal();
+        
+        // Set only the required IDs
+        document.getElementById('modal-resume-id').value = resumeId || '';
+        document.getElementById('modal-jd-id').value = jdId || '';
+        
+        // Load team members for the JD
+        if (jdId) {
+            loadTeamMembersAndPopulate(jdId, {});
+        }
+        
+        console.log('Empty candidate form prepared with IDs:', { resumeId, jdId });
+        
+    } catch (error) {
+        console.error('Error preparing empty candidate form:', error);
+    }
+}
+
+/**
+ * Helper function to format date strings for HTML date input fields
+ * @param {string} dateString - Date string from backend (YYYY-MM-DD format expected)
+ * @returns {string} - Formatted date string for input field
+ */
+function formatDateForInput(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        // If the date is already in YYYY-MM-DD format, return as is
+        if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return dateString;
+        }
+        
+        // Otherwise, try to parse and format
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date string:', dateString);
+            return '';
+        }
+        
+        return date.toISOString().split('T')[0];
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return '';
+    }
+}
+
+/**
+ * Load team members for a JD and populate screening team and HR member fields
+ * @param {string} jdId - The job description ID
+ * @param {object} candidate - The candidate data (optional, for setting selected values)
+ */
+function loadTeamMembersAndPopulate(jdId, candidate = {}) {
+    if (!jdId) {
+        console.warn('JD ID is required to load team members');
+        return;
+    }
+
+    fetch(`/get_jd_team_members/?jd_id=${jdId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Populate screening team name (readonly field)
+            const screeningTeamField = document.getElementById('modal-screening-team');
+            if (screeningTeamField) {
+                screeningTeamField.value = data.team_name || 'No team assigned';
+            }
+
+            // Update hidden team_id field
+            const teamIdField = document.getElementById('modal-team-id');
+            if (teamIdField) {
+                teamIdField.value = data.team_id || '';
+            }
+
+            // Populate HR member dropdown (Assigned To field)
+            const hrMemberSelect = document.getElementById('modal-hr-member-id');
+            if (hrMemberSelect) {
+                // Clear existing options
+                hrMemberSelect.innerHTML = '';
+                
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select team member';
+                hrMemberSelect.appendChild(defaultOption);
+                
+                // Add team members as options
+                if (data.members && data.members.length > 0) {
+                    data.members.forEach(member => {
+                        const option = document.createElement('option');
+                        option.value = member.emp_id;
+                        option.textContent = `${member.first_name} ${member.last_name} (${member.email})`;
+                        hrMemberSelect.appendChild(option);
+                    });
+                    
+                    // Set selected value if candidate has hr_member_id
+                    if (candidate.hr_member_id) {
+                        hrMemberSelect.value = candidate.hr_member_id;
+                    }
+                } else {
+                    // Add "No members" option if team has no members
+                    const noMembersOption = document.createElement('option');
+                    noMembersOption.value = '';
+                    noMembersOption.textContent = 'No team members available';
+                    noMembersOption.disabled = true;
+                    hrMemberSelect.appendChild(noMembersOption);
+                }
+            }
+
+            console.log('Team members loaded and populated successfully:', data);
+        } else {
+            console.error('Failed to load team members:', data.error);
+            
+            // Set default values on error
+            const screeningTeamField = document.getElementById('modal-screening-team');
+            if (screeningTeamField) {
+                screeningTeamField.value = 'Error loading team';
+            }
+            
+            const hrMemberSelect = document.getElementById('modal-hr-member-id');
+            if (hrMemberSelect) {
+                hrMemberSelect.innerHTML = '<option value="">Error loading members</option>';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching team members:', error);
+        showNotification('Error loading team members: ' + error.message, 'error');
+        
+        // Set error values
+        const screeningTeamField = document.getElementById('modal-screening-team');
+        if (screeningTeamField) {
+            screeningTeamField.value = 'Error loading team';
+        }
+        
+        const hrMemberSelect = document.getElementById('modal-hr-member-id');
+        if (hrMemberSelect) {
+            hrMemberSelect.innerHTML = '<option value="">Error loading members</option>';
+        }
+    });
 }
