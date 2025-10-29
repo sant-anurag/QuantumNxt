@@ -21,8 +21,12 @@ def extract_text_from_pdf(path: str) -> str:
 
 def extract_text_from_docx(path: str) -> str:
     from docx import Document
-    doc = Document(path)
-    return "\n".join(p.text for p in doc.paragraphs)
+    try:
+        doc = Document(path)
+        return "\n".join(p.text for p in doc.paragraphs)
+    except Exception as e:
+        print(f"Error extracting text from DOCX: {e}")
+        raise ValueError("Not able to extract text from file. \nIf file is in .doc format, please convert it to .docx and try again.")
 
 def extract_text_from_txt(path: str) -> str:
     with open(path, "rb") as f:
@@ -32,7 +36,7 @@ def extract_text(path: str) -> str:
     low = path.lower()
     if low.endswith(".pdf"):
         return extract_text_from_pdf(path)
-    elif low.endswith(".docx"):
+    elif low.endswith(".docx") or low.endswith(".doc"):
         return extract_text_from_docx(path)
     elif low.endswith(".txt"):
         return extract_text_from_txt(path)
@@ -117,6 +121,7 @@ Rules:
 - Keep dates as given if unclear (do not hallucinate exact dates).
 - Return JSON that strictly matches the provided JSON Schema.
 - If something is truly unavailable, leave it empty.
+- Keep skills in order of technical, semitechnical, personal or communication skills and then other skills.
 """
 
 # --------------------------

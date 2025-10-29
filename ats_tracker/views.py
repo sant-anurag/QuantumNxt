@@ -2352,7 +2352,7 @@ def view_parse_resumes(request):
         SELECT 
             r.resume_id,
             r.file_name,
-            r.status,
+            c.screen_status as status,
             c.name as candidate_name,
             c.phone,
             c.email,
@@ -2364,7 +2364,7 @@ def view_parse_resumes(request):
         FROM resumes r
         LEFT JOIN candidates c ON r.resume_id = c.resume_id
         WHERE r.jd_id = %s
-        ORDER BY c.updated_at, r.uploaded_on DESC
+        ORDER BY c.updated_at DESC NULLS LAST, r.uploaded_on DESC
     """, (jd_id,))
     
     resumes = cursor.fetchall()
@@ -2515,13 +2515,22 @@ def process_resume(file_path, api_key):
     try:
         # Step 1: Extract text from resume file
         resume_text = extract_text(file_path)
-        
+        # print current time with seconds 
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{current_time}] Extracted text from resume.")
         # Step 2: Parse with Gemini AI
         parsed_data = parse_with_gemini(
             text=resume_text,
             api_key=api_key,
             model_name="gemini-1.5-flash-latest"
         )
+
+        time_after_execution = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{time_after_execution}] Parsed resume with Gemini AI.")
+
+        # print time required for execution
+        execution_time = datetime.strptime(time_after_execution, "%Y-%m-%d %H:%M:%S") - datetime.strptime(current_time, "%Y-%m-%d %H:%M:%S")
+        print(f"Time taken for parsing: {execution_time.total_seconds()} seconds")
         
         # Step 3: Calculate total experience
         if parsed_data.get("experience"):
@@ -2531,7 +2540,7 @@ def process_resume(file_path, api_key):
         
     except Exception as e:
         print(f"Error processing resume: {e}")
-        return None
+        return {"error": str(e)}
 
 # @login_required 
 # def parse_individual_resume(request):
@@ -2618,6 +2627,9 @@ def parse_individual_resume(request):
         
         # Parse the resume
         parsed_data = process_resume(file_path, api_key)
+        if not parsed_data or 'error' in parsed_data:
+            return JsonResponse({'success': False, 'error': f'Failed to parse resume: {parsed_data.get("error", "Unknown error")}'}, status=500)
+        
         prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
         educations = [edu['degree'] + ' from ' + edu['institution'] + ' in ' + edu['end_year'] for edu in parsed_data.get('education', [])]
 
@@ -3121,6 +3133,7 @@ def api_candidates_pipeline(request):
             c.l3_result,
             c.offer_status,
             c.joining_status,
+            c.recruiter_comments,
             j.jd_summary,
             comp.company_name,
             r.file_name as resume_filename,
@@ -3153,13 +3166,14 @@ def api_candidates_pipeline(request):
         where_conditions.append("""
             (c.name LIKE %s OR 
             c.email LIKE %s OR 
+            c.phone LIKE %s OR 
             j.jd_summary LIKE %s OR 
             comp.company_name LIKE %s OR
             j.jd_id LIKE %s
         )
         """)
         search_param = f'%{search_query}%'
-        params.extend([search_param, search_param, search_param, search_param, search_param])
+        params.extend([search_param, search_param, search_param, search_param, search_param, search_param])
     
     where_conditions.append("j.jd_status='active'")
     # Combine query with WHERE conditions
@@ -3204,6 +3218,8 @@ def api_candidates_pipeline(request):
                 'jd_id': candidate['jd_id'],
                 'resume_filename': candidate['resume_filename'],
                 'resume_id': candidate['resume_id'],
+                'recruiter_comments': candidate['recruiter_comments'],
+                'updated_at': candidate['updated_at'].strftime("%Y-%m-%d") if candidate['updated_at'] else '',
             })
         
         cursor.close()
@@ -3422,6 +3438,15 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
         """
         update_params = [new_status, today, comment, candidate_id]
         cursor.execute(update_query, tuple(update_params))
+
+        # add candidate note.
+        candidate_note = f"""\ncandidate has been advanced to {stage_name} stage and marked as "{new_status}".\nRemarks: {comment}"""
+        cursor.execute("""
+            INSERT INTO candidate_notes (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, 'general', None, f'Advanced to {stage_name}', 'medium', candidate_note))
+           
+        
 
         # handle jd counts
         previous_data = candidate_data.copy()

@@ -261,12 +261,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="stage ${stageTracker.offer}" title="Offer: ${getStageTooltipText('offer', candidate.offer_status)}"></div>
                 <div class="stage ${stageTracker.joining}" title="Joining: ${getStageTooltipText('joining', candidate.joining_status)}"></div>
             </div>
-
-            <div class="current-stage-status">
-                <span class="status-label">${currentStageInfo.stage}:</span>
-                <span class="status-value ${currentStageInfo.statusClass}">${currentStageInfo.statusText}</span>
+            
+            <div class="current-stage-info">
+                <div class="current-stage-status">
+                    <span class="status-label">${currentStageInfo.stage}:</span>
+                    <span class="status-value ${currentStageInfo.statusClass}">${currentStageInfo.statusText}</span>
+                </div>
+                <div class="recruiter-comments tooltip-container">
+                    <span class="comments-text">💬 ${candidate.recruiter_comments || "No comments"}</span>
+                    <span class="tooltip-text">Recruiter Comments: [${candidate.updated_at || ''}] ${candidate.recruiter_comments || "No comments available."}</span>
+                </div>
             </div>
-
+            
             <div class="candidate_actions">
                 <button class="action-btn primary add-note" onclick="addNote(${candidate.candidate_id})">Add Note</button>
                 <button class="action-btn primary" onclick="takeAction(${candidate.candidate_id})">Take Action</button>
@@ -885,8 +891,6 @@ function handleAddNote() {
     
     console.log('Adding note:', noteData);
 
-    
-    
     // TODO: Send to backend
     fetch('/api/candidate_musters/add_note/', {
         method: 'POST',
