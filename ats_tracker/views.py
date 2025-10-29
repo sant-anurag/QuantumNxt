@@ -2364,7 +2364,10 @@ def view_parse_resumes(request):
         FROM resumes r
         LEFT JOIN candidates c ON r.resume_id = c.resume_id
         WHERE r.jd_id = %s
-        ORDER BY c.updated_at DESC NULLS LAST, r.uploaded_on DESC
+        ORDER BY
+            CASE WHEN c.updated_at IS NULL THEN 0 ELSE 1 END,
+                c.updated_at DESC,
+                r.uploaded_on DESC;
     """, (jd_id,))
     
     resumes = cursor.fetchall()
@@ -2631,6 +2634,7 @@ def parse_individual_resume(request):
             return JsonResponse({'success': False, 'error': f'Failed to parse resume: {parsed_data.get("error", "Unknown error")}'}, status=500)
         
         prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
+        # last_job_profile [job['title']]
         educations = [edu['degree'] + ' from ' + edu['institution'] + ' in ' + edu['end_year'] for edu in parsed_data.get('education', [])]
 
         result = {
@@ -3437,16 +3441,7 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
             WHERE candidate_id=%s
         """
         update_params = [new_status, today, comment, candidate_id]
-        cursor.execute(update_query, tuple(update_params))
-
-        # add candidate note.
-        candidate_note = f"""\ncandidate has been advanced to {stage_name} stage and marked as "{new_status}".\nRemarks: {comment}"""
-        cursor.execute("""
-            INSERT INTO candidate_notes (candidate_id, activity_type, emp_id, note_title, priority, notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (candidate_id, 'general', None, f'Advanced to {stage_name}', 'medium', candidate_note))
-           
-        
+        cursor.execute(update_query, tuple(update_params))       
 
         # handle jd counts
         previous_data = candidate_data.copy()
@@ -3459,6 +3454,18 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
         if not check:
             conn.rollback()
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
+        # add candidate note.
+        activity_type = 'general'
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Advanced to {stage_name}'
+        notes = f"""\ncandidate has been advanced from {stage_name} stage and marked as "{new_status}".\nRemarks: {comment}"""
+        priority = 'medium'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
 
         conn.commit()
 
@@ -3516,20 +3523,24 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         candidate_data = cursor.fetchone()
 
         if not candidate_data:
+            DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Candidate data retrieval failed or candidate not found'}, status=404)
 
         # 2. Validate if rejection is not possible
 
         # Check 1: Fully Selected
         if candidate_data['l3_result'] == 'selected':
+            DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already fully selected (L3) and moved to the final stage.'}, status=400)
 
         # Check 2: Already Rejected/On Hold (at any stage, as per user request)
         rejection_statuses = ['rejected']
         if any(candidate_data[f'{level}_result'] in rejection_statuses for level in ['l1', 'l2', 'l3']):
+            DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already formally rejected at a previous level.'}, status=400)
         if candidate_data['screen_status'] in rejection_statuses:
-             return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already formally rejected at the screening level.'}, status=400)
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Cannot reject: Candidate is already formally rejected at the screening level.'}, status=400)
 
         
         # Determine the stage to update (The first stage that is NOT 'selected')
@@ -3562,11 +3573,13 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         
         # This condition is technically redundant due to Check 1, but kept for clarity
         if not update_column:
-             return JsonResponse({'success': False, 'error': 'Candidate status is ambiguous or fully selected.'}, status=400)
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Candidate status is ambiguous or fully selected.'}, status=400)
 
 
         # 4. Validate member rejection reason
         if not rejection_reason or not rejection_reason.strip():
+            DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Rejection reason must be provided to reject the candidate.'}, status=400)
 
         
@@ -3579,11 +3592,12 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
                 {update_column}=%s, 
                 {date_column}=%s, 
                 {remarks_column}=%s,
+                recruiter_comments=%s,
                 updated_at=CURRENT_TIMESTAMP
             WHERE candidate_id=%s
         """
-        update_params = [new_status, today, full_comment, candidate_id]
-        
+        update_params = [new_status, today, full_comment, full_comment, candidate_id]
+
         cursor.execute(update_query, tuple(update_params))
 
         # handle jd counts
@@ -3595,8 +3609,23 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         check = DataOperations.update_recruitment_jds(cursor, previous_data, current_data)
         if not check:
             conn.rollback()
+            DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
+        # add candidate note.
+        activity_type = 'rejection'
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Rejected at {stage_name} stage'
+        notes = f"""\ncandidate has been rejected at {stage_name} stage and marked as "{new_status}".\nRejection Reason: {rejection_reason}\nRemarks: {comment}"""
+        priority = 'medium'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
+
         conn.commit()
+
 
         # 6. Notify candidate if required (TODO)
         if notify_candidate:
@@ -3610,6 +3639,7 @@ def reject_candidate(request, candidate_id: int, rejection_reason: str = None, c
         # activity_comment = f"Rejected at {stage_name}. Reason: {rejection_reason}"
         # DataOperations.log_candidate_activity(candidate_id, request.session.get('user_id'), 'REJECTED', activity_comment)
 
+        DataOperations.close_db_connection(conn, cursor)
         return JsonResponse({
             'success': True, 
             'message': f'Candidate {candidate_id} successfully rejected. {stage_name} marked as "{new_status}".',
@@ -3731,6 +3761,19 @@ def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, c
         if not check:
             conn.rollback()
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+        
+        # add candidate note.
+        activity_type = 'general'
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Put on Hold at {stage_name}'
+        notes = f"""\ncandidate has been put on hold at {stage_name} stage and marked as "{new_status}".\nReason: {hold_reason}\nRemarks: {comment}"""
+        priority = 'medium'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
+
         conn.commit()
 
         # 6. Notify candidate if required (TODO)
@@ -3759,7 +3802,7 @@ def put_candidate_on_hold(request, candidate_id: int, hold_reason: str = None, c
     finally:
         DataOperations.close_db_connection(conn, cursor)
 
-    return JsonResponse({'success': True, 'message': 'Candidate put on hold successfully.'})
+    # return JsonResponse({'success': True, 'message': 'Candidate put on hold successfully.'})
 
 @login_required
 def back_to_previous_stage(request, candidate_id: int, comment: str):
@@ -3822,7 +3865,7 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
         new_status = 'toBeScreened'
         
         # Append the reason for rollback to the general recruiter_comments field
-        new_recruiter_comment = f"\n[ROLLBACK on {date.today().isoformat()} by {user_id}]: Resetting {stage_name} from '{candidate_data.get(update_column)}' to '{new_status}'. Reason: {comment.strip()}"
+        new_recruiter_comment = f"\n[ROLLBACK on {date.today().strftime('%d:%m:%Y')}]: Resetting {stage_name} from '{candidate_data.get(update_column)}' to '{new_status}'. Reason: {comment.strip()}"
         
         # 3. Update candidate status (resetting the status, date, and comments for that specific stage)
         update_query = f"""
@@ -3831,7 +3874,7 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
                 {update_column}=%s, 
                 {date_column}=NULL, 
                 {comments_column}=NULL,
-                recruiter_comments=CONCAT(COALESCE(recruiter_comments, ''), %s),
+                recruiter_comments=%s,
                 updated_at=CURRENT_TIMESTAMP
             WHERE candidate_id=%s
         """
@@ -3848,6 +3891,17 @@ def back_to_previous_stage(request, candidate_id: int, comment: str):
         if not check:
             conn.rollback()
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+
+        # add candidate note.
+        activity_type = 'general'
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Reverted to {stage_name}'
+        notes = f"""\ncandidate has been reverted at {stage_name} stage and reset to "{new_status}".\nRemarks: {comment}"""
+        priority = 'medium'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
 
         conn.commit()
 
@@ -4030,6 +4084,19 @@ def send_offer_to_candidate(request, candidate_id, offer_data, comment=""):
         conn.rollback()
         DataOperations.close_db_connection(conn, cursor)
         return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+    
+    # add candidate note.
+    activity_type = 'offer_details'
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    note_title = f'Offer {offer_type.capitalize()} Sent'
+    notes = f"""\nAn {offer_type} offer has been sent to the candidate with a total CTC of {total_ctc}.\nRemarks: {comment}"""
+    priority = 'medium'
+    cursor.execute("""
+        INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
+
     conn.commit()
     
     # Close database connection
@@ -4107,7 +4174,22 @@ def manage_offer_status(request, candidate_id: int, offer_status: str, comment: 
             conn.rollback()
             DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
+        
+        activity_type = 'offer_details'
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Offer {offer_status.capitalize()}'
+        notes = f"""\nOffer status has been updated to "{offer_status}".\nRemarks: {comment}"""
+        priority = 'medium'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
+        
+        
+
         conn.commit()
+
         DataOperations.close_db_connection(conn, cursor)
         return JsonResponse({'success': True, 'message': f'Offer status updated to {offer_status} for candidate {candidate_id}.'})
     except Exception as e:
@@ -4174,6 +4256,18 @@ def manage_hiring_status(request, candidate_id: int, hiring_status: str, comment
             DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Error updating recruitment_jds counts'}, status=500)
         
+        # add candidate note
+        activity_type = 'onboarding'
+        user_id = request.session.get('user_id', None)
+        emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+        note_title = f'Onboarding Status Updated'
+        notes = f"""\nOnboarding status has been updated to "{hiring_status}".\nRemarks: {comment}"""
+        priority = 'high'
+        cursor.execute("""
+            INSERT INTO candidate_activities (candidate_id, activity_type, emp_id, note_title, priority, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (candidate_id, activity_type, emp_id, note_title, priority, notes))
+
         conn.commit()
         DataOperations.close_db_connection(conn, cursor)
         return JsonResponse({'success': True, 'message': f'Hiring status updated to {hiring_status} for candidate {candidate_id}.'})

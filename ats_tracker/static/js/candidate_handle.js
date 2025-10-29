@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="recruiter-comments tooltip-container">
                     <span class="comments-text">💬 ${candidate.recruiter_comments || "No comments"}</span>
-                    <span class="tooltip-text">Recruiter Comments: [${candidate.updated_at || ''}] ${candidate.recruiter_comments || "No comments available."}</span>
+                    <span class="tooltip-text">[${candidate.updated_at || ''}] ${candidate.recruiter_comments || "No comments available."}</span>
                 </div>
             </div>
             

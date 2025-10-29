@@ -53,17 +53,6 @@ SCHEMA: Dict[str, Any] = {
         "email": {"type": "string"},
         "phone": {"type": "string"},
         "location": {"type": "string"},
-        "links": {
-            "type": "object",
-            "properties": {
-                "linkedin": {"type": "string"},
-                "github": {"type": "string"},
-                "portfolio": {"type": "string"},
-                "other": {"type": "array", "items": {"type": "string"}}
-            },
-            "additionalProperties": False
-        },
-        "summary": {"type": "string"},
         "skills": {"type": "array", "items": {"type": "string"}},
         "experience": {
             "type": "array",
@@ -76,8 +65,8 @@ SCHEMA: Dict[str, Any] = {
                     "start_date": {"type": "string"},
                     "end_date": {"type": "string"},
                     "current": {"type": "boolean"},
-                    "bullets": {"type": "array", "items": {"type": "string"}},
-                    "tech": {"type": "array", "items": {"type": "string"}}
+                    # "bullets": {"type": "array", "items": {"type": "string"}},
+                    # "tech": {"type": "array", "items": {"type": "string"}}
                 },
                 "required": ["title", "company"]
             }
@@ -91,23 +80,10 @@ SCHEMA: Dict[str, Any] = {
                     "institution": {"type": "string"},
                     "start_year": {"type": "string"},
                     "end_year": {"type": "string"},
-                    "score": {"type": "string"}
+                    # "score": {"type": "string"}
                 }
             }
         },
-        "certifications": {"type": "array", "items": {"type": "string"}},
-        "projects": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "tech": {"type": "array", "items": {"type": "string"}},
-                    "link": {"type": "string"}
-                }
-            }
-        }
     },
     "required": ["name", "email", "skills", "experience"],
     "additionalProperties": False
