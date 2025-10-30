@@ -5865,11 +5865,11 @@ def api_admin_dashboard(request):
 
             -- 4. OFFER ACCEPTANCE RATE (%) (Health)
             (SELECT
-                (SUM(CASE WHEN offer_status = 'accepted' THEN 1 ELSE 0 END) * 100.0) /
+                (SUM(CASE WHEN joining_status = 'joined' THEN 1 ELSE 0 END) * 100.0) /
                 SUM(CASE WHEN offer_status IN ('accepted', 'rejected') THEN 1 ELSE 0 END)
             FROM candidates
             WHERE offer_status IN ('accepted', 'rejected')
-            ) AS Offer_Acceptance_Rate_Percent;
+            ) AS Joining_Rate_Percent;
     """)
     kpi_row = cursor.fetchone()
     admin_dashboard_data.update(kpi_row)

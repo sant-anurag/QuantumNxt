@@ -687,13 +687,13 @@ function updateKPICards(data) {
         avgTimeFill.innerHTML = '<span style="font-size: 0.6em; color: #9ca3af;">No data</span>';
     }
 
-    // Update Offer Acceptance Rate
-    const offerAcceptanceRate = document.getElementById('offer-acceptance-rate');
-    const acceptanceRate = data.Offer_Acceptance_Rate_Percent;
-    if (acceptanceRate !== null && acceptanceRate !== undefined) {
-        offerAcceptanceRate.innerHTML = `${Math.round(acceptanceRate)}<span style="font-size: 0.5em; color: #6b7280;">%</span>`;
+    // Update Joining Rate
+    const joiningRate = document.getElementById('joining-rate');
+    const joiningRateValue = data.Joining_Rate_Percent;
+    if (joiningRateValue !== null && joiningRateValue !== undefined) {
+        joiningRate.innerHTML = `${Math.round(joiningRateValue)}<span style="font-size: 0.5em; color: #6b7280;">%</span>`;
     } else {
-        offerAcceptanceRate.innerHTML = '<span style="font-size: 0.6em; color: #9ca3af;">No data</span>';
+        joiningRate.innerHTML = '<span style="font-size: 0.6em; color: #9ca3af;">No data</span>';
     }
 
     // Add subtle animation to the updated values
