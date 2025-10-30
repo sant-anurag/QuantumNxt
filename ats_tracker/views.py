@@ -2377,7 +2377,18 @@ def view_parse_resumes(request):
     #             r.uploaded_on DESC;
     # """, (jd_id,))
 
-    cursor.execute("""
+    resume_query_filter = """
+        WHERE r.jd_id = %s
+    """
+    resume_query_params = [jd_id]
+    if user_role in ["Team_Lead", "User"]:
+        resume_query_filter += """ 
+            AND (c.candidate_id IS NULL OR c.hr_member_id = %s)
+        """
+        resume_query_params.append(emp_id)
+
+
+    cursor.execute(f"""
         SELECT 
             r.resume_id,
             r.file_name,
@@ -2392,16 +2403,12 @@ def view_parse_resumes(request):
             c.previous_job_profile
         FROM resumes r
         LEFT JOIN candidates c ON r.resume_id = c.resume_id
-        WHERE r.jd_id = %s 
-            AND (
-                c.candidate_id IS NULL 
-                OR c.hr_member_id = %s  -- The specified hr_member_id
-            )
+        {resume_query_filter}
         ORDER BY
             CASE WHEN c.updated_at IS NULL THEN 0 ELSE 1 END,
                 c.updated_at DESC,
                 r.uploaded_on DESC;
-    """, (jd_id, emp_id))
+    """, tuple(resume_query_params))
     
     resumes = cursor.fetchall()
     parsed_resumes = []
