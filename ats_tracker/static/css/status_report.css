@@ -204,6 +204,140 @@
         outline: none;
     }
 
+    /* Select2 custom styling */
+    .searchable-select {
+        width: 200px !important;
+    }
+
+    .select2-container {
+        width: 200px !important;
+        font-family: inherit;
+    }
+
+    .select2-container--default .select2-selection--single {
+        height: 40px !important;
+        padding: 0;
+        border: 1px solid #bfc5e8 !important;
+        border-radius: 7px !important;
+        background: #f7fafd !important;
+        color: #232946;
+        font-size: 1em;
+        box-shadow: none;
+        display: flex;
+        align-items: center;
+    }
+
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border: 1.5px solid #5661d2 !important;
+        outline: none;
+        box-shadow: none;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #232946 !important;
+        line-height: 38px !important;
+        padding-left: 14px !important;
+        padding-right: 40px !important;
+        font-size: 1em;
+        font-weight: 400;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        color: #64748b !important;
+        font-style: normal;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 38px !important;
+        right: 14px !important;
+        top: 1px !important;
+        width: 20px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow b {
+        border-color: #64748b transparent transparent transparent !important;
+        border-style: solid;
+        border-width: 5px 4px 0 4px;
+        height: 0;
+        left: 50%;
+        margin-left: -4px;
+        margin-top: -2px;
+        position: absolute;
+        top: 50%;
+        width: 0;
+    }
+
+    .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+        border-color: transparent transparent #5661d2 transparent !important;
+        border-width: 0 4px 5px 4px;
+    }
+
+    /* Hover effect */
+    .select2-container--default .select2-selection--single:hover {
+        border-color: #5661d2 !important;
+    }
+
+    /* Dropdown styling */
+    .select2-dropdown {
+        border: 1px solid #bfc5e8 !important;
+        border-radius: 7px !important;
+        background: #f7fafd !important;
+        box-shadow: 0 4px 12px rgba(86, 97, 210, 0.15) !important;
+        margin-top: 2px;
+    }
+
+    .select2-container--default .select2-results__option {
+        padding: 10px 14px !important;
+        color: #232946 !important;
+        font-size: 1em;
+        line-height: 1.4;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #5661d2 !important;
+        color: white !important;
+    }
+
+    .select2-container--default .select2-results__option[aria-selected=true] {
+        background-color: #eef2f7 !important;
+        color: #5661d2 !important;
+        font-weight: 500;
+    }
+
+    .select2-container--default .select2-search--dropdown {
+        padding: 8px !important;
+        background: #f7fafd;
+    }
+
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        padding: 8px 12px !important;
+        border: 1px solid #bfc5e8 !important;
+        border-radius: 5px !important;
+        background: #fff !important;
+        color: #232946 !important;
+        font-size: 0.95em;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+        border: 1px solid #5661d2 !important;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(86, 97, 210, 0.1);
+    }
+
+    /* Remove default browser styling */
+    .select2-container--default .select2-selection--single,
+    .select2-container--default .select2-selection--single:focus {
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
     .sr-msg {
         margin-bottom: 12px;
         font-size: 1em;

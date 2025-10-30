@@ -1,4 +1,33 @@
 document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for searchable dropdowns
+        $('#teamSelect').select2({
+            placeholder: 'Select a team...',
+            allowClear: false,
+            width: '200px',
+            minimumResultsForSearch: 5, // Show search box only if more than 5 options
+            escapeMarkup: function(markup) { return markup; },
+            templateResult: function(data) {
+                return data.text;
+            },
+            templateSelection: function(data) {
+                return data.text;
+            }
+        });
+
+        $('#memberSelect').select2({
+            placeholder: 'Select a member...',
+            allowClear: false,
+            width: '200px',
+            minimumResultsForSearch: 5, // Show search box only if more than 5 options
+            escapeMarkup: function(markup) { return markup; },
+            templateResult: function(data) {
+                return data.text;
+            },
+            templateSelection: function(data) {
+                return data.text;
+            }
+        });
+
         // Load teams and members data on page load
         loadTeamsData();
         loadMembersData();
@@ -37,22 +66,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Handle team selection change to update members
-        const teamSelect = document.getElementById('teamSelect');
-        teamSelect.addEventListener('change', function() {
+        $('#teamSelect').on('change', function() {
             const selectedTeamId = this.value;
-            loadMembersData(selectedTeamId === 'all' ? null : selectedTeamId);
+            const selectedMemberId = $('#memberSelect').val();
+            
+            // Load members for the selected team, but preserve member selection if valid
+            loadMembersData(selectedTeamId === 'all' ? null : selectedTeamId, selectedMemberId);
         });
 
         // Handle member selection change to update teams
-        const memberSelect = document.getElementById('memberSelect');
-        memberSelect.addEventListener('change', function() {
+        $('#memberSelect').on('change', function() {
             const selectedMemberId = this.value;
+            const selectedTeamId = $('#teamSelect').val();
+            
             if (selectedMemberId === 'all') {
-                // If "All Members" is selected, reload all teams
-                loadTeamsData();
+                // If "All Members" is selected, reload all teams but preserve team selection
+                loadTeamsData(selectedTeamId);
             } else {
-                // Filter teams based on selected member
-                loadTeamsForMember(selectedMemberId);
+                // Filter teams based on selected member, but preserve team selection if valid
+                loadTeamsForMember(selectedMemberId, selectedTeamId);
             }
         });
 
@@ -83,24 +115,37 @@ if (!window.renderCandidateTables) {
         });
 
         // Load teams data
-        function loadTeamsData() {
+        function loadTeamsData(preserveTeamId = null) {
             fetch('/get_teams/', {
                 method: 'GET',
                 headers: {'X-CSRFToken': getCookie('csrftoken')}
             })
             .then(res => res.json())
             .then(data => {
-                const teamSelect = document.getElementById('teamSelect');
-                // Clear existing options except "All Teams"
-                teamSelect.innerHTML = '<option value="all">All Teams</option>';
+                const $teamSelect = $('#teamSelect');
+                const currentSelection = preserveTeamId || $teamSelect.val();
                 
+                // Clear existing options except "All Teams"
+                $teamSelect.empty().append('<option value="all">All Teams</option>');
+                
+                let hasValidSelection = false;
                 if (data.teams && data.teams.length > 0) {
                     data.teams.forEach(team => {
-                        const option = document.createElement('option');
-                        option.value = team.team_id;
-                        option.textContent = team.team_name;
-                        teamSelect.appendChild(option);
+                        $teamSelect.append(`<option value="${team.team_id}">${team.team_name}</option>`);
+                        
+                        // Check if current selection is still valid
+                        if (team.team_id == currentSelection) {
+                            hasValidSelection = true;
+                        }
                     });
+                }
+                
+                // Restore selection if it's still valid
+                if (hasValidSelection && currentSelection !== 'all') {
+                    $teamSelect.val(currentSelection).trigger('change.select2');
+                } else if (preserveTeamId && preserveTeamId !== 'all') {
+                    // If we were trying to preserve a selection but it's not valid, reset to "all"
+                    $teamSelect.val('all').trigger('change.select2');
                 }
             })
             .catch(error => {
@@ -109,24 +154,37 @@ if (!window.renderCandidateTables) {
         }
 
         // Load teams data for a specific member
-        function loadTeamsForMember(memberId) {
+        function loadTeamsForMember(memberId, preserveTeamId = null) {
             fetch(`/get_teams/?emp_id=${memberId}`, {
                 method: 'GET',
                 headers: {'X-CSRFToken': getCookie('csrftoken')}
             })
             .then(res => res.json())
             .then(data => {
-                const teamSelect = document.getElementById('teamSelect');
-                // Clear existing options except "All Teams"
-                teamSelect.innerHTML = '<option value="all">All Teams</option>';
+                const $teamSelect = $('#teamSelect');
+                const currentSelection = preserveTeamId || $teamSelect.val();
                 
+                // Clear existing options except "All Teams"
+                $teamSelect.empty().append('<option value="all">All Teams</option>');
+                
+                let hasValidSelection = false;
                 if (data.teams && data.teams.length > 0) {
                     data.teams.forEach(team => {
-                        const option = document.createElement('option');
-                        option.value = team.team_id;
-                        option.textContent = team.team_name;
-                        teamSelect.appendChild(option);
+                        $teamSelect.append(`<option value="${team.team_id}">${team.team_name}</option>`);
+                        
+                        // Check if current selection is still valid
+                        if (team.team_id == currentSelection) {
+                            hasValidSelection = true;
+                        }
                     });
+                }
+                
+                // Restore selection if it's still valid
+                if (hasValidSelection && currentSelection !== 'all') {
+                    $teamSelect.val(currentSelection).trigger('change.select2');
+                } else if (preserveTeamId && preserveTeamId !== 'all') {
+                    // If we were trying to preserve a selection but it's not valid, reset to "all"
+                    $teamSelect.val('all').trigger('change.select2');
                 }
             })
             .catch(error => {
@@ -135,7 +193,7 @@ if (!window.renderCandidateTables) {
         }
 
         // Load members data
-        function loadMembersData(teamId = null) {
+        function loadMembersData(teamId = null, preserveMemberId = null) {
             let url = '/get_team_members/';
             if (teamId) {
                 url += `?team_id=${teamId}`;
@@ -147,17 +205,30 @@ if (!window.renderCandidateTables) {
             })
             .then(res => res.json())
             .then(data => {
-                const memberSelect = document.getElementById('memberSelect');
-                // Clear existing options except "All Members"
-                memberSelect.innerHTML = '<option value="all">All Members</option>';
+                const $memberSelect = $('#memberSelect');
+                const currentSelection = preserveMemberId || $memberSelect.val();
                 
+                // Clear existing options except "All Members"
+                $memberSelect.empty().append('<option value="all">All Members</option>');
+                
+                let hasValidSelection = false;
                 if (data.members && data.members.length > 0) {
                     data.members.forEach(member => {
-                        const option = document.createElement('option');
-                        option.value = member.emp_id;
-                        option.textContent = member.emp_name;
-                        memberSelect.appendChild(option);
+                        $memberSelect.append(`<option value="${member.emp_id}">${member.emp_name}</option>`);
+                        
+                        // Check if current selection is still valid
+                        if (member.emp_id == currentSelection) {
+                            hasValidSelection = true;
+                        }
                     });
+                }
+                
+                // Restore selection if it's still valid
+                if (hasValidSelection && currentSelection !== 'all') {
+                    $memberSelect.val(currentSelection).trigger('change.select2');
+                } else if (preserveMemberId && preserveMemberId !== 'all') {
+                    // If we were trying to preserve a selection but it's not valid, reset to "all"
+                    $memberSelect.val('all').trigger('change.select2');
                 }
             })
             .catch(error => {
