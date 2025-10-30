@@ -14,16 +14,12 @@
         <label for="teamSelect">Team:</label>
         <select name="team_id" id="teamSelect">
             <option value="all">All Teams</option>
-            {% for team in teams %}
-            <option value="{{ team.team_id }}">{{ team.team_name }}</option>
-            {% endfor %}
+            <!-- options will be filled by JavaScript -->
         </select>
         <label for="memberSelect">Member:</label>
         <select name="member_id" id="memberSelect">
             <option value="all">All Members</option>
-            {% for member in members %}
-            <option value="{{ member.emp_id }}">{{ member.first_name }} {{ member.last_name }}</option>
-            {% endfor %}
+            <!-- options will be filled by JavaScript -->
         </select>
         <label for="dateInput" id="dateLabel">Date:</label>
         <input type="date" name="date" id="dateInput" required>

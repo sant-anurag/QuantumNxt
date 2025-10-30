@@ -111,6 +111,8 @@ urlpatterns = [
 
     path('status_report/', views.status_report_page, name='status_report'),
     path('status_report/generate/', views.generate_status_report, name='generate_status_report'),
+    path('get_teams/', views.get_teams, name='get_teams'),
+    path('get_team_members/', views.get_team_members, name='get_team_members'),
     path("teams/export/", views.export_teams_excel, name="export_teams_excel"),
     path('api/teams/list/', views.teams_list),
     path('api/teams/filters/', views.teams_filters),

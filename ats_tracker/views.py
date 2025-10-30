@@ -7647,51 +7647,185 @@ def change_user_status(request, user_id, action):
             conn.close()
     return JsonResponse({"success": True, "message": f"User {'activated' if is_active else 'deactivated'} successfully."})
 
+
+@login_required
+def get_teams(request):
+    """
+    API endpoint to get list of teams.
+    """
+    user_id = request.session.get('user_id', None)
+    role = request.session.get('role', 'Guest')
+    self_emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+
+    requested_emp_id = request.GET.get('emp_id', None)
+
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    query = """
+        SELECT DISTINCT
+            t.team_id,
+            t.team_name
+        FROM
+            teams t
+        -- Join to find the teams of the first employee (Your ID)
+        JOIN
+            team_members my_member ON t.team_id = my_member.team_id
+        -- Join to find the teams of the second employee (Other ID)
+        JOIN
+            team_members other_member ON t.team_id = other_member.team_id
+    """
+    params = []
+    query_filters = []
+    
+    if role in ['Team_Lead', 'User']:
+        query_filters.append("my_member.emp_id = %s")
+        params.append(self_emp_id)
+    
+    if requested_emp_id:
+        query_filters.append("other_member.emp_id = %s")
+        params.append(requested_emp_id)
+    if query_filters:
+        query += " WHERE " + " AND ".join(query_filters)
+    
+    # order by team_name
+    query += " ORDER BY t.team_name ASC"
+
+    cursor.execute(query, tuple(params))
+
+    teams = []
+    for row in cursor.fetchall():
+        teams.append({
+            'team_id': row['team_id'],
+            'team_name': row['team_name'],
+        })
+    cursor.close()
+    conn.close()
+    return JsonResponse({"teams": teams})
+
+@login_required
+def get_team_members(request):
+    """
+    API endpoint to get list of team members.
+    """
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    role = request.session.get('role', 'Guest')
+
+    team_id = request.GET.get('team_id', None)
+
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # check if team is present and you are member of it
+    team_check_query = """
+        SELECT team_id FROM team_members
+    """
+    team_check_params = []
+    if role in ['Team_Lead', 'User']:
+        team_check_query += " WHERE emp_id=%s"
+        team_check_params.append(emp_id)
+    
+    cursor.execute(team_check_query, tuple(team_check_params))
+
+    user_team_ids = [row['team_id'] for row in cursor.fetchall()]
+
+    if not user_team_ids:
+        return JsonResponse({"members": []})
+
+    
+    if team_id and int(team_id) not in user_team_ids:
+        return JsonResponse({"members": []})
+    
+    query = """
+    SELECT DISTINCT
+        htm.emp_id,
+        CONCAT(htm.first_name, ' ', htm.last_name) AS emp_name
+    FROM
+        hr_team_members htm
+    JOIN
+            team_members tm ON htm.emp_id = tm.emp_id
+    JOIN
+        teams t ON tm.team_id = t.team_id
+    """
+
+    params = []
+    query_filters = []
+
+    if role in ['Team_Lead', 'User']:
+        query_filters.append("tm.team_id IN (%s)" % ','.join(['%s'] * len(user_team_ids)))
+        params.extend(user_team_ids)
+
+    if team_id:
+        query_filters.append("t.team_id = %s")
+        params.append(team_id)
+
+    if query_filters:
+        query += " WHERE " + " AND ".join(query_filters)
+    query += " ORDER BY emp_name ASC"
+    cursor.execute(query, tuple(params))
+    members = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return JsonResponse({"members": members})
+
+
 @role_required(['Admin', 'Team_Lead'])
 def status_report_page(request):
     """
     View to render the status report page.
+    Teams and members data will be loaded dynamically via AJAX.
     """
     role = request.session.get("role")
     name = request.session.get("name", "Guest")
-    conn = DataOperations.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    if role == "Team_Lead":
-        lead_team_ids = DataOperations.get_team_lead_teams(request.session.get("user_id"))
-        if not lead_team_ids:
-            return render(request, 'status_report.html', {"teams": [], "members": [], "user_role": role})
-        format_strings = ','.join(['%s'] * len(lead_team_ids))
-        cursor.execute(f"SELECT team_id, team_name FROM teams WHERE team_id IN ({format_strings})", tuple(lead_team_ids))
-    else:
-        cursor.execute("SELECT team_id, team_name FROM teams")
-    teams = [
-        {
-            "team_id": t["team_id"], 
-            "team_name": t["team_name"]
-        } for t in cursor.fetchall()
-    ]
-    if role == "Team_Lead" and lead_team_ids:
-        format_strings = ','.join(['%s'] * len(lead_team_ids))
-        cursor.execute(f"""
-            SELECT emp_id, first_name, last_name 
-            FROM hr_team_members 
-            WHERE status='active' AND emp_id IN (
-                SELECT emp_id FROM team_members WHERE team_id IN ({format_strings})
-            )
-        """, tuple(lead_team_ids))
-    else:
-        cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
-    members = [
-        {
-            "emp_id": m["emp_id"], 
-            "first_name": m["first_name"], 
-            "last_name": m["last_name"]
-        } 
-        for m in cursor.fetchall()
-    ]
-    cursor.close()
-    conn.close()
-    return render(request, 'status_report.html', {"teams": teams, "members": members, "user_role": role, "name":name})
+    return render(request, 'status_report.html', {"user_role": role, "name": name})
+
+
+# @role_required(['Admin', 'Team_Lead'])
+# def status_report_page(request):
+#     """
+#     View to render the status report page.
+#     """
+#     role = request.session.get("role")
+#     name = request.session.get("name", "Guest")
+#     conn = DataOperations.get_db_connection()
+#     cursor = conn.cursor(dictionary=True)
+#     if role == "Team_Lead":
+#         lead_team_ids = DataOperations.get_team_lead_teams(request.session.get("user_id"))
+#         if not lead_team_ids:
+#             return render(request, 'status_report.html', {"teams": [], "members": [], "user_role": role})
+#         format_strings = ','.join(['%s'] * len(lead_team_ids))
+#         cursor.execute(f"SELECT team_id, team_name FROM teams WHERE team_id IN ({format_strings})", tuple(lead_team_ids))
+#     else:
+#         cursor.execute("SELECT team_id, team_name FROM teams")
+#     teams = [
+#         {
+#             "team_id": t["team_id"], 
+#             "team_name": t["team_name"]
+#         } for t in cursor.fetchall()
+#     ]
+#     if role == "Team_Lead" and lead_team_ids:
+#         format_strings = ','.join(['%s'] * len(lead_team_ids))
+#         cursor.execute(f"""
+#             SELECT emp_id, first_name, last_name 
+#             FROM hr_team_members 
+#             WHERE status='active' AND emp_id IN (
+#                 SELECT emp_id FROM team_members WHERE team_id IN ({format_strings})
+#             )
+#         """, tuple(lead_team_ids))
+#     else:
+#         cursor.execute("SELECT emp_id, first_name, last_name FROM hr_team_members WHERE status='active'")
+#     members = [
+#         {
+#             "emp_id": m["emp_id"], 
+#             "first_name": m["first_name"], 
+#             "last_name": m["last_name"]
+#         } 
+#         for m in cursor.fetchall()
+#     ]
+#     cursor.close()
+#     conn.close()
+#     return render(request, 'status_report.html', {"teams": teams, "members": members, "user_role": role, "name":name})
 
 def _validate_report_params(request_data, role, user_id):
     """Validates and sanitizes report parameters."""
@@ -7818,13 +7952,20 @@ def _get_report_summary(cursor, where_clause, sql_params, share_count_clause, sh
     
     return report
 
-def _get_detailed_candidate_list(cursor, report_summary, params):
+def _get_detailed_candidate_list(cursor, report_summary, params, where_clause="", sql_params=()):
     """Fetches detailed candidate information for each JD in the report."""
     list_of_candidates = []
     
     date_or_date_range = params["date"] if params["report_type"] != "custom" else f"{params['from_date']} to {params['to_date']}"
     date_filtering_clause = "AND DATE(updated_at)=%s" if params["report_type"] != "custom" else "AND DATE(updated_at) BETWEEN %s AND %s"
     date_params = (params["date"],) if params["report_type"] != "custom" else (params["from_date"], params["to_date"])
+
+    member_id_filter = ""
+    member_id_params = []
+
+    if params.get("member_id") and params["member_id"] != "all":
+        member_id_filter = " AND hr_member_id=%s"
+        member_id_params.append(params["member_id"])   
 
     for row in report_summary[:-1]:  # Exclude summary row
         meta_data = {
@@ -7834,16 +7975,16 @@ def _get_detailed_candidate_list(cursor, report_summary, params):
         }
         
         query = f"""
-            SELECT 
+            SELECT
                 candidate_id, name, email, phone, 
                 experience, current_ctc, expected_ctc, 
                 notice_period, previous_job_profile as profile, 
                 location, shared_on, recruiter_comments
             FROM candidates 
-            WHERE jd_id=%s {date_filtering_clause}
+            WHERE jd_id=%s {date_filtering_clause} {member_id_filter}
             ORDER BY shared_on DESC
         """
-        cursor.execute(query, (row["jd_id"], *date_params))
+        cursor.execute(query, (row["jd_id"], *date_params, *member_id_params))
         candidates = cursor.fetchall()
         
         list_of_candidates.append({
@@ -7890,7 +8031,7 @@ def generate_status_report(request):
         report_summary = _get_report_summary(cursor, where_clause, sql_params, share_count_clause, share_count_params)
 
         # Step 4: Get the detailed list of candidates
-        detailed_candidates = _get_detailed_candidate_list(cursor, report_summary, params)
+        detailed_candidates = _get_detailed_candidate_list(cursor, report_summary, params, where_clause, sql_params)
 
         return JsonResponse({
             "report": report_summary,

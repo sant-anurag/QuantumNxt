@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
+        // Load teams and members data on page load
+        loadTeamsData();
+        loadMembersData();
+
         // Show/hide date fields based on report type
         const reportType = document.getElementById('reportType');
         const dateInput = document.getElementById('dateInput');
@@ -32,6 +36,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Handle team selection change to update members
+        const teamSelect = document.getElementById('teamSelect');
+        teamSelect.addEventListener('change', function() {
+            const selectedTeamId = this.value;
+            loadMembersData(selectedTeamId === 'all' ? null : selectedTeamId);
+        });
+
+        // Handle member selection change to update teams
+        const memberSelect = document.getElementById('memberSelect');
+        memberSelect.addEventListener('change', function() {
+            const selectedMemberId = this.value;
+            if (selectedMemberId === 'all') {
+                // If "All Members" is selected, reload all teams
+                loadTeamsData();
+            } else {
+                // Filter teams based on selected member
+                loadTeamsForMember(selectedMemberId);
+            }
+        });
+
         // AJAX form submit
         document.getElementById('statusReportForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -57,6 +81,89 @@ if (!window.renderCandidateTables) {
     document.head.appendChild(script);
 }
         });
+
+        // Load teams data
+        function loadTeamsData() {
+            fetch('/get_teams/', {
+                method: 'GET',
+                headers: {'X-CSRFToken': getCookie('csrftoken')}
+            })
+            .then(res => res.json())
+            .then(data => {
+                const teamSelect = document.getElementById('teamSelect');
+                // Clear existing options except "All Teams"
+                teamSelect.innerHTML = '<option value="all">All Teams</option>';
+                
+                if (data.teams && data.teams.length > 0) {
+                    data.teams.forEach(team => {
+                        const option = document.createElement('option');
+                        option.value = team.team_id;
+                        option.textContent = team.team_name;
+                        teamSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading teams:', error);
+            });
+        }
+
+        // Load teams data for a specific member
+        function loadTeamsForMember(memberId) {
+            fetch(`/get_teams/?emp_id=${memberId}`, {
+                method: 'GET',
+                headers: {'X-CSRFToken': getCookie('csrftoken')}
+            })
+            .then(res => res.json())
+            .then(data => {
+                const teamSelect = document.getElementById('teamSelect');
+                // Clear existing options except "All Teams"
+                teamSelect.innerHTML = '<option value="all">All Teams</option>';
+                
+                if (data.teams && data.teams.length > 0) {
+                    data.teams.forEach(team => {
+                        const option = document.createElement('option');
+                        option.value = team.team_id;
+                        option.textContent = team.team_name;
+                        teamSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading teams for member:', error);
+            });
+        }
+
+        // Load members data
+        function loadMembersData(teamId = null) {
+            let url = '/get_team_members/';
+            if (teamId) {
+                url += `?team_id=${teamId}`;
+            }
+
+            fetch(url, {
+                method: 'GET',
+                headers: {'X-CSRFToken': getCookie('csrftoken')}
+            })
+            .then(res => res.json())
+            .then(data => {
+                const memberSelect = document.getElementById('memberSelect');
+                // Clear existing options except "All Members"
+                memberSelect.innerHTML = '<option value="all">All Members</option>';
+                
+                if (data.members && data.members.length > 0) {
+                    data.members.forEach(member => {
+                        const option = document.createElement('option');
+                        option.value = member.emp_id;
+                        option.textContent = member.emp_name;
+                        memberSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading members:', error);
+            });
+        }
 
         // Render table
         function renderTable(rows) {
