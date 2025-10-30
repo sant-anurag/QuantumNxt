@@ -91,7 +91,7 @@
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    min-width: 900px; /* Minimum width to prevent cramped layout */
+    min-width: 950px; /* Minimum width to prevent cramped layout with 3 action buttons */
     background: #ffffff;
     border-radius: 12px;
     overflow: visible;
@@ -1127,6 +1127,38 @@ border-bottom: 2px solid #e3e8f7;
     background: #e6ebff;
     color: #4f8cff;
     box-shadow: 0 2px 8px rgba(76, 90, 255, 0.09);
+}
+
+/* Delete button */
+.icon-btn.delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1.5px solid #fecaca;
+    font-size: 1.2em;
+    margin-left: 2px;
+    margin-right: 2px;
+    transition: background 0.2s, color 0.2s;
+}
+.icon-btn.delete-btn:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+}
+.icon-btn.delete-btn:disabled,
+.icon-btn.delete-btn.disabled {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    border: 1.5px solid #d1d5db !important;
+    box-shadow: none !important;
+}
+.icon-btn.delete-btn:disabled:hover,
+.icon-btn.delete-btn.disabled:hover {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* =============================================================================

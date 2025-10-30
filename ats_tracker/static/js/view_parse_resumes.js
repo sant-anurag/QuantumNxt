@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="actions-col">
                     <button class="icon-btn parse-btn" data-resume-id="${resume.resume_id}" title="Parse Resume"><i class="fas fa-upload"></i></button>
                     <button class="icon-btn edit-btn" data-resume-id="${resume.resume_id}" title="Edit Resume"><i class="fas fa-edit"></i></button>
+                    <button class="icon-btn delete-btn" data-resume-id="${resume.resume_id}" title="Delete Resume"><i class="fas fa-trash"></i></button>
                 </td>
                 <td style="display:none;" class="hidden-education">${resume.education || ''}</td>
                 <td style="display:none;" class="hidden-skills">${resume.skills || ''}</td>
@@ -86,6 +87,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+
+        // Add event listeners for delete buttons
+        document.querySelectorAll('.icon-btn.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const resumeId = this.getAttribute('data-resume-id');
+                if (resumeId) {
+                    deleteResume(resumeId, this);
+                }
+            });
+        });
+
+        // Check which resumes have candidate details and disable delete buttons accordingly
+        checkCandidateDetailsAndDisableDelete();
     }
 
     function parse_resume(jd_id, resumeId, buttonElement) {
@@ -175,6 +189,113 @@ document.addEventListener('DOMContentLoaded', function() {
                 buttonElement.disabled = false;
                 buttonElement.title = 'Parse Resume';
             });
+    }
+
+    function deleteResume(resumeId, buttonElement) {
+        // Confirm deletion
+        if (!confirm('Are you sure you want to delete this resume? This action cannot be undone.')) {
+            return;
+        }
+
+        // Store original button content
+        const originalHtml = buttonElement.innerHTML;
+        
+        // Update button to show deleting state
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        buttonElement.disabled = true;
+        buttonElement.title = 'Deleting...';
+
+        fetch(`/delete_resume/?resume_id=${resumeId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // If file download data is provided, trigger download
+                    if (data.download && data.file_content && data.file_name) {
+                        downloadFile(data.file_content, data.file_name, data.mime_type);
+                    }
+                    
+                    // Remove the row from the table
+                    const row = document.querySelector(`tr[data-resume-id="${resumeId}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                    alert('Resume deleted successfully. A copy has been downloaded to your computer.');
+                } else {
+                    alert(data.message || 'Failed to delete resume. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting resume:', error);
+                alert('Failed to delete resume. Please try again.');
+            })
+            .finally(() => {
+                // Restore button state
+                buttonElement.innerHTML = originalHtml;
+                buttonElement.disabled = false;
+                buttonElement.title = 'Delete Resume';
+            });
+    }
+
+    function downloadFile(base64Content, fileName, mimeType) {
+        try {
+            // Convert base64 to blob
+            const byteCharacters = atob(base64Content);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Error downloading file. Please try again.');
+        }
+    }
+
+    function checkCandidateDetailsAndDisableDelete() {
+        // Get all resume rows
+        const resumeRows = document.querySelectorAll('tr[data-resume-id]');
+        
+        resumeRows.forEach(row => {
+            const resumeId = row.getAttribute('data-resume-id');
+            const deleteButton = row.querySelector('.icon-btn.delete-btn');
+            
+            if (resumeId && deleteButton) {
+                // Check if candidate details exist for this resume
+                fetch(`/get_candidate_details/?resume_id=${resumeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.candidate) {
+                            // Candidate details exist, disable delete button
+                            deleteButton.disabled = true;
+                            deleteButton.title = 'Cannot delete - Candidate details exist';
+                            deleteButton.classList.add('disabled');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking candidate details:', error);
+                    });
+            }
+        });
     }
 
     function fetchAndDisplayResumes(jdId) {
@@ -724,16 +845,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Prepare data array for export
         const exportData = [];
         
-        // Add header row
-        const headers = ['File Name', 'Name', 'Contact No', 'Email', 'Total Experience (years)', 'Status'];
+        // Add header row including hidden fields
+        const headers = ['File Name', 'Name', 'Contact No', 'Email', 'Total Experience (years)', 'Status', 'Education', 'Skills', 'Location', 'Previous Job Title'];
         exportData.push(headers);
         
         // Add data rows
         const rows = tbody.querySelectorAll('tr');
         rows.forEach(row => {
-            if (row.children.length >= 6) { // Ensure row has enough columns
+            if (row.children.length >= 10) { // Ensure row has enough columns including hidden ones
                 const rowData = [];
-                // Extract text content from each cell (excluding Actions column)
+                // Extract text content from visible cells (excluding Actions column)
                 for (let i = 0; i < 6; i++) {
                     const cell = row.children[i];
                     if (i === 0) {
@@ -744,6 +865,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         rowData.push(cell.textContent.trim());
                     }
                 }
+                
+                // Extract text content from hidden cells (indices 7, 8, 9, 10)
+                // Skip index 6 which is the Actions column
+                for (let i = 7; i <= 10; i++) {
+                    const cell = row.children[i];
+                    rowData.push(cell ? cell.textContent.trim() : '');
+                }
+                
                 exportData.push(rowData);
             }
         });
@@ -758,7 +887,11 @@ document.addEventListener('DOMContentLoaded', function() {
             { wch: 15 }, // Contact No
             { wch: 25 }, // Email
             { wch: 15 }, // Experience
-            { wch: 15 }  // Status
+            { wch: 15 }, // Status
+            { wch: 30 }, // Education
+            { wch: 35 }, // Skills
+            { wch: 20 }, // Location
+            { wch: 25 }  // Previous Job Title
         ];
         ws['!cols'] = colWidths;
         

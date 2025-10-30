@@ -2420,17 +2420,19 @@ def update_resume_status(request):
             DataOperations.close_db_connection(conn, cursor)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
-
 def export_resumes_excel(request):
     """
-    API endpoint to export resumes to an Excel file.
+    API endpoint to export resumes and candidate data to an Excel file.
     """
     print("export_resumes_excel -> Request method:", request.method)
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return HttpResponse("JD ID required", status=400)
+
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    # --- Query for Resumes Sheet (Sheet 1) ---
     cursor.execute("""
         SELECT r.file_name, r.status, r.uploaded_on, jd.jd_summary, c.company_name
         FROM resumes r
@@ -2439,28 +2441,92 @@ def export_resumes_excel(request):
         WHERE r.jd_id = %s
         ORDER BY r.uploaded_on DESC
     """, (jd_id,))
-    rows = cursor.fetchall()
+    resume_rows = cursor.fetchall()
+
+    # --- Query for Candidates Sheet (Sheet 2) ---
+    cursor.execute("""
+        SELECT
+            c.name, c.phone, c.email, c.skills, c.experience, c.relevant_experience,
+            c.current_ctc, c.current_ctc_basis, c.expected_ctc, c.expected_ctc_basis,
+            c.education, c.previous_job_profile, c.location, c.notice_period,
+            jd.jd_id, jd.jd_summary, cust.company_name
+        FROM candidates c
+        JOIN resumes r ON c.resume_id = r.resume_id
+        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+        LEFT JOIN customers cust ON jd.company_id = cust.company_id
+        WHERE c.jd_id = %s
+        ORDER BY c.candidate_id DESC
+    """, (jd_id,))
+    candidate_rows = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Resumes"
-    headers = ["File Name", "Status", "Uploaded On", "JD Summary", "Company"]
-    ws.append(headers)
-    for row in rows:
-        ws.append([
+
+    # =================================================================
+    # Sheet 1: Resumes Data
+    # =================================================================
+    ws_resumes = wb.active
+    ws_resumes.title = "Resumes"
+    resume_headers = ["File Name", "Status", "Uploaded On", "JD Summary", "Company"]
+    ws_resumes.append(resume_headers)
+
+    for row in resume_rows:
+        ws_resumes.append([
             row['file_name'],
             row['status'],
             row['uploaded_on'].strftime('%Y-%m-%d %H:%M') if row['uploaded_on'] else '',
             row['jd_summary'],
             row['company_name']
         ])
-    for col in range(1, len(headers)+1):
-        ws.column_dimensions[get_column_letter(col)].width = 22
+    
+    # Auto-adjust column width for Resumes sheet
+    for col in range(1, len(resume_headers) + 1):
+        ws_resumes.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
 
+    # =================================================================
+    # Sheet 2: Candidate Personal Data
+    # =================================================================
+    ws_candidates = wb.create_sheet(title="Candidates")
+    candidate_headers = [
+        "JD ID", "JD Summary", "Company Name", "Name", "Phone", "Email", "Experience", 
+        "Relevant Experience", "Previous Job Profile", "Location", "Education", "Skills", 
+        "Current CTC", "Current CTC Basis", "Expected CTC", "Expected CTC Basis", "Notice Period"
+    ]
+    ws_candidates.append(candidate_headers)
+
+    for row in candidate_rows:
+        ws_candidates.append([
+            row['jd_id'],
+            row['jd_summary'],
+            row['company_name'],
+            row['name'],
+            row['phone'],
+            row['email'],
+            row['experience'],
+            row['relevant_experience'],
+            row['previous_job_profile'],
+            row['location'],
+            row['education'],
+            row['skills'],
+            row['current_ctc'],
+            row['current_ctc_basis'],
+            row['expected_ctc'],
+            row['expected_ctc_basis'],
+            row['notice_period']
+        ])
+    
+    # Auto-adjust column width for Candidates sheet (Can be adjusted as needed)
+    for col in range(1, len(candidate_headers) + 1):
+        ws_candidates.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 25
+
+
+    # =================================================================
+    # Final Response
+    # =================================================================
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="resumes_{jd_id}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="recruitment_data_{jd_id}.xlsx"'
     wb.save(response)
     return response
 
@@ -2544,61 +2610,6 @@ def process_resume(file_path, api_key):
     except Exception as e:
         print(f"Error processing resume: {e}")
         return {"error": str(e)}
-
-# @login_required 
-# def parse_individual_resume(request):
-#     """
-#     API endpoint to parse an individual resume for a specific job description.
-#     """
-#     api_key = settings.GEMINI_API_KEY
-#     jd_id = request.GET.get('jd_id')
-#     resume_id = request.GET.get('resume_id')
-    
-#     if not jd_id or not resume_id:
-#         return JsonResponse({'success': False, 'error': 'JD ID and Resume ID are required'}, status=400)
-    
-#     conn = DataOperations.get_db_connection()
-#     cursor = conn.cursor(dictionary=True)
-    
-#     try:
-#         # Get the specific resume
-#         cursor.execute("SELECT * FROM resumes WHERE resume_id=%s AND jd_id=%s", (resume_id, jd_id))
-#         resume = cursor.fetchone()
-        
-#         if not resume:
-#             return JsonResponse({'success': False, 'error': 'Resume not found'}, status=404)
-        
-#         file_path = resume['file_path']
-#         if not os.path.exists(file_path):
-#             return JsonResponse({'success': False, 'error': 'Resume file not found'}, status=404)
-        
-#         # Parse the resume
-#         parser = ResumeParser()
-#         result = process_resume(file_path, api_key)
-#         result = parser.parse_resume(file_path)
-        
-#         from .utils import get_display_filename
-#         display_name = get_display_filename(resume['file_name'], resume['jd_id'])
-        
-#         parsed_resume = {
-#             'resume_id': resume['resume_id'],
-#             'file_name': display_name,
-#             'name': result.get('Name', ''),
-#             'email': result.get('Email', ''),
-#             'phone': result.get('Contact Number', ''),
-#             'experience': result.get('Work Experience (Years)', ''),
-#             'status': resume['status'],
-#             'file_url': f"/download_resume/{resume['resume_id']}/"
-#         }
-        
-#         return JsonResponse({'success': True, 'resume': parsed_resume})
-        
-#     except Exception as e:
-#         print(f"Error parsing individual resume: {str(e)}")
-#         return JsonResponse({'success': False, 'error': f'Error parsing resume: {str(e)}'}, status=500)
-#     finally:
-#         cursor.close()
-#         conn.close()
 
 
 @login_required 
@@ -3430,7 +3441,8 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
         if current_status != 'toBeScreened':
              return JsonResponse({'success': False, 'error': f'Candidate is currently set to "{current_status}" at the {stage_name} stage and cannot be automatically advanced. Must be "toBeScreened"'}, status=400)
 
-
+        # Design recruiter_comments
+        recruiter_comments = f"""\nAdvanced to {stage_name} stage and marked as "{new_status}".\nRemarks: {comment}"""
         # Dynamic SQL update based on the determined stage
         update_query = f"""
             UPDATE candidates 
@@ -3438,10 +3450,11 @@ def advanced_to_next_stage(request, candidate_id: int, comment: str, notify_stat
                 {update_column}=%s, 
                 {date_column}=%s, 
                 {comment_column}=%s,
+                recruiter_comments=%s,
                 updated_at=CURRENT_TIMESTAMP
             WHERE candidate_id=%s
         """
-        update_params = [new_status, today, comment, candidate_id]
+        update_params = [new_status, today, comment, recruiter_comments, candidate_id]
         cursor.execute(update_query, tuple(update_params))       
 
         # handle jd counts
@@ -8250,13 +8263,13 @@ def generate_daily_report(report_type, user_id, **kwargs):
             return None
 
     request_data = {
-                "report_type": 'custom',
-                "team_id": None,
-                "member_id": emp_id,
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "from_date": from_date.strftime("%Y-%m-%d"),
-                "to_date": to_date.strftime("%Y-%m-%d"),
-                "lead_team_ids": None
+        "report_type": 'custom',
+        "team_id": None,
+        "member_id": emp_id,
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "from_date": from_date.strftime("%Y-%m-%d"),
+        "to_date": to_date.strftime("%Y-%m-%d"),
+        "lead_team_ids": None
         }
     
     all_teams_data = []
@@ -8360,7 +8373,7 @@ def generate_recruitment_report_excel(data):
             detailed_headers = [
                 'Candidate ID', 'Name', 'Email', 'Phone', 'Experience',
                 'Current CTC', 'Expected CTC', 'Notice Period', 'Profile',
-                'Location', 'Recruiter Comments'
+                'Location', 'Recruiter Comments', 'Shared On'
             ]
             main_sheet.append(detailed_headers)
             for cell in main_sheet[current_row]:
@@ -8381,7 +8394,8 @@ def generate_recruitment_report_excel(data):
                     candidate.get('notice_period', ''),
                     candidate.get('profile', ''),
                     candidate.get('location', ''),
-                    candidate.get('recruiter_comments', '')
+                    candidate.get('recruiter_comments', ''),
+                    candidate.get('shared_on', '')
                 ]
                 main_sheet.append(candidate_data)
                 for cell in main_sheet[current_row]:
@@ -8554,3 +8568,188 @@ def prelogout_page(request):
         "name": name,
         "user_role": user_role
     })
+
+
+# @login_required
+# def delete_resume(request):
+#     """
+#     API endpoint to delete a resume. Only allows deletion if no candidate details exist.
+#     """
+#     if request.method == "DELETE":
+#         resume_id = request.GET.get('resume_id')
+#         if not resume_id:
+#             return JsonResponse({'success': False, 'message': 'resume_id required'}, status=400)
+        
+#         try:
+#             conn = DataOperations.get_db_connection()
+#             cursor = conn.cursor(dictionary=True)
+            
+#             # Check if candidate details exist for this resume
+#             cursor.execute("SELECT COUNT(*) as count FROM candidates WHERE resume_id=%s", (resume_id,))
+#             candidate_count = cursor.fetchone()['count']
+            
+#             if candidate_count > 0:
+#                 cursor.close()
+#                 conn.close()
+#                 return JsonResponse({
+#                     'success': False, 
+#                     'message': 'Cannot delete resume. Candidate details exist for this resume.'
+#                 }, status=400)
+            
+#             # Get resume file path for deletion
+#             cursor.execute("SELECT file_path FROM resumes WHERE resume_id=%s", (resume_id,))
+#             resume_row = cursor.fetchone()
+            
+#             if not resume_row:
+#                 cursor.close()
+#                 conn.close()
+#                 return JsonResponse({'success': False, 'message': 'Resume not found'}, status=404)
+            
+#             file_path = resume_row['file_path']
+            
+#             # Delete from database
+#             cursor.execute("DELETE FROM resumes WHERE resume_id=%s", (resume_id,))
+#             conn.commit()
+            
+#             # Delete physical file if it exists
+#             if file_path and os.path.exists(file_path):
+#                 try:
+#                     os.remove(file_path)
+#                 except OSError as e:
+#                     print(f"Warning: Could not delete file {file_path}: {e}")
+            
+#             cursor.close()
+#             conn.close()
+#             return JsonResponse({'success': True, 'message': 'Resume deleted successfully'})
+            
+#         except mysql.connector.Error as db_error:
+#             print("delete_resume -> Database error:", str(db_error))
+#             if 'conn' in locals():
+#                 conn.rollback()
+#             return JsonResponse({'success': False, 'message': f'Database error: {str(db_error)}'}, status=500)
+#         except Exception as e:
+#             print("delete_resume -> Unexpected error:", str(e))
+#             return JsonResponse({'success': False, 'message': f'An error occurred: {str(e)}'}, status=500)
+#         finally:
+#             if 'cursor' in locals():
+#                 cursor.close()
+#             if 'conn' in locals():
+#                 conn.close()
+#     else:
+#         return JsonResponse({'success': False, 'message': 'Only DELETE method allowed'}, status=405)
+
+
+@login_required
+def delete_resume(request):
+    """
+    API endpoint to delete a resume. Only allows deletion if no candidate details exist.
+    """
+    if request.method == "DELETE":
+        resume_id = request.GET.get('resume_id')
+        if not resume_id:
+            return JsonResponse({'success': False, 'message': 'resume_id required'}, status=400)
+        
+        try:
+            conn = DataOperations.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            
+            # Check if candidate details exist for this resume
+            cursor.execute("SELECT COUNT(*) as count FROM candidates WHERE resume_id=%s", (resume_id,))
+            candidate_count = cursor.fetchone()['count']
+            
+            if candidate_count > 0:
+                cursor.close()
+                conn.close()
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Cannot delete resume. Candidate details exist for this resume.'
+                }, status=400)
+            
+            # Get resume file path for deletion
+            cursor.execute("SELECT file_path, file_name FROM resumes WHERE resume_id=%s", (resume_id,))
+            resume_row = cursor.fetchone()
+            
+            if not resume_row:
+                cursor.close()
+                conn.close()
+                return JsonResponse({'success': False, 'message': 'Resume not found'}, status=404)
+            
+            file_path = resume_row['file_path']
+            original_file_name = resume_row['file_name']
+            
+            # Check if file exists before proceeding
+            if not file_path or not os.path.exists(file_path):
+                cursor.close()
+                conn.close()
+                return JsonResponse({'success': False, 'message': 'Resume file not found on disk'}, status=404)
+            
+            # Read file content for download
+            try:
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+            except Exception as e:
+                cursor.close()
+                conn.close()
+                return JsonResponse({'success': False, 'message': f'Error reading file: {str(e)}'}, status=500)
+            
+            # Delete from database
+            cursor.execute("DELETE FROM resumes WHERE resume_id=%s", (resume_id,))
+            conn.commit()
+            
+            # Move physical file to scrapped_resumes folder
+            try:
+                # Create scrapped_resumes folder if it doesn't exist
+                static_dir = settings.STATICFILES_DIRS[0] if hasattr(settings, 'STATICFILES_DIRS') else os.path.join(settings.BASE_DIR, 'static')
+                scrapped_folder = os.path.join(static_dir, 'resumes', 'scrapped_resumes')
+                os.makedirs(scrapped_folder, exist_ok=True)
+                
+                # Generate new filename with timestamp to avoid conflicts
+                file_name = os.path.basename(file_path)
+                name, ext = os.path.splitext(file_name)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                new_filename = f"{name}__scrapped_{timestamp}{ext}"
+                new_file_path = os.path.join(scrapped_folder, new_filename)
+                
+                # Move file to scrapped folder
+                import shutil
+                shutil.move(file_path, new_file_path)
+                print(f"Resume file moved to scrapped folder: {new_file_path}")
+                
+            except OSError as e:
+                print(f"Warning: Could not move file {file_path} to scrapped folder: {e}")
+            
+            cursor.close()
+            conn.close()
+            
+            # Return file content as base64 for download
+            import base64
+            file_base64 = base64.b64encode(file_content).decode('utf-8')
+            
+            # Get file extension for MIME type
+            file_ext = os.path.splitext(original_file_name)[1].lower()
+            mime_type = 'application/pdf' if file_ext == '.pdf' else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' if file_ext in ['.docx'] else 'application/msword' if file_ext == '.doc' else 'text/plain'
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Resume deleted successfully and file moved to scrapped folder',
+                'download': True,
+                'file_content': file_base64,
+                'file_name': original_file_name,
+                'mime_type': mime_type
+            })
+            
+        except mysql.connector.Error as db_error:
+            print("delete_resume -> Database error:", str(db_error))
+            if 'conn' in locals():
+                conn.rollback()
+            return JsonResponse({'success': False, 'message': f'Database error: {str(db_error)}'}, status=500)
+        except Exception as e:
+            print("delete_resume -> Unexpected error:", str(e))
+            return JsonResponse({'success': False, 'message': f'An error occurred: {str(e)}'}, status=500)
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+    else:
+        return JsonResponse({'success': False, 'message': 'Only DELETE method allowed'}, status=405)
