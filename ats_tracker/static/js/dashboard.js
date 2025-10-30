@@ -139,21 +139,23 @@ function renderInProgressCandidatesTable(candidates) {
     const tbody = document.getElementById('in-progress-candidates-table').querySelector('tbody');
     tbody.innerHTML = '';
     if (!candidates || candidates.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6">No in-progress candidates found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">No in-progress candidates found.</td></tr>`;
         return;
     }
     candidates.forEach(c => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${c.candidate_id}</td>
-                <td>${c.name}</td>
-                <td>${c.jd_id}</td>
-                <td>${c.l1_result || ''}</td>
-                <td>${c.l2_result || ''}</td>
-                <td>${c.l3_result || ''}</td>
-                <td>${c.company_name || ''}</td>
-                <td>${c.team_name || ''}</td>
-            </tr>
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${c.candidate_id}</td>
+            <td class="tooltip" title="${c.name || ''}">${c.name || ''}</td>
+            <td>${c.jd_id}</td>
+            <td>${c.l1_result || ''}</td>
+            <td>${c.l2_result || ''}</td>
+            <td>${c.l3_result || ''}</td>
+            <td class="tooltip" title="${c.company_name || ''}">${c.company_name || ''}</td>
+            <td class="tooltip" title="${c.team_name || ''}">${c.team_name || ''}</td>
+            <td>${c.last_updated || ''}</td>
+            <td class="tooltip" title="${c.recruiter_comments || ''}">${c.recruiter_comments || ''}</td>
         `;
+        tbody.appendChild(row);
     });
 }

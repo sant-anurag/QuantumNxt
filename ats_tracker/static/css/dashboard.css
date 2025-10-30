@@ -61,15 +61,25 @@
 .table-container {
     width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
 }
 
 .table-container::-webkit-scrollbar {
-    height: 6px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
 }
 
 .table-container::-webkit-scrollbar-thumb {
-    background: rgba(111, 124, 194, 0.38);
-    border-radius: 8px;
+    background: rgba(86, 97, 210, 0.6);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(86, 97, 210, 0.8);
 }
 
 
@@ -99,6 +109,99 @@
     text-align: left;
     font-size: 0.95em;
     border-bottom: 1px solid #e3e8ff;
+}
+
+/* Specific styles for in-progress candidates table */
+#in-progress-candidates-table {
+    table-layout: fixed;
+    min-width: 1200px; /* Ensure minimum width for horizontal scroll */
+}
+
+#in-progress-candidates-table th,
+#in-progress-candidates-table td {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+}
+
+/* Column width specifications - increased sizes */
+#in-progress-candidates-table th:nth-child(1), 
+#in-progress-candidates-table td:nth-child(1) { width: 100px; } /* Candidate ID */
+
+#in-progress-candidates-table th:nth-child(2), 
+#in-progress-candidates-table td:nth-child(2) { width: 150px; } /* Name */
+
+#in-progress-candidates-table th:nth-child(3), 
+#in-progress-candidates-table td:nth-child(3) { width: 80px; } /* JD ID */
+
+#in-progress-candidates-table th:nth-child(4), 
+#in-progress-candidates-table td:nth-child(4) { width: 100px; } /* L1 Status */
+
+#in-progress-candidates-table th:nth-child(5), 
+#in-progress-candidates-table td:nth-child(5) { width: 100px; } /* L2 Status */
+
+#in-progress-candidates-table th:nth-child(6), 
+#in-progress-candidates-table td:nth-child(6) { width: 100px; } /* L3 Status */
+
+#in-progress-candidates-table th:nth-child(7), 
+#in-progress-candidates-table td:nth-child(7) { width: 180px; } /* Customer */
+
+#in-progress-candidates-table th:nth-child(8), 
+#in-progress-candidates-table td:nth-child(8) { width: 150px; } /* Team Name */
+
+#in-progress-candidates-table th:nth-child(9), 
+#in-progress-candidates-table td:nth-child(9) { width: 120px; } /* Last Updated */
+
+#in-progress-candidates-table th:nth-child(10), 
+#in-progress-candidates-table td:nth-child(10) { width: 220px; } /* Recruiter Comments */
+
+/* Tooltip styles */
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    white-space: normal;
+    max-width: 300px;
+    word-wrap: break-word;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+}
+
+.tooltip:hover::before,
+.tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 .dashboard-table th {
     background: #eef2f7;

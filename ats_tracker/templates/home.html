@@ -150,6 +150,9 @@
                         <button class="shortcut-btn" onclick="location.href='{% url 'assign_jd_page' %}'">
                             <i class="fas fa-tasks"></i> Assign JD
                         </button>
+                        <button class="shortcut-btn" onclick="location.href='{% url 'generate_export_report' %}?report_type=daily'">
+                            <i class="fas fa-download"></i> Download Daily Report
+                        </button>
                     {% endif %}
                     {% if user_role == "Team_Lead" or user_role == "User" %}
                         <button class="shortcut-btn" onclick="location.href='{% url 'jd_create' %}'">
@@ -163,6 +166,9 @@
                         </button>
                         <button class="shortcut-btn" onclick="location.href='{% url 'candidate_pipeline' %}'">
                             <i class="fas fa-user-friends"></i> Candidate Pipeline
+                        </button>
+                        <button class="shortcut-btn" onclick="location.href='{% url 'generate_export_report' %}?report_type=daily'">
+                            <i class="fas fa-download"></i> Download Daily Report
                         </button>
                     {% endif %}
 
@@ -230,6 +236,8 @@
                                     <th>L3 Status</th>
                                     <th>Customer</th>
                                     <th>Assigned Team</th>
+                                    <th>Last Updated</th>
+                                    <th>Recruiter Comments</th>
                                 </tr>
                                 </thead>
                                 <tbody>

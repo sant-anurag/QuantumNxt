@@ -2641,11 +2641,16 @@ def parse_individual_resume(request):
         
         # Parse the resume
         parsed_data = process_resume(file_path, api_key)
+        
+        structured_data = json.dumps(parsed_data, indent=4)
+        print("Parsed Data:", structured_data)
+
+
         if not parsed_data or 'error' in parsed_data:
             return JsonResponse({'success': False, 'error': f'Failed to parse resume: {parsed_data.get("error", "Unknown error")}'}, status=500)
         
-        prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
-        # last_job_profile [job['title']]
+        # prev_jobs = [job['title'] for job in parsed_data.get('experience', [])]
+        last_job_profile = [job['title'] for job in parsed_data.get('experience', []) if job.get('current')]
         educations = [edu['degree'] + ' from ' + edu['institution'] + ' in ' + edu['end_year'] for edu in parsed_data.get('education', [])]
 
         result = {
@@ -2655,7 +2660,7 @@ def parse_individual_resume(request):
             'work_experience_years': parsed_data.get('total_experience_years', ''),
             'education': ",\n".join(educations),
             'skills': ", ".join(parsed_data.get('skills', [])),
-            'previous_job_title': ",\n".join(prev_jobs)
+            'previous_job_title': ", ".join(last_job_profile)
 
         }
         
@@ -5744,7 +5749,9 @@ def dashboard_data(request):
                 c.l2_result,
                 c.l3_result,
                 cu.company_name,
-                t.team_name
+                t.team_name,
+                DATE(c.updated_at) AS last_updated,
+                c.recruiter_comments
             FROM candidates c
             LEFT JOIN recruitment_jds r ON c.jd_id = r.jd_id
             LEFT JOIN customers cu ON r.company_id = cu.company_id
