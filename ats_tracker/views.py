@@ -2335,19 +2335,48 @@ def get_resume_list_and_data(request):
 
         
 
-
+@login_required
 @csrf_exempt
 def view_parse_resumes(request):
     """
     API endpoint to parse resumes for a specific job description.
     """
+    user_id = request.session.get('user_id', None)
+    user_role = request.session.get('role', 'Guest')
     jd_id = request.GET.get('jd_id')
     if not jd_id:
         return JsonResponse({'success': False, 'error': 'JD ID required'}, status=400)
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        cursor.close()
+        conn.close()
+        return JsonResponse({'error': 'Employee ID not found for user.'}, status=404)
     # Query to get resumes with candidate data if available
+    # cursor.execute("""
+    #     SELECT 
+    #         r.resume_id,
+    #         r.file_name,
+    #         c.screen_status as status,
+    #         c.name as candidate_name,
+    #         c.phone,
+    #         c.email,
+    #         c.experience,
+    #         c.education,
+    #         c.skills,
+    #         c.location,
+    #         c.previous_job_profile
+    #     FROM resumes r
+    #     LEFT JOIN candidates c ON r.resume_id = c.resume_id
+    #     WHERE r.jd_id = %s 
+    #     ORDER BY
+    #         CASE WHEN c.updated_at IS NULL THEN 0 ELSE 1 END,
+    #             c.updated_at DESC,
+    #             r.uploaded_on DESC;
+    # """, (jd_id,))
+
     cursor.execute("""
         SELECT 
             r.resume_id,
@@ -2363,12 +2392,16 @@ def view_parse_resumes(request):
             c.previous_job_profile
         FROM resumes r
         LEFT JOIN candidates c ON r.resume_id = c.resume_id
-        WHERE r.jd_id = %s
+        WHERE r.jd_id = %s 
+            AND (
+                c.candidate_id IS NULL 
+                OR c.hr_member_id = %s  -- The specified hr_member_id
+            )
         ORDER BY
             CASE WHEN c.updated_at IS NULL THEN 0 ELSE 1 END,
                 c.updated_at DESC,
                 r.uploaded_on DESC;
-    """, (jd_id,))
+    """, (jd_id, emp_id))
     
     resumes = cursor.fetchall()
     parsed_resumes = []
