@@ -65,9 +65,12 @@ document.addEventListener('DOMContentLoaded', function() {
 							let modalHtml = `
 								<div class="modal-header">
 									<h3 class='font-bold text-xl text-blue-900'>Candidate Activities</h3>
+									<button id="exportMusterBtn" class="btn-primary" style="margin-left: auto;">
+										<i class="fas fa-file-excel"></i>
+										Export Muster
+									</button>
 								</div>
-								<div class="activities-section">
-							`;
+								<div class="activities-section">`;
 							
 							if (data.activity_records.length === 0) {
 								modalHtml += `<div class='no-activities-message'>No activities found for this candidate.</div>`;
@@ -424,6 +427,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const overlay = candidateActivityModal.querySelector('.modal-overlay');
         if (overlay) {
             overlay.addEventListener('click', hideModal);
+        }
+        
+        // Add export muster functionality
+        const exportMusterBtn = candidateActivityModal.querySelector('#exportMusterBtn');
+        if (exportMusterBtn) {
+            exportMusterBtn.addEventListener('click', function() {
+                const candidateId = candidateActivityModal.dataset.candidateId;
+                if (candidateId) {
+                    // Show loading state
+                    const originalText = exportMusterBtn.innerHTML;
+                    exportMusterBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+                    exportMusterBtn.disabled = true;
+                    
+                    // Create download link
+                    const downloadUrl = `/api/candidate_musters/${candidateId}/export/`;
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `candidate_${candidateId}_muster.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Reset button state
+                    setTimeout(() => {
+                        exportMusterBtn.innerHTML = originalText;
+                        exportMusterBtn.disabled = false;
+                    }, 2000);
+                }
+            });
         }
     }
 

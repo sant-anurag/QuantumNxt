@@ -142,6 +142,7 @@ urlpatterns = [
     path("api/candidate_musters/add_note/", views.add_candidate_activity, name="add_candidate_note"),
     path("api/candidate_musters/edit_note/", views.update_candidate_activity, name="edit_candidate_note"),
     path("api/candidate_musters/delete_note/", views.delete_candidate_activity, name="delete_candidate_note"),
+    path("api/candidate_musters/<int:candidate_id>/export/", views.export_candidate_muster, name="export_candidate_muster"),
 
     # prelogout urls
     path("prelogout/", views.prelogout_page, name="prelogout"),

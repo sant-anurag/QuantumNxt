@@ -4910,7 +4910,15 @@ def api_candidate_details(request):
     candidate_id = request.GET.get('candidate_id')
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM candidates WHERE candidate_id=%s", (candidate_id,))
+    cursor.execute("""
+    SELECT c.*, 
+        t.team_name, 
+        CONCAT(hr.first_name, ' ', hr.last_name) AS allocated_to
+    FROM candidates c
+    LEFT JOIN teams t ON c.team_id = t.team_id
+    LEFT JOIN hr_team_members hr ON c.hr_member_id = hr.emp_id
+    WHERE candidate_id=%s
+    """, (candidate_id,))
     candidate = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -5315,6 +5323,95 @@ def get_candidate_muster(request, candidate_id):
     cursor.close()
     conn.close()
     return JsonResponse({'success': True, 'activity_records': activity_records})
+
+@login_required
+def export_candidate_muster(request, candidate_id):
+    """
+    API endpoint to export muster details of a specific candidate as excel file.
+    """
+    if request.method != "GET":
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+    if not candidate_id or not str(candidate_id).isdigit():
+        return JsonResponse({'success': False, 'error': 'Invalid candidate ID'}, status=400)
+    candidate_id = int(candidate_id)
+    role = request.session.get('role', 'Guest')
+    user_id = request.session.get('user_id', None)
+    emp_id = DataOperations.get_emp_id_from_user_id(user_id)
+    if not emp_id:
+        return JsonResponse({'success': False, 'error': 'Employee ID not found for user'}, status=404)
+    conn = DataOperations.get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    if role in ['Team_Lead', 'User']:
+        cursor.execute("""
+            select candidate_id, team_id from candidates
+            where candidate_id=%s and team_id in (select team_id from team_members where emp_id=%s)
+        """, (candidate_id, emp_id))
+        candidate_row = cursor.fetchone()
+        if not candidate_row:
+            DataOperations.close_db_connection(conn, cursor)
+            return JsonResponse({'success': False, 'error': 'Permission denied to access this candidate'}, status=403)
+    cursor.execute("""
+        SELECT
+            ca.activity_id,
+            c.candidate_id,
+            c.name AS candidate_name,
+            rj.jd_summary,
+            ca.activity_date,
+            ca.notes,
+            ca.activity_type,
+            ca.note_title,
+            CONCAT(htm.first_name, ' ', htm.last_name) AS hr_member_name
+        FROM
+            candidate_activities AS ca
+        LEFT JOIN
+            candidates AS c ON ca.candidate_id = c.candidate_id
+        LEFT JOIN
+            recruitment_jds AS rj ON c.jd_id = rj.jd_id
+        LEFT JOIN
+            hr_team_members AS htm ON ca.emp_id = htm.emp_id
+        LEFT JOIN
+            team_members AS tm ON htm.emp_id = tm.emp_id AND c.team_id = tm.team_id
+        WHERE
+            c.candidate_id=%s
+        ORDER BY ca.updated_at DESC
+    """, (candidate_id,))
+    activity_records = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # create a inmemory excel file using openpyxl
+    from openpyxl import Workbook
+    from openpyxl.utils import get_column_letter
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Candidate Muster"
+    headers = ['Activity ID', 'Candidate ID', 'Candidate Name', 'JD Summary', 'Activity Date', 'Notes', 'Activity Type', 'Note Title', 'HR Member Name']
+    ws.append(headers)
+    for record in activity_records:
+        ws.append([
+            record['activity_id'],
+            record['candidate_id'],
+            record['candidate_name'],
+            record['jd_summary'],
+            record['activity_date'].strftime('%Y-%m-%d'),
+            record['notes'],
+            record['activity_type'],
+            record['note_title'],
+            record['hr_member_name']
+        ])
+    for col_num, _ in enumerate(headers, 1):
+        column_letter = get_column_letter(col_num)
+        ws.column_dimensions[column_letter].width = 20
+    from io import BytesIO
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    response = HttpResponse(
+        excel_file,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=candidate_{candidate_id}_muster.xlsx'
+    return response
     
 @login_required
 def add_candidate_activity(request):
