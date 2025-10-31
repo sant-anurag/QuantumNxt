@@ -5224,15 +5224,49 @@ def get_search_candidates(request):
     limit = 10
     offset = (page - 1) * limit
 
+    # cursor.execute(f"""
+    #     SELECT DISTINCT 
+    #             c.candidate_id, c.name, c.email, c.phone, c.experience, jd.jd_id, jd.jd_summary, c.updated_at
+    #     FROM candidates c
+    #     LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
+    #     LEFT JOIN candidate_activities ca ON c.candidate_id = ca.candidate_id
+    #     WHERE {where_statement}
+    #     ORDER BY c.updated_at DESC
+    #     LIMIT %s OFFSET %s
+    # """, (*params, limit, offset))
+
     cursor.execute(f"""
-        SELECT DISTINCT 
-                c.candidate_id, c.name, c.email, c.phone, c.experience, jd.jd_id, jd.jd_summary, c.updated_at
-        FROM candidates c
-        LEFT JOIN recruitment_jds jd ON c.jd_id = jd.jd_id
-        LEFT JOIN candidate_activities ca ON c.candidate_id = ca.candidate_id
-        WHERE {where_statement}
-        ORDER BY c.updated_at DESC
-        LIMIT %s OFFSET %s
+        SELECT
+            c.candidate_id,
+            c.name,
+            c.email,
+            c.phone,
+            c.experience,
+            jd.jd_id,
+            jd.jd_summary,
+            c.updated_at AS last_candidate_update,
+            ca_latest.latest_activity_date
+        FROM
+            candidates c
+        LEFT JOIN
+            recruitment_jds jd ON c.jd_id = jd.jd_id
+        LEFT JOIN
+            (
+                SELECT
+                    candidate_id,
+                    MAX(activity_date) AS latest_activity_date
+                FROM
+                    candidate_activities
+                GROUP BY
+                    candidate_id
+            ) AS ca_latest ON c.candidate_id = ca_latest.candidate_id
+        WHERE
+            {where_statement}
+        ORDER BY
+            -- Prioritize candidates with recent activity over recent record updates
+            ca_latest.latest_activity_date DESC,
+            c.updated_at DESC
+        LIMIT %s OFFSET %s;
     """, (*params, limit, offset))
     candidates = cursor.fetchall()
     cursor.execute(f"""
@@ -5271,14 +5305,6 @@ def get_candidate_muster(request, candidate_id):
         'from_date': request.GET.get('from_date', ''),
         'to_date': request.GET.get('to_date', '')
     }
-    
-    if not FILTERS['from_date']:
-        # select start date of current month
-        FILTERS['from_date'] = datetime.now().replace(month=datetime.now().month-3, day=1).strftime('%Y-%m-%d')
-
-    if not FILTERS['to_date']:
-        # select end date of current month
-        FILTERS['to_date'] = (datetime.now().replace(day=1, month=datetime.now().month+1) - timedelta(days=1)).strftime('%Y-%m-%d')
 
     conn = DataOperations.get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -5293,8 +5319,7 @@ def get_candidate_muster(request, candidate_id):
         if not candidate_row:
             DataOperations.close_db_connection(conn, cursor)
             return JsonResponse({'success': False, 'error': 'Permission denied to access this candidate'}, status=403)
-    
-    cursor.execute("""
+    query = """
         SELECT
             ca.activity_id,
             c.candidate_id,
@@ -5315,10 +5340,25 @@ def get_candidate_muster(request, candidate_id):
             hr_team_members AS htm ON ca.emp_id = htm.emp_id
         LEFT JOIN
             team_members AS tm ON htm.emp_id = tm.emp_id AND c.team_id = tm.team_id
-        WHERE
-            c.candidate_id=%s AND ca.activity_date BETWEEN %s AND %s
-        ORDER BY ca.updated_at DESC
-    """, (candidate_id, FILTERS['from_date'], FILTERS['to_date']))
+    """
+
+    where_clauses = ["c.candidate_id=%s"]
+    params = [candidate_id]
+    if FILTERS['from_date'] and FILTERS['to_date']:
+        where_clauses.append("ca.activity_date BETWEEN %s AND %s")
+        params.extend([FILTERS['from_date'], FILTERS['to_date']])
+    if FILTERS['from_date'] and not FILTERS['to_date']:
+        where_clauses.append("ca.activity_date >= %s")
+        params.append(FILTERS['from_date'])
+    if FILTERS['to_date'] and not FILTERS['from_date']:
+        where_clauses.append("ca.activity_date <= %s")
+        params.append(FILTERS['to_date'])
+    
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+    
+    query += " ORDER BY ca.updated_at DESC"
+    cursor.execute(query, params)
     activity_records = cursor.fetchall()
     cursor.close()
     conn.close()
