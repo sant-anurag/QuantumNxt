@@ -425,7 +425,8 @@ document.addEventListener("DOMContentLoaded", function() {
             (jd.jd_id && jd.jd_id.toLowerCase().includes(term)) ||
             (jd.team_name && jd.team_name.toLowerCase().includes(term)) ||
             (jd.jd_summary && jd.jd_summary.toLowerCase().includes(term)) ||
-            (jd.company_name && jd.company_name.toLowerCase().includes(term))
+            (jd.company_name && jd.company_name.toLowerCase().includes(term)) ||
+            (jd.location && jd.location.toLowerCase().includes(term))
         );
     }
 
